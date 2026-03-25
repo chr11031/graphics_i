@@ -18,6 +18,25 @@
 			The graphics course is taught over 6 weeks and 
 			features a project with both a presentation and submission component.
 		</p>
+
+
+		<h2>Class Project</h2>
+		<p>
+			By the conclusion of this course, you will be expected to write a short survey paper on a graphics topic of your choice. The paper should be 4-8 pages long including figures and will be supplemented by a live demo &amp 7-10 minute presentation completed in class during the final week of the period. You may choose from one of the following topics below for your paper:
+			<ul>
+				<li>Physics Simulation (Navier Stokes)</li>
+				<li>Ray Marching (See ShaderToy for examples)</li>
+				<li>Hierarchical Acceleration Data Structures (BSPs, Octrees, BVH, etc)</li>
+				<li>Hair &amp Fur Simulation</li>
+				<li>Caustics &amp Refractive Media in Shading or Light Transport</li>
+				<li>Geometry or Tesselation Shaders</li>
+				<li>Bresenham's Algorithm(s)</li>
+				<li>Billboarding in 3D environments</li>
+				<li>Cell Shading &amp Non-realistic effects</li>
+				<li>An approved topic of your choice</li>
+			</ul>
+		</p>
+
 		
 		<h2>Score Breakdown</h2>
 		<table>
@@ -52,7 +71,10 @@
 		<li>Matrix multiplication, inversion, concatenation of matrices</li>
 		<li>Object Hierarchy &amp Scene Graph</li>
 		<li>Viewport Transformations</li>
+		<br/>
 		<li>Fractals: Julia, Mandelbrot, IFS
+		<li>ITW: Create_Matrix, Draw_Pixel, Set_Color</li>
+		<li>GL: glClearColor, glBegin, glVertex2f</li>
 		<li>PROJECT: Barnsley Fern</li>
 		<li>TECHNICAL: Vertex Shader, Homogeneous Coordinates, Canvas Rendering</li>
 		</ul>
@@ -61,34 +83,47 @@
 		<ul>
 		<li>Scanline and parallel rasterization of triangles</li>
 		<li>Sampling Techniques for Triangles and Images</li>
-		<li>PROJECT: Planets In Motion (2D)</li>
+		<br/>
+		<li>ITW: draw_triangle, create_vbo, create_vbo, bind_vbo, bind_vao, set_shader(VERTEX &amp FRAGMENT, ...)</li>
+		<li>GL: glGenBuffers, glDeleteBuffers, glVertexAttrib, glBindVertexArray, glBindBuffer</li>
+		<li>PROJECT: Smooth Triangles &amp Texturing, Billboarded Planets In Motion (2D)</li>
 		<li>TECHNICAL: Fragment Shader, MSAA, FSAA, Fragment vs Pixel, Z &amp Stencil Buffers, Math Products</li>
 		</ul>
 		
-		<h3>3. Curves &amp Surfaces</h3>
-		<ul>
-		<li>Bezier Curves</li>
-		<li>Paches and Nerbs</li>
-		<li>PROJECT: Text Renderer &amp Teapot Smoothing</li>
-		<li>TECHNICAL: Bezier, Scanline Rendering, Fonts</li>
-		</ul>
-				
-		<h3>4. Projection and Shadow Mapping </h3>
+		<h3>3. Projection and Shadow Mapping </h3>
 		<ul>
 		<li>Perspective (Similar Triangles), Orthographic Matrices</li>
 		<li>Clipping algorithms</li>
 		<li>Perspective Correction</li>
+		<li>Model, View, Projection matrices</li>
 		<li>Multi Pass Rendering</li>
+		<br/>
+		<li>ITW: create_renderpass, bind_render_pass, set_uniform, create_uniform, bind_uniform, clipping</li>
+		<li>GL: glBindRenderTarget, glUniform</li>
 		<li>PROJECT: Shadow Mapped 3D View</li>
-		<li>TECHNICAL: Projection, Clipping, PCF, Multi-Pass Rendering</li>
+		<li>TECHNICAL: Projection, Clipping, PCF, Multi-Pass Rendering, Depth &amp Stencil Buffers</li>
 		</ul>
 	
+		<h3>4. Compute &amp Curves &amp Surfaces</h3>
+		<ul>
+		<li>Bezier Curves (Cameras and GPU Textured projection)</li>
+		<li>Compute Based Catmull Clark Surfaces</li>
+		<li>Patches and Nerbs</li>
+		<br/>
+		<li>ITW: create_renderpass, bind_render_pass</li>
+		<li>GL: glUniform, glDispatchCompute</li>
+		<li>PROJECT: Glyph Renderer &amp 2D Camera Motion</li>
+		<li>TECHNICAL: Geometry, Tesselation, Compute Shaders, Bezier, Scanline Rendering, Fonts</li>
+		</ul>
+				
 		<h3>5. Shading &amp Light Models</h3>
 		<ul>
 		<li>Normal Transformations</li>
 		<li>Dot, Cross Products, Wedge Products</li>
 		<li>Point, Directional, Area Lights</li>
 		<li>Ambient, Diffuse, Phong Shading</li>
+		<li>Post Processing, HDR, Gamma Correction</li>
+		<br/>
 		<li>PROJECT: Blinn-Phong Shaded Reference Objects</li>
 		<li>TECHNICAL: GLSL, Geometric Algebra</li>
 		</ul>
@@ -97,8 +132,9 @@
 		<ul>
 		<li>SIGGRAPH</li>
 		<li>Writing a Paper</li>
-		<li>Leaps forward through time</li>
+		<li>State of the art evolution over the past 20 years</li>
 		<li>Presentations and Final Submissions</li>
+		<br/>
 		<li>PROJECT: Your presentations</li>
 		<li>TECHNICAL: Research &amp Publishing</li>
 		</ul>
