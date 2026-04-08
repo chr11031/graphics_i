@@ -1,0 +1,128 @@
+<html>
+	<head>
+		<title>Project 0: Points, Lines, Curves, &amp Transformations</title>
+		<style>
+			table {border: 1px solid;}
+		</style>
+	</head>	
+
+	<body>
+		<h1>Project 0: Points, Lines, &amp Transformations</h1>	
+		<p>
+			Name: Yours here</br>
+			Date: Submission date
+		</p>
+		
+		<table>
+			<tr>
+				<td>
+					<canvas style="background-color: #AAAAAA;" 
+							width=320px 
+							height=240px 
+							id="frame_canvas"></canvas>
+				</td>
+				<td>
+					<canvas style="background-color: #AAAAAA;" 
+							width=320px 
+							height=240px 
+							id="frame_webgl"></canvas>				
+				</td>			
+			</tr>
+			<tr>
+				<td style="text-align: center">
+					Canvas
+				</td>
+				<td style="text-align: center">
+					WebGL
+				</td>			
+			</tr>
+		</table>
+	
+		</br>
+		
+		<h2>Description</h2>
+		In this assignment, you will create:</br>
+		
+		<ol>
+			<li>Point3 Class that supports operations:
+				<ul>
+					<li>Normalization</li>
+					<li>Dot Product</li>
+					<li>Cross Product</li>
+				</ul>
+			</li>
+			
+			<li>Mat3 Transformations that supports operations:
+				<ul>
+					<li>Multiplication with other Mat3 matrices</li>
+					<li>Multiplication with Point3 values</li>
+					<li>Inversion</li>
+					<li>Transpose</li>
+					<li>Helper function for translations</li>
+					<li>Helper function for scalings</li>
+					<li>Helper function for rotations</li>
+					<li>Helper function for viewport transformation</li>
+				</ul>
+			</li>
+			<li>Canvas Renderer which:
+				<ul>
+					<li>Maps Normalized Device Coordinates (NDC) to the left view screen.</li>
+					<li>Clips points outside the viewport space</li>
+					<li>Draws Lines</li>
+					<li>Draws Points</li>
+				</ul>
+			</li>
+			<li>WebGL Renderer which:
+				<ul>
+					<li>Maps Normalized Device Coordinates (NDC) to the left view screen.</li>
+					<li>Uses glBegin(...), glEnd(...), glVertex2f(...), glColor3f(...) commands</li>
+					<li>Draws Lines</li>
+					<li>Draws Points</li>
+				</ul>
+			</li>
+			<li>Feature support:
+				<ul>
+					<li>Zoom in control (slider)</li>
+					<li>Arbitrary Transformation Support</li>
+					<li>Color Range Support</li>
+				</ul>		
+			</li>
+		</ol>
+		
+		<h2>Score Breakdown</h2>
+		<table>
+			<tr>
+				<td style="border: 1px solid">Point3</td>
+				<td style="border: 1px solid">10 pts</td>
+				<td style="border: 1px solid">All features implemented (-1pt per missing feature)</td>
+			</tr>
+			<tr>
+				<td style="border: 1px solid">Mat3</td>
+				<td style="border: 1px solid">10 pts</td>
+				<td style="border: 1px solid">All features implemented (-1pt per missing feature)</td>
+			</tr>
+			<tr>
+				<td style="border: 1px solid">Canvas Renderer</td>
+				<td style="border: 1px solid">10 pts</td>
+				<td style="border: 1px solid">Rendering matches WebGL version (graded on quality), clips correctly</td>
+			</tr>
+			<tr>
+				<td style="border: 1px solid">WebGL Renderer</td>
+				<td style="border: 1px solid">10 pts</td>
+				<td style="border: 1px solid">GL Functions are used (-2pt per missing), performant</td>
+			</tr>
+			<tr>
+				<td style="border: 1px solid">Feature Support</td>
+				<td style="border: 1px solid">10 pts</td>
+				<td style="border: 1px solid">3pts per feature, +1 for all 3</td>
+			</tr>
+		</table>		
+		<br/>
+		
+
+		
+
+
+	</body>
+
+</html>
