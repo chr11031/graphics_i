@@ -6,6 +6,10 @@
 		</style>
 		<script>
 			var ctx = null;
+			var ctx_width = null;
+			var ctx_height = null;
+			var slider = null;
+			var slider_view = null;
 
 			class vec2 
 			{
@@ -16,7 +20,15 @@
 				}
 			}
 
-			
+			class line2
+			{
+				constructor(sx, sy, ex, ey)
+				{
+					this.start = new vec2(sx, sy);
+					this.end = new vec2(ex, ey);
+				}
+			}
+
 			class rgba
 			{
 				constructor(r, g, b, a)
@@ -29,164 +41,362 @@
 			
 			}
 
-
 			function draw_pixel(pt, color)
-			{
+			{			
 				ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
 				ctx.fillRect(pt.x, pt.y, 1, 1);
 			}
 			
 			
-			function vec2_swap(a, b)
+			function clear_canvas(color)
 			{
-				var tmp_x = a.x;
-				var tmp_y = a.y;
-				a.x = b.x;
-				a.y = b.y;
-				b.x = tmp_x;
-				b.y = tmp_y;
+				ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
+				ctx.fillRect(0, 0, ctx_width, ctx_height);			
 			}
 			
-			function draw_line(in_start, in_end, color)
+			
+			function draw_line(line_start, line_end, color)
 			{
-				// Local copies
-				var pt_start = new vec2(in_start.x, in_start.y);
-				var pt_end = new vec2(in_end.x, in_end.y);
+				var pt_start = new vec2(Math.round(line_start.x), Math.round(line_start.y));
+				var pt_end = new vec2(Math.round(line_end.x), Math.round(line_end.y));
 			
-			
-				// Fold the left half over (eliminate all 7 West* cases)
-				if (pt_end.x < pt_start.x)
-				{
-					vec2_swap(pt_start, pt_end);
-				}
-				else
-				{
-					// Fold vertical lines up-down to just be up (eliminate South case)
-					if (pt_end.x == pt_start.x && pt_end.y < pt_start.y)
-					{
-						vec2_swap(pt_start, pt_end);
-					}
-				}
-			
-			
-				// 4 special cases
 				var dx = pt_end.x - pt_start.x;
 				var dy = pt_end.y - pt_start.y;
+				
+				// Fold the left side over to the right, bottom to the top
+				var dir_x = 1;
+				if (dx < 0)
+				{
+					dir_x = -1;
+					dx = -dx;
+				}
+				var dir_y = 1;
+				if (dy < 0)
+				{
+					dir_y = -1;
+					dy = -dy;
+				}
+			
+			
+				// 8 special cases
 				if (dx == 0)						
 				{
-					// 1. North
-					while (pt_start.y <= pt_end.y)
+					// North or South
+					while (pt_start.y != pt_end.y)
 					{
 						draw_pixel(pt_start, color);
-						pt_start.y += 1;
+						pt_start.y += dir_y;
 					}
+					draw_pixel(pt_start, color);
 					return;
 				}
 				else if (dy == 0) 					
 				{
-					// 2. East
-					while (pt_start.x <= pt_end.x)
+					// East or West
+					while (pt_start.x != pt_end.x)
 					{
 						draw_pixel(pt_start, color);
-						pt_start.x += 1;
+						pt_start.x += dir_x;
 					}
+					draw_pixel(pt_start, color);
 					return;
 				}
 				else if (dx == dy)
 				{
-					// 3. North-East
-					while (pt_start.x <= pt_end.x)
+					// North-East, South-East, North-West, South-West
+					while (pt_start.x != pt_end.x)
 					{
 						draw_pixel(pt_start, color);
-						pt_start.x += 1;
-						pt_start.y += 1;						
+						pt_start.x += dir_x;
+						pt_start.y += dir_y;						
 					}
-					return;
-				}
-				else if (dx == -dy)
-				{
-					// 4. South-East
-					while (pt_start.x <= pt_end.x)
-					{
-						draw_pixel(pt_start, color);
-						pt_start.x += 1;
-						pt_start.y -= 1;
-					}
+					draw_pixel(pt_start, color);
 					return;
 				}
 				
 
-				// 4 general cases (Bresenham)
-				if (dy > 0) 
+				// 8 general cases
+				if (dx > dy)
 				{
-					// 5. North-East-East
-					if (dx > dy)
+					// North-East-East, South-East-East, North-West-West, South-West-West
+					var error = 2*dy - dx;
+					while (pt_start.x != pt_end.x)
 					{
-						
+						draw_pixel(pt_start, color);
+
+						pt_start.x += dir_x;
+						if (error > 0)
+						{
+							pt_start.y += dir_y;
+							error += 2*(dy - dx);
+						}
+						else
+						{
+							error += 2*dy;
+						}
 					}
-					// 6. North-East-North
-					else
-					{
-					
-					}
+					draw_pixel(pt_start, color);
+					return;						
 				}
 				else
 				{
-					// 7. South-East-East
-					if (dx > -dy)
+					// North-East-North, North-West-North, South-West-South, South-East-South
+					var error = 2*dx - dy;
+					while (pt_start.y != pt_end.y)
 					{
-					
+						draw_pixel(pt_start, color);
+						
+						pt_start.y += dir_y;
+						if (error > 0)
+						{
+							pt_start.x += dir_x;
+							error += 2*(dx - dy);
+						}
+						else
+						{
+							error += 2*dx;
+						}
 					}
-					// 8. South-East-South
-					else
-					{
-					
-					}
+					draw_pixel(pt_start, color);
+					return;
 				}
 			}
 
-			
-			function draw_bezier_cubic(pt_start, pt_end, control_a, control_b, color)
-			{
-			
-			}
 
+			function vec2_lerp(v0, v1, coef)
+			{
+				var dx = v1.x - v0.x;
+				var dy = v1.y - v0.y;
+				
+				var v = new vec2(v0.x + coef*dx,
+								 v0.y + coef*dy);
+				
+				return v;
+			}
+			
+			
+			function add_cubic_bezier_points(points_list, prev_pt, ctr0_pt, ctr1_pt, next_pt, num_steps)
+			{
+				if (num_steps < 1)
+				{
+					alert('Invalid number of bezier curve steps. Must be at least 1');
+					return;
+				}
+				
+				var i = 0;
+				var coef = 0.0;
+				var step_size = 1.0 / num_steps;
+				while (i < (num_steps+1))
+				{
+					var a0 = vec2_lerp(prev_pt, ctr0_pt, coef);
+					var a1 = vec2_lerp(ctr0_pt, ctr1_pt, coef);
+					var a2 = vec2_lerp(ctr1_pt, next_pt, coef);
+					
+					var b0 = vec2_lerp(a0, a1, coef);
+					var b1 = vec2_lerp(a1, a2, coef);
+					
+					var c0 = vec2_lerp(b0, b1, coef);
+					
+					points_list.push(c0);
+					
+					coef += step_size;					
+					i += 1;
+				}					
+			}
+			
+			
+			function path_parser(d)
+			{		
+				var i;
+
+				// Segment out the text
+				i = 0;
+				var segments = [];
+				while (i < d.length)
+				{
+					if (d[i] == ' ')
+					{
+						i += 1;
+					}
+					else if (d[i] == 'M' || d[i] == 'L' || d[i] == 'H' || d[i] == 'V' || d[i] == 'C' || d[i] == 'Z')
+					{
+						segments.push(d[i])
+						i += 1;
+					}
+					else if (d[i] >= 'A' && d[i] <= 'Z')
+					{
+						alert('Unsupported SVG Path sentinel ' + d[i]);
+						return;
+					}
+					else
+					{
+						var num = parseFloat(d.substring(i));
+						if (isNaN(num))
+						{
+							alert('Failed to parse number at input: ' + d[i] + '__' + i + '__' + d);
+							return;
+						}
+						
+						segments.push(num);
+						var str_num = num.toString();
+						i += str_num.length;
+					}
+					
+					continue;				
+				}
+
+				
+				// Recover the line segments / cubic bezier curve samples
+				var points = [];
+				var mark_pt = new vec2(0, 0);
+				var prev_pt = new vec2(0, 0);
+				var ctr0_pt = new vec2(0, 0);
+				var ctr1_pt = new vec2(0, 0);
+				var curr_pt = new vec2(0, 0);
+				i = 0;
+				while (i < segments.length)
+				{
+					if (segments[i] == "C")
+					{
+						prev_pt.x = curr_pt.x;
+						prev_pt.y = curr_pt.y;
+						
+						ctr0_pt.x = parseFloat(segments[i+1]);
+						ctr0_pt.y = parseFloat(segments[i+2]);
+
+						ctr1_pt.x = parseFloat(segments[i+3]);
+						ctr1_pt.y = parseFloat(segments[i+4]);
+					
+						curr_pt.x = parseFloat(segments[i+5])
+						curr_pt.y = parseFloat(segments[i+6]);						
+						
+						add_cubic_bezier_points(points, prev_pt, ctr0_pt, ctr1_pt, curr_pt, parseInt(slider.value));					 
+						
+						i += 7;
+					}
+					else if (segments[i] == "M")
+					{
+						mark_pt.x = parseFloat(segments[i+1])
+						mark_pt.y = parseFloat(segments[i+2]);											
+					
+						curr_pt.x = mark_pt.x;
+						curr_pt.y = mark_pt.y;						
+						
+						if (i != 0)
+						{
+							points.push( null );
+						}
+
+						points.push( new vec2(curr_pt.x, curr_pt.y) );
+						
+						i += 3;
+					}
+					else if (segments[i] == "L")
+					{
+						curr_pt.x = parseFloat(segments[i+1])
+						curr_pt.y = parseFloat(segments[i+2]);						
+						
+						points.push( new vec2(curr_pt.x, curr_pt.y) );
+						
+						i += 3;
+					}
+					else if (segments[i] == "H")
+					{
+						curr_pt.x = parseFloat(segments[i+1])
+						points.push( new vec2(curr_pt.x, curr_pt.y) );						 
+
+						i += 2;
+					}
+					else if (segments[i] == "V")
+					{
+						curr_pt.y = parseFloat(segments[i+1])
+						points.push( new vec2(curr_pt.x, curr_pt.y) );						 
+
+						i += 2;					
+					}
+					else if (segments[i] == "Z")
+					{
+						if (points.length < 1)
+						{
+							alert("Bad SVG path preprocessing. Found 'Z' too early");
+							return;
+						}
+						
+						points.push( new vec2(mark_pt.x, mark_pt.y) );
+						i += 1;
+					}
+					else
+					{
+						alert("SVG path preprocessing error");
+						return;
+					}
+				}
+				
+				return points;
+			}
+			
+			
+			function draw_svg_canvas()
+			{
+				var color = new rgba(0, 0, 255, 255);
+				
+				var paths = document.getElementsByTagName("path");
+				i = 0;
+				while (i < paths.length)
+				{
+					var path_text = paths[i].getAttribute('d');
+					var path_points = path_parser(path_text);
+					
+					var l = 0;
+					while (l < path_points.length - 1)
+					{
+						if (path_points[l+1] != null)
+						{
+							draw_line(path_points[l], path_points[l+1], color);		
+							l += 1;
+						}
+						else
+						{
+							l += 2;
+						}
+					}
+					
+					i += 1;
+				}
+			}
+			
+			function update_slider_view()
+			{
+				slider_view.textContent = slider.value + " Sample(s)";
+			}
+			
+			function update_samples()
+			{
+				update_slider_view();
+				
+				clear_canvas(new rgba(176, 176, 176, 255));
+				draw_svg_canvas();
+			}
 			
 			function main()
 			{
-				ctx = document.getElementById("frame_canvas").getContext("2d");
+				var frame_canvas = document.getElementById("frame_canvas");
+				ctx = frame_canvas.getContext("2d");
+				ctx_width = frame_canvas.width;
+				ctx_height = frame_canvas.height;
 
+				slider = document.getElementById("samples_slider");
+				slider_view = document.getElementById("samples_slider_count");
 
-				var pt = new vec2(10, 30);
-				var color = new rgba(255, 255, 0, 255);
-					
-					
-				var end = new vec2(30, 10);
-				
-				draw_line(end, pt, color);
-
-
-				/*
-					
-				while (pt.x < 100)
-				{
-					draw_pixel(pt, color);
-					pt.x += 1;
-				}
-				
-				*/
-			
-			
-				var v = document.getElementsByTagName("path");
-				console.log(v);
-				alert(v.innerHTML);
+				draw_svg_canvas();
+				update_slider_view();
 			}
 		</script>
 		
 	</head>	
 
 	<body onload="main()">
-		<h1>Project 0: Points, Lines, &amp Transformations</h1>	
+		<h1>Project 0: Points, Lines, &amp Curves</h1>	
 		<p>
 			Name: Yours here</br>
 			Date: Submission date
@@ -198,17 +408,18 @@
 					<canvas	id="frame_canvas"
 							style="background-color: #AAAAAA;" 
 							width=480 
-							height=320px>
+							height=480>
 					</canvas>
 				</td>
 				<td>
 					<svg 	id="svg_canvas"
 							width="480" 
-							height="320" 
-							viewBox="0 0 311 393" 
+							height="480" 
+							viewBox="0 0 480 480" 
 							fill="gray" 
 							xmlns="http://www.w3.org/2000/svg">
 								<g clip-path="url(#clip0_1402_2)">
+								<path d="M178.113 268.996H158.613L137.659 327.462H156.415L158.597 319.749H177.676L179.94 327.462H199.035L178.08 268.996H178.113ZM162.284 307.558L168.218 286.604L174.394 307.558H162.3H162.284Z" fill="black"/>
 								<path d="M0 340.073H16.5566V378.134H40.3405V391.263H0V340.073Z" fill="#1257D1"/>
 								<path d="M67.6492 338.844C83.9794 338.844 94.8932 350.033 94.8932 365.652C94.8932 381.271 83.9794 392.459 67.6492 392.459C51.319 392.459 40.4052 381.271 40.4052 365.652C40.4052 350.033 51.319 338.844 67.6492 338.844ZM67.6492 379.719C71.8692 379.719 78.3366 377.067 78.3366 365.668C78.3366 354.269 71.8692 351.618 67.6492 351.618C63.4292 351.618 56.9618 354.269 56.9618 365.668C56.9618 377.067 63.4292 379.719 67.6492 379.719Z" fill="#1257D1"/>
 								<path d="M13.8564 233.134C13.8564 186.343 137.109 94.7154 137.109 64.8359C137.109 54.7629 125.145 51.8364 112.776 51.8364C86.8413 51.8364 14.6487 83.0256 14.6487 129.171C14.6487 146.067 25.417 155.493 45.757 160.036C30.3807 168.476 8.5855 163.432 -0.0161743 148.864V255.366H27.438C19.2729 250.661 13.8403 241.833 13.8403 233.151L13.8564 233.134Z" fill="black"/>
@@ -217,7 +428,6 @@
 								<path d="M277.711 72.2249C252.294 99.8408 186.132 204.532 186.132 238.987C186.132 247.767 192.519 252.31 202.091 252.31C220.846 252.31 245.568 223.724 245.568 190.579C252.359 195.445 255.544 202.608 255.544 209.755C255.544 228.365 241.089 246.813 221.849 255.382H310.679V0H201.007L155.218 52.2406C163.335 57.4954 166.601 64.464 166.601 70.3494C166.601 103.479 40.9549 209.415 40.9549 238.648C40.9549 245.148 44.1401 246.441 51.319 246.441C109.154 246.441 210.078 109.865 239.974 72.1764L277.727 72.2249H277.711Z" fill="#1257D1"/>
 								<path d="M0.129303 301.964C0.129303 322.094 10.2023 328.998 28.3111 328.998C47.7295 328.998 56.412 320.8 56.412 302.045V268.996H37.2523V304.001C37.2523 310.339 35.2151 314.721 28.3111 314.721C20.437 314.721 19.3052 309.773 19.3052 304.001V268.996H0.129303V301.964Z" fill="black"/>
 								<path d="M83.559 327.462V307.639L83.1548 298.552L82.3464 289.951H82.5081L93.147 327.462H106.47L117.109 289.951H117.27L116.284 300.493L116.042 309.596V327.462H133.261V268.996H110.124L99.8084 305.456L89.4929 268.996H66.3557V327.462H83.559Z" fill="black"/>
-								<path d="M178.113 268.996H158.613L137.659 327.462H156.415L158.597 319.749H177.676L179.94 327.462H199.035L178.08 268.996H178.113ZM162.284 307.558L168.218 286.604L174.394 307.558H162.3H162.284Z" fill="black"/>
 								<path d="M251.583 285.957C250.208 275.722 242.819 267.444 226.57 267.444C211.953 267.444 201.234 273.701 201.234 286.119C201.234 308.448 234.848 302.352 234.848 311.212C234.848 313.977 231.679 315.513 226.893 315.513C225.018 315.513 222.997 315.028 221.444 314.058C219.811 313.088 218.68 311.536 218.275 309.434H199.924C200.328 319.976 210.401 328.998 225.826 328.998C241.251 328.998 253.183 322.417 253.183 308.852C253.183 287.574 219.569 293.023 219.569 284.259C219.569 282.141 221.428 280.929 225.664 280.929C227.524 280.929 229.238 281.252 230.612 281.98C231.986 282.707 233.053 283.936 233.377 285.957H251.566H251.583Z" fill="black"/>
 								<path d="M309.127 285.957C307.736 275.722 300.363 267.444 284.114 267.444C269.497 267.444 258.778 273.701 258.778 286.119C258.778 308.448 292.392 302.352 292.392 311.212C292.392 313.977 289.223 315.513 284.437 315.513C282.562 315.513 280.541 315.028 278.988 314.058C277.371 313.088 276.223 311.536 275.819 309.434H257.468C257.872 319.976 267.945 328.998 283.37 328.998C298.795 328.998 310.743 322.417 310.743 308.852C310.743 287.574 277.129 293.023 277.129 284.259C277.129 282.141 278.988 280.929 283.224 280.929C285.084 280.929 286.798 281.252 288.172 281.98C289.563 282.707 290.614 283.936 290.937 285.957H309.127Z" fill="black"/>
 								<path d="M152.017 391.247H135.913L130.124 360.058H129.979L124.336 391.247H108.151L93.5512 340.057H109.801L116.349 371.667H116.494L122.962 340.057H137.562L143.884 372.103H144.029L150.723 340.057H167.053L152.001 391.247H152.017Z" fill="#1257D1"/>
@@ -227,7 +437,7 @@
 								</g>
 								<defs>
 								<clipPath id="clip0_1402_2">
-								<rect width="550" height="555" fill="gray"/>
+								<rect width="480" height="480" fill="gray"/>
 								</clipPath>
 								</defs>
 				</svg>
@@ -235,7 +445,9 @@
 			</tr>
 			<tr>
 				<td style="text-align: center">
-					Canvas
+					Canvas<br/>
+					<input type="range" onchange="update_samples()" id="samples_slider" value="1" min="1" max="24"/>
+					<label id="samples_slider_count" for="samples_slider">1</label>
 				</td>
 				<td style="text-align: center">
 					SVG import
