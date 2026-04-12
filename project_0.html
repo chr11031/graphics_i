@@ -10,6 +10,7 @@
 			var ctx_height = null;
 			var slider = null;
 			var slider_view = null;
+			var edge_list = null;
 
 			class vec2 
 			{
@@ -39,12 +40,17 @@
 					this.a = a;
 				}
 			
-			}
+			}			
 
 			function draw_pixel(pt, color)
 			{			
 				ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
 				ctx.fillRect(pt.x, pt.y, 1, 1);
+			}
+			
+			function draw_edge(pt, color)
+			{
+				draw_pixel(pt, color);
 			}
 			
 			
@@ -84,10 +90,10 @@
 					// North or South
 					while (pt_start.y != pt_end.y)
 					{
-						draw_pixel(pt_start, color);
+						draw_edge(pt_start, color);
 						pt_start.y += dir_y;
 					}
-					draw_pixel(pt_start, color);
+					draw_edge(pt_start, color);
 					return;
 				}
 				else if (dy == 0) 					
@@ -95,10 +101,10 @@
 					// East or West
 					while (pt_start.x != pt_end.x)
 					{
-						draw_pixel(pt_start, color);
+						draw_edge(pt_start, color);
 						pt_start.x += dir_x;
 					}
-					draw_pixel(pt_start, color);
+					draw_edge(pt_start, color);
 					return;
 				}
 				else if (dx == dy)
@@ -106,11 +112,11 @@
 					// North-East, South-East, North-West, South-West
 					while (pt_start.x != pt_end.x)
 					{
-						draw_pixel(pt_start, color);
+						draw_edge(pt_start, color);
 						pt_start.x += dir_x;
 						pt_start.y += dir_y;						
 					}
-					draw_pixel(pt_start, color);
+					draw_edge(pt_start, color);
 					return;
 				}
 				
@@ -122,7 +128,7 @@
 					var error = 2*dy - dx;
 					while (pt_start.x != pt_end.x)
 					{
-						draw_pixel(pt_start, color);
+						draw_edge(pt_start, color);
 
 						pt_start.x += dir_x;
 						if (error > 0)
@@ -135,7 +141,7 @@
 							error += 2*dy;
 						}
 					}
-					draw_pixel(pt_start, color);
+					draw_edge(pt_start, color);
 					return;						
 				}
 				else
@@ -144,7 +150,7 @@
 					var error = 2*dx - dy;
 					while (pt_start.y != pt_end.y)
 					{
-						draw_pixel(pt_start, color);
+						draw_edge(pt_start, color);
 						
 						pt_start.y += dir_y;
 						if (error > 0)
@@ -157,7 +163,7 @@
 							error += 2*dx;
 						}
 					}
-					draw_pixel(pt_start, color);
+					draw_edge(pt_start, color);
 					return;
 				}
 			}
@@ -336,14 +342,81 @@
 			}
 			
 			
+			function parse_hex_char(character)
+			{
+				if (character >= '0' && character <= '9')
+				{
+					return parseInt(character);
+				}
+				else if (character == 'A')
+				{
+					return 10;
+				}
+				else if (character == 'B')
+				{
+					return 11;
+				}
+				else if (character == 'C')
+				{
+					return 12;
+				}
+				else if (character == 'D')
+				{
+					return 13;
+				}
+				else if (character == 'E')
+				{
+					return 14;
+				}
+				else if (character == 'F')
+				{
+					return 15;
+				}
+				
+				else
+				{
+					alert('Bogus hex character: ' + character);
+					return null;
+				}
+			}
+			
+			
+			function fill_to_rgba(fill)
+			{
+				var color = null;
+				if (fill == 'black')
+				{
+					color = new rgba(0, 0, 0, 255);
+				}
+				else if (fill[0] == '#')
+				{
+					var r = parse_hex_char(fill[1]) * 16 + 
+							parse_hex_char(fill[2]);
+					var g = parse_hex_char(fill[3]) * 16 + 
+							parse_hex_char(fill[4]);
+					var b = parse_hex_char(fill[5]) * 16 + 
+							parse_hex_char(fill[6]);
+							
+					color = new rgba(r, g, b, 255);
+				}
+				else
+				{
+					alert('Unsupported text string for SVG fill color: ' + fill);
+					return null;
+				}
+				
+				return color;
+			}
+			
+			
 			function draw_svg_canvas()
 			{
-				var color = new rgba(0, 0, 255, 255);
-				
 				var paths = document.getElementsByTagName("path");
 				i = 0;
 				while (i < paths.length)
 				{
+					var color = fill_to_rgba(paths[i].getAttribute('fill'));
+
 					var path_text = paths[i].getAttribute('d');
 					var path_points = path_parser(path_text);
 					
@@ -378,6 +451,8 @@
 				draw_svg_canvas();
 			}
 			
+						
+			
 			function main()
 			{
 				var frame_canvas = document.getElementById("frame_canvas");
@@ -387,6 +462,8 @@
 
 				slider = document.getElementById("samples_slider");
 				slider_view = document.getElementById("samples_slider_count");
+
+				edge_list = new Array(ctx_height);
 
 				draw_svg_canvas();
 				update_slider_view();
