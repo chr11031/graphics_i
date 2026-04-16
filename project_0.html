@@ -1,6 +1,6 @@
 <html>
 	<head>
-		<title>Project 0: Points, Lines, Curves, &amp Transformations</title>
+		<title>Project 0: Lines, Lerps, &amp Logos</title>
 		<style>
 			table {border: 1px solid;}
 		</style>
@@ -21,15 +21,6 @@
 				}
 			}
 
-			class line2
-			{
-				constructor(sx, sy, ex, ey)
-				{
-					this.start = new vec2(sx, sy);
-					this.end = new vec2(ex, ey);
-				}
-			}
-
 			class rgba
 			{
 				constructor(r, g, b, a)
@@ -42,15 +33,156 @@
 			
 			}			
 
+			class line2_list
+			{
+				constructor(fill)
+				{
+					this.fill = new rgba(fill.r, fill.g, fill.b, fill.a);
+					this.pts = [];
+				}
+				
+				add_pt(pt)
+				{
+					this.pts.push(new vec2(pt.x, pt.y));
+				}
+				
+				count()
+				{
+					return this.pts.length;
+				}
+			}
+			
+			class line2_list_set
+			{
+				constructor()
+				{
+					this.lists = [];
+				}
+								
+				begin_new_list(fill)
+				{
+					this.lists.push(new line2_list(fill));
+					return this.last();
+				}
+				
+				add_from_other_set(set)
+				{
+					// For each element in set
+					var list_i = 0;
+					while (list_i < set.count())
+					{
+						var other_list = set.lists[list_i];					
+						var our_list = this.begin_new_list(other_list.fill);
+					
+						var pt_i = 0;
+						while (pt_i < other_list.count())
+						{
+							our_list.add_pt(other_list.pts[pt_i]);
+								
+							pt_i += 1;
+						}
+						
+						list_i += 1;
+					}					
+				}
+				
+				count()
+				{
+					return this.lists.length;
+				}
+				
+				last()
+				{
+					return this.lists[this.lists.length - 1];
+				}
+			}
+			
+
+			class edge2
+			{
+				constructor (x, color)
+				{
+					this.x = x;
+					this.color = color;
+					this.next = null;
+				}
+			}
+
 			function draw_pixel(pt, color)
 			{			
 				ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
 				ctx.fillRect(pt.x, pt.y, 1, 1);
 			}
 			
-			function draw_edge(pt, color)
+
+			var curr_dy = 0;
+			function insert_edge(pt, dy, color)
 			{
-				draw_pixel(pt, color);
+				// Don't create edge lists for Vertical peaks
+				var old_dy = curr_dy;
+				curr_dy = Math.sign(dy);
+				if (old_dy == -curr_dy)
+				{
+					return;
+				}
+
+				
+				
+		
+			
+				edge = new edge2(pt.x, color);
+				
+				if (edge_list[pt.y] == null)
+				{
+					edge_list[pt.y] = edge;
+					return;
+				}
+				
+				var lesser = null;
+				var greater = null;
+				var ref = edge_list[pt.y];
+				while (ref != null)
+				{
+					if ( ref.x == pt.x )
+					{
+						return; // Already present (do not "insert")
+					}
+					
+					if (ref.x < pt.x)
+					{
+						if ( lesser == null || (lesser != null && ref.x > lesser.x) )
+						{
+							lesser = ref;
+						}
+					}
+					if (ref.x > pt.x)
+					{
+						if ( greater == null || (greater != null && ref.x < greater.x) )
+						{
+							greater = ref;
+						}							
+						break;
+					}
+					
+					ref = ref.next;
+				}
+				
+				
+				// Insert reference to linked list
+				if (lesser == null)
+				{
+					edge_list[pt.y] = lesser == null ? edge : lesser;
+				}
+				else
+				{
+					edge.next = lesser.next;
+					lesser.next = edge;
+				}
+				
+				if (greater != null)
+				{
+					edge.next = greater;
+				}				
 			}
 			
 			
@@ -68,6 +200,8 @@
 			
 				var dx = pt_end.x - pt_start.x;
 				var dy = pt_end.y - pt_start.y;
+				var og_dx = dx;
+				var og_dy = dy;
 				
 				// Fold the left side over to the right, bottom to the top
 				var dir_x = 1;
@@ -90,10 +224,10 @@
 					// North or South
 					while (pt_start.y != pt_end.y)
 					{
-						draw_edge(pt_start, color);
+						draw_pixel(pt_start, color);
+						insert_edge(pt_start, og_dy, color);
 						pt_start.y += dir_y;
 					}
-					draw_edge(pt_start, color);
 					return;
 				}
 				else if (dy == 0) 					
@@ -101,10 +235,9 @@
 					// East or West
 					while (pt_start.x != pt_end.x)
 					{
-						draw_edge(pt_start, color);
+						draw_pixel(pt_start, color);
 						pt_start.x += dir_x;
 					}
-					draw_edge(pt_start, color);
 					return;
 				}
 				else if (dx == dy)
@@ -112,11 +245,11 @@
 					// North-East, South-East, North-West, South-West
 					while (pt_start.x != pt_end.x)
 					{
-						draw_edge(pt_start, color);
+						draw_pixel(pt_start, color);
+						insert_edge(pt_start, og_dy, color);
 						pt_start.x += dir_x;
 						pt_start.y += dir_y;						
 					}
-					draw_edge(pt_start, color);
 					return;
 				}
 				
@@ -128,11 +261,12 @@
 					var error = 2*dy - dx;
 					while (pt_start.x != pt_end.x)
 					{
-						draw_edge(pt_start, color);
-
+						draw_pixel(pt_start, color);
+						
 						pt_start.x += dir_x;
 						if (error > 0)
 						{
+							insert_edge(pt_start, og_dy, color);
 							pt_start.y += dir_y;
 							error += 2*(dy - dx);
 						}
@@ -141,7 +275,6 @@
 							error += 2*dy;
 						}
 					}
-					draw_edge(pt_start, color);
 					return;						
 				}
 				else
@@ -150,8 +283,9 @@
 					var error = 2*dx - dy;
 					while (pt_start.y != pt_end.y)
 					{
-						draw_edge(pt_start, color);
+						draw_pixel(pt_start, color);
 						
+						insert_edge(pt_start, og_dy, color);
 						pt_start.y += dir_y;
 						if (error > 0)
 						{
@@ -163,7 +297,6 @@
 							error += 2*dx;
 						}
 					}
-					draw_edge(pt_start, color);
 					return;
 				}
 			}
@@ -181,7 +314,7 @@
 			}
 			
 			
-			function add_cubic_bezier_points(points_list, prev_pt, ctr0_pt, ctr1_pt, next_pt, num_steps)
+			function add_cubic_bezier_points(list, prev_pt, ctr0_pt, ctr1_pt, next_pt, num_steps)
 			{
 				if (num_steps < 1)
 				{
@@ -203,15 +336,15 @@
 					
 					var c0 = vec2_lerp(b0, b1, coef);
 					
-					points_list.push(c0);
+					list.add_pt( c0 );
 					
 					coef += step_size;					
 					i += 1;
 				}					
 			}
 			
-			
-			function path_parser(d)
+		
+			function parse_path(d, fill)
 			{		
 				var i;
 
@@ -251,9 +384,12 @@
 					continue;				
 				}
 
+
+
+				var set = new line2_list_set();
+			
 				
 				// Recover the line segments / cubic bezier curve samples
-				var points = [];
 				var mark_pt = new vec2(0, 0);
 				var prev_pt = new vec2(0, 0);
 				var ctr0_pt = new vec2(0, 0);
@@ -276,7 +412,7 @@
 						curr_pt.x = parseFloat(segments[i+5])
 						curr_pt.y = parseFloat(segments[i+6]);						
 						
-						add_cubic_bezier_points(points, prev_pt, ctr0_pt, ctr1_pt, curr_pt, parseInt(slider.value));					 
+						add_cubic_bezier_points(set.last(), prev_pt, ctr0_pt, ctr1_pt, curr_pt, parseInt(slider.value));					 
 						
 						i += 7;
 					}
@@ -288,12 +424,8 @@
 						curr_pt.x = mark_pt.x;
 						curr_pt.y = mark_pt.y;						
 						
-						if (i != 0)
-						{
-							points.push( null );
-						}
-
-						points.push( new vec2(curr_pt.x, curr_pt.y) );
+						set.begin_new_list(fill);
+						set.last().add_pt( new vec2(curr_pt.x, curr_pt.y) );
 						
 						i += 3;
 					}
@@ -302,33 +434,33 @@
 						curr_pt.x = parseFloat(segments[i+1])
 						curr_pt.y = parseFloat(segments[i+2]);						
 						
-						points.push( new vec2(curr_pt.x, curr_pt.y) );
+						set.last().add_pt( new vec2(curr_pt.x, curr_pt.y) );
 						
 						i += 3;
 					}
 					else if (segments[i] == "H")
 					{
 						curr_pt.x = parseFloat(segments[i+1])
-						points.push( new vec2(curr_pt.x, curr_pt.y) );						 
+						set.last().add_pt( new vec2(curr_pt.x, curr_pt.y) );						 
 
 						i += 2;
 					}
 					else if (segments[i] == "V")
 					{
 						curr_pt.y = parseFloat(segments[i+1])
-						points.push( new vec2(curr_pt.x, curr_pt.y) );						 
+						set.last().add_pt( new vec2(curr_pt.x, curr_pt.y) );						 
 
 						i += 2;					
 					}
 					else if (segments[i] == "Z")
 					{
-						if (points.length < 1)
+						if (set.last().count() < 1)
 						{
 							alert("Bad SVG path preprocessing. Found 'Z' too early");
 							return;
 						}
 						
-						points.push( new vec2(mark_pt.x, mark_pt.y) );
+						set.last().add_pt( new vec2(mark_pt.x, mark_pt.y) );
 						i += 1;
 					}
 					else
@@ -338,7 +470,35 @@
 					}
 				}
 				
-				return points;
+
+				return set;
+
+
+				/*
+				// Remove redundant points
+				var filtered = [];
+				filtered.push( points[0] == null ? null : new vec2(points[0].x, points[0].y) );
+				i = 1;
+				var last = points[0];
+				while (i < points.length)
+				{
+					var last = filtered[filtered.length-1];
+					var curr = points[i];
+				
+					if (last != null && curr != null)
+					{
+						if (Math.round(last.x) != Math.round(curr.x) ||
+							Math.round(last.y) != Math.round(curr.y))
+							{
+								filtered.push(new vec2(curr.x, curr.y));
+							}
+					}
+					
+					i += 1;
+				}
+				
+				return filtered;
+				*/
 			}
 			
 			
@@ -408,50 +568,126 @@
 				return color;
 			}
 			
+
+			function fill_edges()
+			{
+				var pt = new vec2(0,0);
+				while (pt.y < ctx_height)
+				{
+					// Something to draw
+					if (edge_list[pt.y] != null)
+					{
+						var start = edge_list[pt.y];
+						var end = start.next;
+						while (end != null && start.x > end.x)
+						{
+							start = end;
+							end = end.next;						
+						}
+						
+						while (end != null)
+						{
+							pt.x = start.x;
+							
+							while (pt.x <= end.x)
+							{
+								draw_pixel(pt, edge_list[pt.y].color);
+								pt.x += 1;
+							}
+							
+							// Advance to next pair
+							start = end;
+							end = end.next;
+							while (end != null && start.x + 1 == end.x)
+							{
+								start = end;
+								end = end.next;						
+							}
+							
+							// Advance again, so every other pair is drawn (convexity rule)
+							if (end != null)
+							{
+								start = end;
+								end = end.next;
+								while (end != null && start.x + 1 == end.x)
+								{
+									start = end;
+									end = end.next;						
+								}
+							}
+						}
+					
+						// Deallocate edge list
+						edge_list[pt.y] = null;					
+					}
+					
+					pt.y += 1;
+				}
+			}
+			
 			
 			function draw_svg_canvas()
 			{
+				var combined_sets = new line2_list_set();
 				var paths = document.getElementsByTagName("path");
+			
+				var i;
+				
+				// Build a complete set of line lists
 				i = 0;
 				while (i < paths.length)
 				{
-					var color = fill_to_rgba(paths[i].getAttribute('fill'));
+					var path_set = parse_path( paths[i].getAttribute('d'), 
+											   fill_to_rgba(paths[i].getAttribute('fill')) );
+												  
+					combined_sets.add_from_other_set(path_set);
+					i += 1;
+				}
 
-					var path_text = paths[i].getAttribute('d');
-					var path_points = path_parser(path_text);
-					
-					var l = 0;
-					while (l < path_points.length - 1)
+				
+				// For the whole set
+				i = 0;
+				while (i < combined_sets.count())
+				{
+					// Draw each line list in the set
+					var list = combined_sets.lists[i];					
+					var pt_i = 1;
+					while (pt_i < list.count())
 					{
-						if (path_points[l+1] != null)
-						{
-							draw_line(path_points[l], path_points[l+1], color);		
-							l += 1;
-						}
-						else
-						{
-							l += 2;
-						}
+						draw_line(list.pts[pt_i-1], list.pts[pt_i], list.fill);
+						pt_i += 1;
 					}
-					
+				
 					i += 1;
 				}
 			}
+
 			
 			function update_slider_view()
 			{
 				slider_view.textContent = slider.value + " Sample(s)";
 			}
+
 			
 			function update_samples()
 			{
 				update_slider_view();
 				
-				clear_canvas(new rgba(176, 176, 176, 255));
+				clear_canvas(new rgba(255, 255, 255, 255));
 				draw_svg_canvas();
 			}
-			
-						
+
+				
+			function init_edge_list()
+			{
+				edge_list = new Array(ctx_height);
+				var i = 0;
+				while (i < ctx_height)
+				{
+					edge_list[i] = null;
+					i += 1;
+				}
+			}	
 			
 			function main()
 			{
@@ -463,8 +699,7 @@
 				slider = document.getElementById("samples_slider");
 				slider_view = document.getElementById("samples_slider_count");
 
-				edge_list = new Array(ctx_height);
-
+				init_edge_list();	
 				draw_svg_canvas();
 				update_slider_view();
 			}
@@ -483,7 +718,7 @@
 			<tr>
 				<td>
 					<canvas	id="frame_canvas"
-							style="background-color: #AAAAAA;" 
+							style="background-color: #FFFFFF;" 
 							width=480 
 							height=480>
 					</canvas>
