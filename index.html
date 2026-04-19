@@ -12,7 +12,7 @@
 		Summer 2026</br>
 		Dane Christensen</br>
 		Dandeneau 307</br>
-		dane_christense@uml.edu</br>
+		dane_christensen@uml.edu</br>
 		<h2>Course Description</h2>
 		<p>
 			The graphics course is taught over 6 weeks and 
@@ -20,6 +20,99 @@
 		</p>
 
 
+		<h2>Course Overview:</h2>
+		<h3>0. Introduction </h3>
+		<ul>
+		<li>Representations and Methods (Discrete, Parametric, etc &amp Raster, Trace, Radiosity)
+		<li>Rasteriztion Pipeline Overview</li>
+		</ul>
+
+		<h3>1. Lines &amp Lerps</h3>
+		<ul>
+		<li>Fundamental representations of color, discrete vs continuous representations of shapes and light. Basic color theory.</li>
+		<li>Frame buffers, Point arithmetic, reading and writing to images</li>
+		<li>Bresenham, Wu Algorithms, Diamond Line Rules, API/DX11 Raster notes</li>
+		<li>Bezier Curves, their history, quadratic and cubic forms, their applications (SVG, fonts, etc)</li>
+		<li>Convex vs Concave Polygons, Ear Clipping and related methods (Monotone and otherwise)</li>
+		<li>OpenGL Immediate Mode</li>
+		<br/>
+		<li>PROJECT: <a href="project_0.html">SVG Renderer</a></li>
+		</ul>
+
+		<h3>2. Transformations &amp Triangles</h3>
+		<ul>
+		<li>Dot Products, Determinants, Barycentric Coordinates</li>
+		<li>Matrix multiplication, inversion, rank deficiency, concatenation of matrices</li>
+		<li>Rotation, Translation, Scaling, matrix concatenation</li>
+		<li>Fractals: Julia, Mandelbrot, IFS
+		<li>Scanline and parallel rasterization of triangles</li>
+		<li>OpenGL Immediate vs. Retained Mode</li>
+		<li>Catmull Clark Surfaces</li>
+		<li>Patches and Nerbs</li>
+		<br/>
+		<li>PROJECT: <a href="project_1.html">Object Modeling</a></li>
+		</ul>
+
+		<h3>3. Signals &amp Sampling</h3>
+		<ul>
+		<li>Blitting Images onto the screen</li>
+		<li>Nyquist Theorem, Sampling Techniques for Triangles and Images</li>
+		<li>2D Textures, Texture Arrays, 3D Textures, Cubemaps, Skyboxes (IBR)</li>
+		<li>SSAA, MSAA, Bilinear, Trilinear (MIP-MAPPED) Anisotropic Filtering</li>
+		<li>Procedurally generated textures</li>
+		<br/>
+		<li>PROJECT: <a href="project_2.html">MSAA Triangles</a></li>
+		</ul>
+		
+		<h3>4. Projections &amp Pipelines</h3>
+		<ul>
+		<li>OpenGL API and shading model
+		<li>Vertex Shaders, Gouraud Shading</li>
+		<li>Normal Transformations</li>
+		<li>Model, View, Projection matrices</li>
+		<li>Homogeneous Coordinates, Points at Infinity</li>
+		<li>Object Hierarchy &amp Scene Graph</li>
+		<li>Viewport Transformations</li>
+		<li>Perspective (Similar Triangles), Orthographic Matrices</li>
+		<li>Pipeline stages and elements: Z-Buffer, Stencil Buffer, Logical Operations</li>
+		<li>Rendering API evolutions, extensions, multiple passes: Early Z Test, &amp multiple render targets (Framebuffers, RenderBuffers, Textures)</li>
+		<li>Clipping algorithms, Back Face Culling</li>
+		<li>Perspective Correct interpolation</li>
+		<li>Transform Feedback, Geometry, Tesselation, and Compute Shaders</li>
+		<li>Multi Pass Rendering; G-Buffer, Visibility-Buffer, A &amp K Buffers</li>
+		<li>Cel Shading</li>
+		<li>PCF Shadows</li>
+		<br/>
+		<li>ITW: create_renderpass, bind_render_pass, set_uniform, create_uniform, bind_uniform, clipping</li>
+		<li>GL: glBindRenderTarget, glUniform</li>
+		<li>PROJECT: <a href="project_3.html">Shadow Mapped Scene</a></li>
+		</ul>
+	
+		<h3>5. Rays &amp Radiosity</h3>
+		<ul>
+		<li>Fragment Shaders</li>
+		<li>Glyph Based SDFs</li>
+		<li>Ray Marching</li>
+		<li>The Rendering Equation</li>
+		<li>BRDF, BSSRDF, etc</li>
+		<li>Dot, Cross Products, Wedge Products</li>
+		<li>Point, Directional, Area Lights</li>
+		<li>Ambient, Diffuse, Phong Shading</li>
+		<li>Post Processing, HDR, Gamma Correction</li>
+		<br/>
+		<li>PROJECT: <a href="project_4.html">Mixed Rendering With Ray Marched Clouds</a></li>
+		</ul>
+				
+		<h3>6. Projects &amp Presentations</h3>
+		<ul>
+		<li>SIGGRAPH</li>
+		<li>Writing a Paper</li>
+		<li>State of the art evolution over the past 20 years</li>
+		<li>Presentations and Final Submissions</li>
+		<br/>
+		<li>PROJECT: <a href="project_final.html">Final Project</a></li>
+		</ul>
+	
 		<h2>Class Project</h2>
 		<p>
 			By the conclusion of this course, you will be expected to write a short survey paper on a graphics topic of your choice. The paper should be 4-8 pages long including figures and will be supplemented by a live demo &amp 7-10 minute presentation completed in class during the final week of the period. You may choose from one of the following topics below for your paper:
@@ -27,7 +120,7 @@
 				<li>Bresenham's Algorithm(s)</li>
 				<li>ACES Color Mapping</li>
 				<li>Billboarding in 3D environments</li>
-				<li>Cell Shading &amp Non-realistic effects</li>
+				<li>Extensions to Cel Shading &amp Other Non-realistic effects</li>
 				<li>Ray Marching (See ShaderToy for examples)</li>
 				<li>Physics Simulation (Navier Stokes)</li>
 				<li>Hierarchical Acceleration Data Structures (Octrees, BVH, etc)</li>
@@ -42,118 +135,31 @@
 		</p>
 
 		
+		
 		<h2>Score Breakdown</h2>
 		<table>
 			<tr>
-				<td>Assignments</td>
-				<td>80%</td>
-				<td>5 projects, due on select weekends</td>
+				<td>Midterms 1 &amp 2</td>
+				<td>10% (each)</td>
+				<td>Held middle of 1st and 2nd terms</td>
 			</tr>
 			<tr>
-				<td>Presentation</td>
+				<td>Final</td>
+				<td>20%</td>
+				<td>Held last day of class</td>
+			</tr>
+			<tr>
+				<td>Minor Projects (5 Total)</td>
+				<td>10% (each)</td>
+				<td>4 projects, due on select weekends</td>
+			</tr>
+			<tr>
+				<td>Final Project</td>
 				<td>10%</td>
 				<td>Scheduled during last week of class</td>
 			</tr>
-			<tr>
-				<td>Project</td>
-				<td>10%</td>
-				<td>Due last day of class</td>
-			</tr>
 		</table>		
 		<br/>
-		
-		<h2>Course Overview:</h2>
-		<h3>0. Introduction </h3>
-		<ul>
-		<li>Representations and Methods (Discrete, Parametric, etc &amp Raster, Trace, Radiosity)
-		<li>Rasteriztion Pipeline Overview</li>
-		</ul>
-
-		<h3>1. Lines, Lerps, &amp Logos</h3>
-		<ul>
-		<li>Bresenham, Wu Algorithms</li>
-		<li>Bezier Curves</li>
-		<li>OpenGL Immediate Mode</li>
-		<br/>
-		<li>ITW: Create_Matrix, Draw_Line, Draw_Pixel, Set_Color</li>
-		<li>GL: glClearColor, glBegin, glVertex2f</li>
-		<li>PROJECT: <a href="project_0.html">Points, Lines, &amp Curves</a></li>
-		<li>TECHNICAL: Vertex Shader, Homogeneous Coordinates, Canvas Rendering</li>
-		</ul>
-
-		<h3>2. Transformations, Barycentric Coordinates &amp Sampling </h3>
-		<ul>
-		<li>Scanline and parallel rasterization of triangles</li>
-		<li>Sampling Techniques for Triangles and Images</li>
-		<li>OpenGL Retained Mode</lI
-		<br/>
-		<li>ITW: draw_triangle, display_lists, create_vbo, create_vbo, bind_vbo, bind_vao, set_shader(VERTEX &amp FRAGMENT, ...)</li>
-		<li>GL: glGenBuffers, glDeleteBuffers, glVertexAttrib, glBindVertexArray, glBindBuffer</li>
-		<li>PROJECT: Smooth Triangles &amp Texturing, Billboarded Planets In Motion (2D)</li>
-		<li>TECHNICAL: Fragment Shader, MSAA, FSAA, Fragment vs Pixel, Z &amp Stencil Buffers, Math Products</li>
-		</ul>
-		
-		<h3>3. Transformations, Projection and Multi-Pass Rendering </h3>
-		<ul>
-		<li>Rotation, Translation, Scaling, Homogeneous Coordinates</li>
-		<li>Matrix multiplication, inversion, concatenation of matrices</li>
-		<li>Object Hierarchy &amp Scene Graph</li>
-		<li>Fractals: Julia, Mandelbrot, IFS
-		<li>Viewport Transformations</li>
-		<li>Perspective (Similar Triangles), Orthographic Matrices</li>
-		<li>Clipping algorithms</li>
-		<li>Perspective Correction</li>
-		<li>Model, View, Projection matrices</li>
-		<li>Multi Pass Rendering</li>
-		<br/>
-		<li>ITW: create_renderpass, bind_render_pass, set_uniform, create_uniform, bind_uniform, clipping</li>
-		<li>GL: glBindRenderTarget, glUniform</li>
-		<li>PROJECT: Shadow Mapped 3D View</li>
-		<li>TECHNICAL: Projection, Clipping, PCF, Multi-Pass Rendering, Depth &amp Stencil Buffers</li>
-		</ul>
-	
-		<h3>4. Compute &amp Curves &amp Surfaces</h3>
-		<ul>
-		<li>Bezier Curves (Cameras and GPU Textured projection)</li>
-		<li>Compute Based Catmull Clark Surfaces</li>
-		<li>Transform Feedback, Geometry, Tesselation, and Compute Shaders</li>
-		<li>Patches and Nerbs</li>
-		<li>Texture Based SDFs, Blinn Cubic Bezier Renderer</li>
-		<br/>
-		<li>ITW: create_renderpass, bind_render_pass</li>
-		<li>GL: glUniform, glDispatchCompute</li>
-		<li>PROJECT: Glyph Renderer &amp 2D Camera Motion</li>
-		<li>TECHNICAL: Geometry, Tesselation, Compute Shaders, Bezier, Scanline Rendering, Fonts</li>
-		</ul>
-				
-		<h3>5. Shading &amp Light Models</h3>
-		<ul>
-		<li>Normal Transformations</li>
-		<li>Dot, Cross Products, Wedge Products</li>
-		<li>Point, Directiona, Area Lights</li>
-		<li>Ambient, Diffuse, Phong Shading</li>
-		<li>Post Processing, HDR, Gamma Correction</li>
-		<li>Cubemaps, Skyboxes, and IBR</li>
-		<br/>
-		<li>ITW: NA</li>
-		<li>GL: GLSL reflect, refract, dot, cross, etc operations</li>
-		<li>PROJECT: Blinn-Phong Shaded Reference Objects</li>
-		<li>TECHNICAL: GLSL, Geometric Algebra</li>
-		</ul>
-		
-		<h3>6. Projects &amp Presentations</h3>
-		<ul>
-		<li>SIGGRAPH</li>
-		<li>Writing a Paper</li>
-		<li>State of the art evolution over the past 20 years</li>
-		<li>Presentations and Final Submissions</li>
-		<br/>
-		<li>ITW: NA</li>
-		<li>GL: NA</li>
-		<li>PROJECT: Your presentations</li>
-		<li>TECHNICAL: Research &amp Publishing</li>
-		</ul>
-	
 	</body>
 
 

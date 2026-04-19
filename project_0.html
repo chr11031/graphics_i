@@ -1,6 +1,6 @@
 <html>
 	<head>
-		<title>Project 0: Lines, Lerps, &amp Logos</title>
+		<title>Project 0: SVG Renderer</title>
 		<style>
 			table {border: 1px solid;}
 		</style>
@@ -29,6 +29,14 @@
 					this.g = g;
 					this.b = b;
 					this.a = a;
+				}
+				
+				equals(other)
+				{
+					return (this.r == other.r &&
+							this.g == other.g &&
+							this.b == other.b &&
+							this.a == other.a);
 				}
 			
 			}			
@@ -114,10 +122,18 @@
 				ctx.fillRect(pt.x, pt.y, 1, 1);
 			}
 			
+			
+			function draw_pixel_mark_edge(pt, color)
+			{
+				draw_pixel(pt, color);
+				insert_edge(pt, 0, color);
+			}
+			
 
 			var curr_dy = 0;
 			function insert_edge(pt, dy, color)
-			{
+			{			
+				/*
 				// Don't create edge lists for Vertical peaks
 				var old_dy = curr_dy;
 				curr_dy = Math.sign(dy);
@@ -125,7 +141,7 @@
 				{
 					return;
 				}
-
+				*/
 				
 				
 		
@@ -224,8 +240,8 @@
 					// North or South
 					while (pt_start.y != pt_end.y)
 					{
-						draw_pixel(pt_start, color);
-						insert_edge(pt_start, og_dy, color);
+						draw_pixel_mark_edge(pt_start, color);
+						// insert_edge(pt_start, og_dy, color);
 						pt_start.y += dir_y;
 					}
 					return;
@@ -235,7 +251,7 @@
 					// East or West
 					while (pt_start.x != pt_end.x)
 					{
-						draw_pixel(pt_start, color);
+						draw_pixel_mark_edge(pt_start, color);
 						pt_start.x += dir_x;
 					}
 					return;
@@ -245,8 +261,8 @@
 					// North-East, South-East, North-West, South-West
 					while (pt_start.x != pt_end.x)
 					{
-						draw_pixel(pt_start, color);
-						insert_edge(pt_start, og_dy, color);
+						draw_pixel_mark_edge(pt_start, color);
+						// insert_edge(pt_start, og_dy, color);
 						pt_start.x += dir_x;
 						pt_start.y += dir_y;						
 					}
@@ -261,12 +277,12 @@
 					var error = 2*dy - dx;
 					while (pt_start.x != pt_end.x)
 					{
-						draw_pixel(pt_start, color);
+						draw_pixel_mark_edge(pt_start, color);
 						
 						pt_start.x += dir_x;
 						if (error > 0)
 						{
-							insert_edge(pt_start, og_dy, color);
+							// insert_edge(pt_start, og_dy, color);
 							pt_start.y += dir_y;
 							error += 2*(dy - dx);
 						}
@@ -283,9 +299,9 @@
 					var error = 2*dx - dy;
 					while (pt_start.y != pt_end.y)
 					{
-						draw_pixel(pt_start, color);
+						draw_pixel_mark_edge(pt_start, color);
 						
-						insert_edge(pt_start, og_dy, color);
+						// insert_edge(pt_start, og_dy, color);
 						pt_start.y += dir_y;
 						if (error > 0)
 						{
@@ -571,54 +587,56 @@
 
 			function fill_edges()
 			{
+				return;
 				var pt = new vec2(0,0);
 				while (pt.y < ctx_height)
 				{
-					// Something to draw
-					if (edge_list[pt.y] != null)
+					if (edge_list[pt.y] == null)
 					{
-						var start = edge_list[pt.y];
-						var end = start.next;
-						while (end != null && start.x > end.x)
+						pt.y += 1;
+						continue;
+					}
+					
+					var start = edge_list[pt.y];
+					while (start != null)
+					{					
+						// Find rightmost segment start
+						while (
+								   start.next != null && 
+								   ( (Math.round(start.x) == Math.round(start.next.x)) || (Math.round(start.x+1) == Math.round(start.next.x)) ) &&
+								   start.color.equals(start.next.color)
+							  )
 						{
-							start = end;
-							end = end.next;						
+							
+							start = start.next;
+						}
+
+						// Find segmend end
+						end = start;
+						if (end.next != null) 
+						{
+							end = end.next;
+						}
+						while (		
+									end.next != null && 
+								    ( (Math.round(end.x) == Math.round(end.next.x)) || (Math.round(end.x+1) == Math.round(end.next.x)) ) &&
+									end.color.equals(end.next.color))
+						{
+							end = end.next;
 						}
 						
-						while (end != null)
+
+						// Draw the span
+						pt.x = start.x;
+						while (pt.x <= end.x)
 						{
-							pt.x = start.x;
-							
-							while (pt.x <= end.x)
-							{
-								draw_pixel(pt, edge_list[pt.y].color);
-								pt.x += 1;
-							}
-							
-							// Advance to next pair
-							start = end;
-							end = end.next;
-							while (end != null && start.x + 1 == end.x)
-							{
-								start = end;
-								end = end.next;						
-							}
-							
-							// Advance again, so every other pair is drawn (convexity rule)
-							if (end != null)
-							{
-								start = end;
-								end = end.next;
-								while (end != null && start.x + 1 == end.x)
-								{
-									start = end;
-									end = end.next;						
-								}
-							}
+							draw_pixel(pt, edge_list[pt.y].color);
+							pt.x += 1;
 						}
-					
-						// Deallocate edge list
-						edge_list[pt.y] = null;					
+						
+						
+						// Advance forward
+						start = end.next;							
 					}
 					
 					pt.y += 1;
@@ -644,6 +662,10 @@
 					i += 1;
 				}
 
+
+				// Clear edge data
+				reset_edge_list();	
+
 				
 				// For the whole set
 				i = 0;
@@ -660,6 +682,8 @@
 				
 					i += 1;
 				}
+				
+				fill_edges();
 			}
 
 			
@@ -678,7 +702,7 @@
 			}
 
 				
-			function init_edge_list()
+			function reset_edge_list()
 			{
 				edge_list = new Array(ctx_height);
 				var i = 0;
@@ -699,7 +723,6 @@
 				slider = document.getElementById("samples_slider");
 				slider_view = document.getElementById("samples_slider_count");
 
-				init_edge_list();	
 				draw_svg_canvas();
 				update_slider_view();
 			}
@@ -746,6 +769,7 @@
 								<path d="M171.904 340.073H216.384V353.186H188.461V359.573H213.829V371.764H188.461V378.15H217.208V391.279H171.904V340.089V340.073Z" fill="#1257D1"/>
 								<path d="M224.064 340.073H240.62V378.134H264.404V391.263H224.064V340.073Z" fill="#1257D1"/>
 								<path d="M270.128 340.073H286.685V378.134H310.469V391.263H270.128V340.073Z" fill="#1257D1"/>
+
 								</g>
 								<defs>
 								<clipPath id="clip0_1402_2">
