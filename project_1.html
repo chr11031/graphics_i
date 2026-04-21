@@ -1,8 +1,8 @@
 <html>
 	<head>
-		<title>Project 0: SVG Outline</title>
+		<title>Project 1: SVG Fill</title>
 		<style>
-			table {border: 0px solid;}
+			table {border: 1px solid;}
 		</style>
 		<script>
 			var ctx = null;
@@ -664,10 +664,9 @@
 				}
 
 
-				// Clear edge data
-				reset_edge_list();	
 
-				
+				/*
+
 				// For the whole set
 				i = 0;
 				while (i < combined_sets.count())
@@ -684,7 +683,8 @@
 					i += 1;
 				}
 				
-				fill_edges();
+				*/
+				
 			}
 
 			
@@ -732,7 +732,7 @@
 	</head>	
 
 	<body onload="main()">
-		<h1>Project 0: SVG Outline</h1>	
+		<h1>Project 1: SVG Fill</h1>	
 		<p>
 			Name: Yours here</br>
 			Date: Submission date
@@ -740,161 +740,55 @@
 		
 		<table>
 			<tr>
-				<td width=320px>
-				</td>
 				<td>
 					<canvas	id="frame_canvas"
 							style="background-color: #FFFFFF;" 
-							width=320 
+							width=480 
 							height=480>
 					</canvas>
-					<br/>
-					<svg 	style="position: relative;top:-480px; margin-bottom:-480px"
-							width="320" 
-							alt="SVG Logo for UMass Lowell"
-							height="480" 							
-							viewBox="0 0 320 480" 
-							fill="gray" 
-							xmlns="http://www.w3.org/2000/svg">																
-								<path
-									 d="m 0,340.073 h 16.5566 v 38.061 h 23.7839 v 13.129 H 0 Z"
-									 fill="#1257d1"
-									 id="path2"
-									 clip-path="url(#clipPath982)"
-									 style="stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0;fill:none" />
-								  <path
-									 d="m 67.6492,338.844 c 16.3302,0 27.244,11.189 27.244,26.808 0,15.619 -10.9138,26.807 -27.244,26.807 -16.3302,0 -27.244,-11.188 -27.244,-26.807 0,-15.619 10.9138,-26.808 27.244,-26.808 z m 0,40.875 c 4.22,0 10.6874,-2.652 10.6874,-14.051 0,-11.399 -6.4674,-14.05 -10.6874,-14.05 -4.22,0 -10.6874,2.651 -10.6874,14.05 0,11.399 6.4674,14.051 10.6874,14.051 z"
-									 fill="#1257d1"
-									 id="path4"
-									 clip-path="url(#clipPath976)"
-									 style="stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0;fill:none" />
-								  <path
-									 d="m 13.8564,233.134 c 0,-46.791 123.2526,-138.4186 123.2526,-168.2981 0,-10.073 -11.964,-12.9995 -24.333,-12.9995 -25.9347,0 -98.1273,31.1892 -98.1273,77.3346 0,16.896 10.7683,26.322 31.1083,30.865 -15.3763,8.44 -37.1715,3.396 -45.7731743,-11.172 V 255.366 H 27.438 C 19.2729,250.661 13.8403,241.833 13.8403,233.151 Z"
-									 fill="#000000"
-									 id="path6"
-									 clip-path="url(#clipPath970)"
-									 style="fill:none;fill-opacity:1;stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0" />
-								  <path
-									 d="m 122.752,44.6899 c 14.276,0 25.19,3.0558 32.45,7.5507 L 109.671,0 H 0 V 121.296 C 11.5767,94.0848 50.7854,44.6899 122.752,44.6899 Z"
-									 fill="#000000"
-									 id="path8"
-									 clip-path="url(#clipPath964)"
-									 style="fill:none;fill-opacity:1;stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0" />
-								  <path
-									 d="M 62.8633,255.35 H 114.425 V 226.02 C 97.6581,239.23 80.0343,250.079 62.8633,255.35 Z"
-									 fill="#000000"
-									 id="path10"
-									 clip-path="url(#clipPath958)"
-									 style="stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0;fill:none" />
-								  <path
-									 d="m 277.711,72.2249 c -25.417,27.6159 -91.579,132.3071 -91.579,166.7621 0,8.78 6.387,13.323 15.959,13.323 18.755,0 43.477,-28.586 43.477,-61.731 6.791,4.866 9.976,12.029 9.976,19.176 0,18.61 -14.455,37.058 -33.695,45.627 h 88.83 V 0 H 201.007 l -45.789,52.2406 c 8.117,5.2548 11.383,12.2234 11.383,18.1088 0,33.1296 -125.6461,139.0656 -125.6461,168.2986 0,6.5 3.1852,7.793 10.3641,7.793 57.835,0 158.759,-136.576 188.655,-174.2646 l 37.753,0.0485 z"
-									 fill="#1257d1"
-									 id="path12"
-									 clip-path="url(#clipPath952)"
-									 style="fill:none;fill-opacity:1;stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0" />
-								  <path
-									 d="m 0.129303,301.964 c 0,20.13 10.072997,27.034 28.181797,27.034 19.4184,0 28.1009,-8.198 28.1009,-26.953 V 268.996 H 37.2523 v 35.005 c 0,6.338 -2.0372,10.72 -8.9412,10.72 -7.8741,0 -9.0059,-4.948 -9.0059,-10.72 V 268.996 H 0.129303 Z"
-									 fill="#000000"
-									 id="path14"
-									 clip-path="url(#clipPath946)"
-									 style="fill:none;fill-opacity:1;stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0" />
-								  <path
-									 d="m 83.559,327.462 v -19.823 l -0.4042,-9.087 -0.8084,-8.601 h 0.1617 l 10.6389,37.511 h 13.323 l 10.639,-37.511 h 0.161 l -0.986,10.542 -0.242,9.103 v 17.866 h 17.219 v -58.466 h -23.137 l -10.3156,36.46 -10.3155,-36.46 H 66.3557 v 58.466 z"
-									 fill="#000000"
-									 id="path16"
-									 clip-path="url(#clipPath940)"
-									 style="fill:none;fill-opacity:1;stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0" />
-								  <path
-									 d="m 178.113,268.996 h -19.5 l -20.954,58.466 h 18.756 l 2.182,-7.713 h 19.079 l 2.264,7.713 h 19.095 L 178.08,268.996 Z m -15.829,38.562 5.934,-20.954 6.176,20.954 H 162.3 Z"
-									 fill="#000000"
-									 id="path18"
-									 clip-path="url(#clipPath934)"
-									 style="fill:none;fill-opacity:1;stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0" />
-								  <path
-									 d="m 251.583,285.957 c -1.375,-10.235 -8.764,-18.513 -25.013,-18.513 -14.617,0 -25.336,6.257 -25.336,18.675 0,22.329 33.614,16.233 33.614,25.093 0,2.765 -3.169,4.301 -7.955,4.301 -1.875,0 -3.896,-0.485 -5.449,-1.455 -1.633,-0.97 -2.764,-2.522 -3.169,-4.624 h -18.351 c 0.404,10.542 10.477,19.564 25.902,19.564 15.425,0 27.357,-6.581 27.357,-20.146 0,-21.278 -33.614,-15.829 -33.614,-24.593 0,-2.118 1.859,-3.33 6.095,-3.33 1.86,0 3.574,0.323 4.948,1.051 1.374,0.727 2.441,1.956 2.765,3.977 h 18.189 z"
-									 fill="#000000"
-									 id="path20"
-									 clip-path="url(#clipPath928)"
-									 style="fill:none;fill-opacity:1;stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0" />
-								  <path
-									 d="m 309.127,285.957 c -1.391,-10.235 -8.764,-18.513 -25.013,-18.513 -14.617,0 -25.336,6.257 -25.336,18.675 0,22.329 33.614,16.233 33.614,25.093 0,2.765 -3.169,4.301 -7.955,4.301 -1.875,0 -3.896,-0.485 -5.449,-1.455 -1.617,-0.97 -2.765,-2.522 -3.169,-4.624 h -18.351 c 0.404,10.542 10.477,19.564 25.902,19.564 15.425,0 27.373,-6.581 27.373,-20.146 0,-21.278 -33.614,-15.829 -33.614,-24.593 0,-2.118 1.859,-3.33 6.095,-3.33 1.86,0 3.574,0.323 4.948,1.051 1.391,0.727 2.442,1.956 2.765,3.977 z"
-									 fill="#000000"
-									 id="path22"
-									 clip-path="url(#clipPath922)"
-									 style="fill:none;fill-opacity:1;stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0" />
-								  <path
-									 d="m 152.017,391.247 h -16.104 l -5.789,-31.189 h -0.145 l -5.643,31.189 h -16.185 l -14.5998,-51.19 h 16.2498 l 6.548,31.61 h 0.145 l 6.468,-31.61 h 14.6 l 6.322,32.046 h 0.145 l 6.694,-32.046 h 16.33 l -15.052,51.19 z"
-									 fill="#1257d1"
-									 id="path24"
-									 clip-path="url(#clipPath916)"
-									 style="stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0;fill:none" />
-								  <path
-									 d="m 171.904,340.073 h 44.48 v 13.113 h -27.923 v 6.387 h 25.368 v 12.191 h -25.368 v 6.386 h 28.747 v 13.129 h -45.304 v -51.19 z"
-									 fill="#1257d1"
-									 id="path26"
-									 clip-path="url(#clipPath910)"
-									 style="stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0;fill:none" />
-								  <path
-									 d="m 224.064,340.073 h 16.556 v 38.061 h 23.784 v 13.129 h -40.34 z"
-									 fill="#1257d1"
-									 id="path28"
-									 clip-path="url(#clipPath904)"
-									 style="stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0;fill:none" />
-								  <path
-									 d="m 270.128,340.073 h 16.557 v 38.061 h 23.784 v 13.129 h -40.341 z"
-									 fill="#1257d1"
-									 id="path30"
-									 clip-path="url(#clipPath898)"
-									 style="stroke:#000000;stroke-opacity:0.26666668;stroke-dasharray:4, 2;stroke-dashoffset:0;fill:none" />
-
-
-					</svg>
 				</td>
-				<td width=320px>
-					<div hidden>
-						<svg 	id="svg_canvas"
-								width="320" 
-								alt="SVG Logo for UMass Lowell"
-								height="480" 							
-								viewBox="0 0 320 480" 
-								fill="gray" 
-								xmlns="http://www.w3.org/2000/svg">
-									<g clip-path="url(#clip0_1402_2)">
-									<path d="M178.113 268.996H158.613L137.659 327.462H156.415L158.597 319.749H177.676L179.94 327.462H199.035L178.08 268.996H178.113ZM162.284 307.558L168.218 286.604L174.394 307.558H162.3H162.284Z" fill="black"/>
-									<path d="M0 340.073H16.5566V378.134H40.3405V391.263H0V340.073Z" fill="#1257D1"/>
-									<path d="M67.6492 338.844C83.9794 338.844 94.8932 350.033 94.8932 365.652C94.8932 381.271 83.9794 392.459 67.6492 392.459C51.319 392.459 40.4052 381.271 40.4052 365.652C40.4052 350.033 51.319 338.844 67.6492 338.844ZM67.6492 379.719C71.8692 379.719 78.3366 377.067 78.3366 365.668C78.3366 354.269 71.8692 351.618 67.6492 351.618C63.4292 351.618 56.9618 354.269 56.9618 365.668C56.9618 377.067 63.4292 379.719 67.6492 379.719Z" fill="#1257D1"/>
-									<path d="M13.8564 233.134C13.8564 186.343 137.109 94.7154 137.109 64.8359C137.109 54.7629 125.145 51.8364 112.776 51.8364C86.8413 51.8364 14.6487 83.0256 14.6487 129.171C14.6487 146.067 25.417 155.493 45.757 160.036C30.3807 168.476 8.5855 163.432 -0.0161743 148.864V255.366H27.438C19.2729 250.661 13.8403 241.833 13.8403 233.151L13.8564 233.134Z" fill="black"/>
-									<path d="M122.752 44.6899C137.028 44.6899 147.942 47.7457 155.202 52.2406L109.671 0H0V121.296C11.5767 94.0848 50.7854 44.6899 122.752 44.6899Z" fill="black"/>
-									<path d="M62.8633 255.35H114.425V226.02C97.6581 239.23 80.0343 250.079 62.8633 255.35Z" fill="black"/>
-									<path d="M277.711 72.2249C252.294 99.8408 186.132 204.532 186.132 238.987C186.132 247.767 192.519 252.31 202.091 252.31C220.846 252.31 245.568 223.724 245.568 190.579C252.359 195.445 255.544 202.608 255.544 209.755C255.544 228.365 241.089 246.813 221.849 255.382H310.679V0H201.007L155.218 52.2406C163.335 57.4954 166.601 64.464 166.601 70.3494C166.601 103.479 40.9549 209.415 40.9549 238.648C40.9549 245.148 44.1401 246.441 51.319 246.441C109.154 246.441 210.078 109.865 239.974 72.1764L277.727 72.2249H277.711Z" fill="#1257D1"/>
-									<path d="M0.129303 301.964C0.129303 322.094 10.2023 328.998 28.3111 328.998C47.7295 328.998 56.412 320.8 56.412 302.045V268.996H37.2523V304.001C37.2523 310.339 35.2151 314.721 28.3111 314.721C20.437 314.721 19.3052 309.773 19.3052 304.001V268.996H0.129303V301.964Z" fill="black"/>
-									<path d="M83.559 327.462V307.639L83.1548 298.552L82.3464 289.951H82.5081L93.147 327.462H106.47L117.109 289.951H117.27L116.284 300.493L116.042 309.596V327.462H133.261V268.996H110.124L99.8084 305.456L89.4929 268.996H66.3557V327.462H83.559Z" fill="black"/>
-									<path d="M251.583 285.957C250.208 275.722 242.819 267.444 226.57 267.444C211.953 267.444 201.234 273.701 201.234 286.119C201.234 308.448 234.848 302.352 234.848 311.212C234.848 313.977 231.679 315.513 226.893 315.513C225.018 315.513 222.997 315.028 221.444 314.058C219.811 313.088 218.68 311.536 218.275 309.434H199.924C200.328 319.976 210.401 328.998 225.826 328.998C241.251 328.998 253.183 322.417 253.183 308.852C253.183 287.574 219.569 293.023 219.569 284.259C219.569 282.141 221.428 280.929 225.664 280.929C227.524 280.929 229.238 281.252 230.612 281.98C231.986 282.707 233.053 283.936 233.377 285.957H251.566H251.583Z" fill="black"/>
-									<path d="M309.127 285.957C307.736 275.722 300.363 267.444 284.114 267.444C269.497 267.444 258.778 273.701 258.778 286.119C258.778 308.448 292.392 302.352 292.392 311.212C292.392 313.977 289.223 315.513 284.437 315.513C282.562 315.513 280.541 315.028 278.988 314.058C277.371 313.088 276.223 311.536 275.819 309.434H257.468C257.872 319.976 267.945 328.998 283.37 328.998C298.795 328.998 310.743 322.417 310.743 308.852C310.743 287.574 277.129 293.023 277.129 284.259C277.129 282.141 278.988 280.929 283.224 280.929C285.084 280.929 286.798 281.252 288.172 281.98C289.563 282.707 290.614 283.936 290.937 285.957H309.127Z" fill="black"/>
-									<path d="M152.017 391.247H135.913L130.124 360.058H129.979L124.336 391.247H108.151L93.5512 340.057H109.801L116.349 371.667H116.494L122.962 340.057H137.562L143.884 372.103H144.029L150.723 340.057H167.053L152.001 391.247H152.017Z" fill="#1257D1"/>
-									<path d="M171.904 340.073H216.384V353.186H188.461V359.573H213.829V371.764H188.461V378.15H217.208V391.279H171.904V340.089V340.073Z" fill="#1257D1"/>
-									<path d="M224.064 340.073H240.62V378.134H264.404V391.263H224.064V340.073Z" fill="#1257D1"/>
-									<path d="M270.128 340.073H286.685V378.134H310.469V391.263H270.128V340.073Z" fill="#1257D1"/>
+				<td>
+					<svg 	id="svg_canvas"
+							width="480" 
+							height="480" 
+							viewBox="0 0 480 480" 
+							fill="gray" 
+							xmlns="http://www.w3.org/2000/svg">
+								<g clip-path="url(#clip0_1402_2)">
+								<path d="M178.113 268.996H158.613L137.659 327.462H156.415L158.597 319.749H177.676L179.94 327.462H199.035L178.08 268.996H178.113ZM162.284 307.558L168.218 286.604L174.394 307.558H162.3H162.284Z" fill="black"/>
+								<path d="M0 340.073H16.5566V378.134H40.3405V391.263H0V340.073Z" fill="#1257D1"/>
+								<path d="M67.6492 338.844C83.9794 338.844 94.8932 350.033 94.8932 365.652C94.8932 381.271 83.9794 392.459 67.6492 392.459C51.319 392.459 40.4052 381.271 40.4052 365.652C40.4052 350.033 51.319 338.844 67.6492 338.844ZM67.6492 379.719C71.8692 379.719 78.3366 377.067 78.3366 365.668C78.3366 354.269 71.8692 351.618 67.6492 351.618C63.4292 351.618 56.9618 354.269 56.9618 365.668C56.9618 377.067 63.4292 379.719 67.6492 379.719Z" fill="#1257D1"/>
+								<path d="M13.8564 233.134C13.8564 186.343 137.109 94.7154 137.109 64.8359C137.109 54.7629 125.145 51.8364 112.776 51.8364C86.8413 51.8364 14.6487 83.0256 14.6487 129.171C14.6487 146.067 25.417 155.493 45.757 160.036C30.3807 168.476 8.5855 163.432 -0.0161743 148.864V255.366H27.438C19.2729 250.661 13.8403 241.833 13.8403 233.151L13.8564 233.134Z" fill="black"/>
+								<path d="M122.752 44.6899C137.028 44.6899 147.942 47.7457 155.202 52.2406L109.671 0H0V121.296C11.5767 94.0848 50.7854 44.6899 122.752 44.6899Z" fill="black"/>
+								<path d="M62.8633 255.35H114.425V226.02C97.6581 239.23 80.0343 250.079 62.8633 255.35Z" fill="black"/>
+								<path d="M277.711 72.2249C252.294 99.8408 186.132 204.532 186.132 238.987C186.132 247.767 192.519 252.31 202.091 252.31C220.846 252.31 245.568 223.724 245.568 190.579C252.359 195.445 255.544 202.608 255.544 209.755C255.544 228.365 241.089 246.813 221.849 255.382H310.679V0H201.007L155.218 52.2406C163.335 57.4954 166.601 64.464 166.601 70.3494C166.601 103.479 40.9549 209.415 40.9549 238.648C40.9549 245.148 44.1401 246.441 51.319 246.441C109.154 246.441 210.078 109.865 239.974 72.1764L277.727 72.2249H277.711Z" fill="#1257D1"/>
+								<path d="M0.129303 301.964C0.129303 322.094 10.2023 328.998 28.3111 328.998C47.7295 328.998 56.412 320.8 56.412 302.045V268.996H37.2523V304.001C37.2523 310.339 35.2151 314.721 28.3111 314.721C20.437 314.721 19.3052 309.773 19.3052 304.001V268.996H0.129303V301.964Z" fill="black"/>
+								<path d="M83.559 327.462V307.639L83.1548 298.552L82.3464 289.951H82.5081L93.147 327.462H106.47L117.109 289.951H117.27L116.284 300.493L116.042 309.596V327.462H133.261V268.996H110.124L99.8084 305.456L89.4929 268.996H66.3557V327.462H83.559Z" fill="black"/>
+								<path d="M251.583 285.957C250.208 275.722 242.819 267.444 226.57 267.444C211.953 267.444 201.234 273.701 201.234 286.119C201.234 308.448 234.848 302.352 234.848 311.212C234.848 313.977 231.679 315.513 226.893 315.513C225.018 315.513 222.997 315.028 221.444 314.058C219.811 313.088 218.68 311.536 218.275 309.434H199.924C200.328 319.976 210.401 328.998 225.826 328.998C241.251 328.998 253.183 322.417 253.183 308.852C253.183 287.574 219.569 293.023 219.569 284.259C219.569 282.141 221.428 280.929 225.664 280.929C227.524 280.929 229.238 281.252 230.612 281.98C231.986 282.707 233.053 283.936 233.377 285.957H251.566H251.583Z" fill="black"/>
+								<path d="M309.127 285.957C307.736 275.722 300.363 267.444 284.114 267.444C269.497 267.444 258.778 273.701 258.778 286.119C258.778 308.448 292.392 302.352 292.392 311.212C292.392 313.977 289.223 315.513 284.437 315.513C282.562 315.513 280.541 315.028 278.988 314.058C277.371 313.088 276.223 311.536 275.819 309.434H257.468C257.872 319.976 267.945 328.998 283.37 328.998C298.795 328.998 310.743 322.417 310.743 308.852C310.743 287.574 277.129 293.023 277.129 284.259C277.129 282.141 278.988 280.929 283.224 280.929C285.084 280.929 286.798 281.252 288.172 281.98C289.563 282.707 290.614 283.936 290.937 285.957H309.127Z" fill="black"/>
+								<path d="M152.017 391.247H135.913L130.124 360.058H129.979L124.336 391.247H108.151L93.5512 340.057H109.801L116.349 371.667H116.494L122.962 340.057H137.562L143.884 372.103H144.029L150.723 340.057H167.053L152.001 391.247H152.017Z" fill="#1257D1"/>
+								<path d="M171.904 340.073H216.384V353.186H188.461V359.573H213.829V371.764H188.461V378.15H217.208V391.279H171.904V340.089V340.073Z" fill="#1257D1"/>
+								<path d="M224.064 340.073H240.62V378.134H264.404V391.263H224.064V340.073Z" fill="#1257D1"/>
+								<path d="M270.128 340.073H286.685V378.134H310.469V391.263H270.128V340.073Z" fill="#1257D1"/>
 
-									</g>
-									<defs>
-									<clipPath id="clip0_1402_2">
-									<rect width="480" height="480" fill="gray"/>
-									</clipPath>
-									</defs>
-						</svg>
-					</div>
+								</g>
+								<defs>
+								<clipPath id="clip0_1402_2">
+								<rect width="480" height="480" fill="gray"/>
+								</clipPath>
+								</defs>
+				</svg>
 				</td>			
 			</tr>
 			<tr>
-				<td width=320px>
-				</td>
-				<td style="text-align: center; text-height:100px;">
+				<td style="text-align: center">
+					Canvas<br/>
 					<input type="range" onchange="update_samples()" id="samples_slider" value="1" min="1" max="24"/>
-					<br/>
-					<br/>
 					<label id="samples_slider_count" for="samples_slider">1</label>
 				</td>
+				<td style="text-align: center">
+					SVG import
+				</td>			
 			</tr>
 		</table>
 	
@@ -904,61 +798,77 @@
 		In this assignment, you will create:</br>
 		
 		<ol>
-			<li>Function "draw_line" that draws arbitrary lines using Bresenham's Line Drawing Algorithm.
-				<ul><br/></ul>
+			<li>Point3 Class that supports operations:
 				<ul>
-					<li>Highly Optimized for special cases</li>
-					<li>General cases are simplified into no more than 2 octants</li>
-					<li>Inner loop calculations are minimally complex</li>
-					<li>Does NOT draw the last point in a line</li>
+					<li>Normalization</li>
+					<li>Dot Product</li>
+					<li>Cross Product</li>
 				</ul>
 			</li>
-			<br/>
-			<li>Function "add_cubic_bezier_points" that creates a number of sample points based on "num_steps".
-				<ul><br/></ul>
+			
+			<li>Mat3 Transformations that supports operations:
 				<ul>
-					<li>Efficient and highly readable code</li>
-					<li>Appends outputs to "list" pass-by-reference parameter container</li>
-					<li>Fires an alert when inputs are invalid/incorrect</li>
+					<li>Multiplication with other Mat3 matrices</li>
+					<li>Multiplication with Point3 values</li>
+					<li>Inversion</li>
+					<li>Transpose</li>
+					<li>Helper function for translations</li>
+					<li>Helper function for scalings</li>
+					<li>Helper function for rotations</li>
+					<li>Helper function for viewport transformation</li>
 				</ul>
 			</li>
-			<br/>
-			<li>Canvas drawing that matches an outline of the image on the right hand side.
-				<ul><br/></ul>
+			<li>Canvas Renderer which:
 				<ul>
-					<li>Lines form continuous paths</li>
-					<li>Lines are colored correctly</li>
+					<li>Maps Normalized Device Coordinates (NDC) to the left view screen.</li>
+					<li>Clips points outside the viewport space</li>
+					<li>Draws Lines</li>
+					<li>Draws Points</li>
 				</ul>
 			</li>
-			<br/>
-			<li>Comments &amp Submission
-				<ul><br/></ul>
+			<li>WebGL Renderer which:
 				<ul>
-					<li>Clearly describe code structure</li>
-					<li>Neither too frequent nor infrequent</li>
-					<li>Explain math involved where relevant</li>
-					<li>Edit this to include your submission data, name. Also, submit as "last_name_first_name.html"</li>
+					<li>Maps Normalized Device Coordinates (NDC) to the left view screen.</li>
+					<li>Uses glBegin(...), glEnd(...), glVertex2f(...), glColor3f(...) commands</li>
+					<li>Draws Lines</li>
+					<li>Draws Points</li>
 				</ul>
+			</li>
+			<li>Feature support:
+				<ul>
+					<li>Zoom in control (slider)</li>
+					<li>Arbitrary Transformation Support</li>
+					<li>Color Range Support</li>
+				</ul>		
 			</li>
 		</ol>
 		
 		<h2>Score Breakdown</h2>
-		<table style="border-width:1px;">
+		<table>
 			<tr>
-				<td style="padding:2px; border-top: 0px solid">draw_line</td>
-				<td style="padding:2px; border-left: 1px solid">20 pts</td>
+				<td style="border: 1px solid">Point3</td>
+				<td style="border: 1px solid">10 pts</td>
+				<td style="border: 1px solid">All features implemented (-1pt per missing feature)</td>
 			</tr>
 			<tr>
-				<td style="padding:2px; border-top: 1px solid">add_cubic_bezier_points</td>
-				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">10 pts</td>
+				<td style="border: 1px solid">Mat3</td>
+				<td style="border: 1px solid">10 pts</td>
+				<td style="border: 1px solid">All features implemented (-1pt per missing feature)</td>
 			</tr>
 			<tr>
-				<td style="padding:2px; border-top: 1px solid">Canvas Renderer</td>
-				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">5 pts</td>
+				<td style="border: 1px solid">Canvas Renderer</td>
+				<td style="border: 1px solid">10 pts</td>
+				<td style="border: 1px solid">Rendering matches WebGL version (graded on quality), clips correctly</td>
 			</tr>
 			<tr>
-				<td style="padding:2px; border-top: 1px solid">Comments</td>
-				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">5 pts</td>
+				<td style="border: 1px solid">WebGL Renderer</td>
+				<td style="border: 1px solid">10 pts</td>
+				<td style="border: 1px solid">GL Functions are used (-2pt per missing), performant</td>
+			</tr>
+			<tr>
+				<td style="border: 1px solid">Feature Support</td>
+				<td style="border: 1px solid">10 pts</td>
+				<td style="border: 1px solid">3pts per feature, +1 for all 3</td>
 			</tr>
 		</table>		
 		<br/>
