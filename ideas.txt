@@ -1,0 +1,9 @@
+	Triangles & Transformations:
+		  *Scale, Translation, Rotation,
+		  *Puzzle Game Interface???
+		  *
+
+ 	Other Ideas:
+		  *Delauney Triangulation
+		  *Interactable SVG Disruptor
+		  *
