@@ -1,0 +1,314 @@
+<html>
+	<head>
+		<title>Project 2: Level Viewer</title>
+		<style>
+			table {border: 0px solid;}
+		</style>
+		<script>
+			var ctx = null;
+			var ctx_width = null;
+			var ctx_height = null;
+			var slider = null;
+			var slider_view = null;
+			
+			var gl;
+			var vbo1;
+			var vbo2;
+			var vao;
+			var program;
+
+			class vec2 
+			{
+				constructor(x, y) 
+				{
+					this.x = x;
+					this.y = y;
+				}
+			}
+
+			class rgba
+			{
+				constructor(r, g, b, a)
+				{
+					this.r = r;
+					this.g = g;
+					this.b = b;
+					this.a = a;
+				}
+				
+				equals(other)
+				{
+					return (this.r == other.r &&
+							this.g == other.g &&
+							this.b == other.b &&
+							this.a == other.a);
+				}
+			
+			}			
+
+			
+			function draw_gl_canvas()
+			{
+				gl.clearColor(0,1,1,1);
+				gl.clear(gl.COLOR_BUFFER_BIT);		
+
+				gl.bindVertexArray(vao);
+				gl.useProgram(program);
+				
+				gl.drawArrays(
+					gl.TRIANGLES,
+					0,
+					3
+				);
+				
+			}
+
+			
+			
+			function main()
+			{
+				var frame_canvas = document.getElementById("frame_canvas");
+				
+				gl = frame_canvas.getContext("webgl2");
+				
+				
+				var positions = new Float32Array([
+					-0.5, -0.5, 0.0, 1.0,
+					 0.5, -0.5, 0.0, 1.0,
+					 0.0, 0.1,  0.0, 0.0,			
+				]);
+				
+				
+				vbo1 = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					vbo1
+				);
+								
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					positions,
+					gl.STATIC_DRAW
+				);
+				
+				
+				var colors = new Uint8Array([
+					255, 0, 0,
+					0, 255, 0,
+					0, 0, 255
+				]);
+				
+				
+				vbo2 = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					vbo2
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER, 
+					colors, 
+					gl.STATIC_DRAW
+				);
+				
+				
+				vao = gl.createVertexArray();
+				gl.bindVertexArray(vao);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, vbo1);
+				gl.enableVertexAttribArray(0);
+				gl.vertexAttribPointer(
+					0,
+					4,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, vbo2);
+				gl.enableVertexAttribArray(1);
+				gl.vertexAttribPointer(
+					1,
+					3,
+					gl.UNSIGNED_BYTE,
+					true,
+					0,
+					0					
+				);
+				
+				gl.bindVertexArray(null);
+				
+				var vs_code = `#version 300 es
+								precision highp float;
+								layout(location=0) in vec4 aPos;
+								layout(location=1) in vec3 aCol;
+								
+								out vec3 vCol;
+								
+								void main(){
+
+									vCol = aCol;
+									
+									gl_Position = aPos;								
+								}`;
+				
+				
+				var vertex_shader = gl.createShader(gl.VERTEX_SHADER);
+				gl.shaderSource(vertex_shader, vs_code);
+				gl.compileShader(vertex_shader);
+				if (!gl.getShaderParameter(vertex_shader, gl.COMPILE_STATUS))
+				{
+					alert('Failed to compile vertex shader:' + gl.getShaderInfoLog(vertex_shader));
+					return;
+				}
+
+
+				var fs_code = `#version 300 es
+								precision highp float;
+								
+								in vec3 vCol;
+								
+								out vec4 outCol;
+								
+								void main() {
+								
+									outCol = vec4(vCol, 1.0);
+									
+								}`;
+								
+				var fragment_shader = gl.createShader(gl.FRAGMENT_SHADER);
+				gl.shaderSource(fragment_shader, fs_code);
+				gl.compileShader(fragment_shader);
+				if (!gl.getShaderParameter(fragment_shader, gl.COMPILE_STATUS))
+				{
+					alert('Failed to compile fragment shader:' + gl.getShaderInfoLog(fragment_shader));
+					return;
+				}
+						
+				
+				program = gl.createProgram();
+				gl.attachShader(program, vertex_shader);
+				gl.attachShader(program, fragment_shader);
+				gl.linkProgram(program);
+				
+				if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+				{
+					alert('Failed to link shader program:' + gl.getProgramInfoLog(program));
+					return;
+				}
+				
+				
+				console.log('Gl stuff built!');
+				
+				
+				draw_gl_canvas();
+			}
+		</script>
+		
+	</head>	
+
+	<body onload="main()">
+		<h1>Project 2: Level Viewer</h1>	
+		<p>
+			Name: Yours here</br>
+			Date: Submission date
+		</p>
+		
+		<table>
+			<tr>
+				<td width=320px>
+				</td>
+				<td>
+					<canvas	id="frame_canvas"
+							style="background-color: #FFFFFF;" 
+							width=320 
+							height=480>
+					</canvas>	
+			</tr>
+			<tr>
+				<td width=320px>
+				</td>
+				<td style="text-align: center; text-height:100px;">
+					<input type="range" onchange="update_samples()" style="width:320px;" id="samples_slider" value="1" min="1" max="16"/>
+					<br/>
+					<br/>
+					<label id="samples_slider_count" for="samples_slider">1</label>
+				</td>
+			</tr>
+		</table>
+	
+		</br>
+		
+		<h2>Description</h2>
+		In this assignment, you will create:</br>
+		
+		<ol>
+			<li>Write function "draw_line" that draws arbitrary lines using Bresenham's Line Drawing Algorithm.
+				<ul><br/></ul>
+				<ul>
+					<li>Highly Optimized for special cases</li>
+					<li>General cases are simplified into no more than 2 octants</li>
+					<li>Inner loop calculations are minimally complex</li>
+					<li>Does NOT draw the last point in a line</li>
+				</ul>
+			</li>
+			<br/>
+			<li>Implement function "add_cubic_bezier_points" that creates a number of sample points based on "num_steps".
+				<ul><br/></ul>
+				<ul>
+					<li>Efficient and highly readable code</li>
+					<li>Appends outputs to "list" pass-by-reference parameter container</li>
+					<li>Fires an alert when inputs are invalid/incorrect</li>
+				</ul>
+			</li>
+			<br/>
+			<li>Complete canvas drawing that matches the outline of the image beneath it.
+				<ul><br/></ul>
+				<ul>
+					<li>Lines form continuous paths</li>
+					<li>Lines are colored correctly</li>
+				</ul>
+			</li>
+			<br/>
+			<li>Comments &amp Submission
+				<ul><br/></ul>
+				<ul>
+					<li>Clearly describe code structure</li>
+					<li>Neither too frequent nor infrequent</li>
+					<li>Explain math involved where relevant</li>
+					<li>Edit this to include your submission data, name. Also, submit as "last_name_first_name.html"</li>
+				</ul>
+			</li>
+		</ol>
+		
+		<h2>Score Breakdown</h2>
+		<table style="border-width:1px;">
+			<tr>
+				<td style="padding:2px; border-top: 0px solid">draw_line</td>
+				<td style="padding:2px; border-left: 1px solid">20 pts</td>
+			</tr>
+			<tr>
+				<td style="padding:2px; border-top: 1px solid">add_cubic_bezier_points</td>
+				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">10 pts</td>
+			</tr>
+			<tr>
+				<td style="padding:2px; border-top: 1px solid">Render</td>
+				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">5 pts</td>
+			</tr>
+			<tr>
+				<td style="padding:2px; border-top: 1px solid">Comments</td>
+				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">5 pts</td>
+			</tr>
+		</table>		
+		<br/>
+		
+
+		
+
+
+	</body>
+
+</html>

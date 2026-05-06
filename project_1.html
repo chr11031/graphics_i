@@ -118,13 +118,46 @@
 			
 			
 			
+			class vec4
+			{
+				constructor (x, y, z, w)
+				{
+					this.x = x;
+					this.y = y;
+					this.z = z;
+					this.w = w;
+				}
+				
+				dot(v4)
+				{
+					return 	this.x * v4.x + 
+							this.y * v4.y + 
+							this.z * v4.z + 
+							this.w * v4.w;
+				}
+				
+				normalize()
+				{
+					var len = this.x * this.x +
+							  this.y * this.y +
+							  this.z * this.z + 
+							  this.w * this.w;
+
+					len = Math.sqrt(len);
+					this.x /= len;
+					this.y /= len;
+					this.z /= len;
+					this.w /= len;
+				}
+			}
 			
 			
-			class mat3
+			
+			class mat4
 			{
 				constructor ()
 				{
-					this.m = [[0,0,0],[0,0,0],[0,0,0]];
+					this.m = [ [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0] ];
 					this.set_identity();
 				}
 				
@@ -141,88 +174,153 @@
 				set_identity()
 				{
 					this.m[0][0] = 1.0;
+					this.m[0][1] = 0.0;
+					this.m[0][2] = 0.0;
+					this.m[0][3] = 0.0;
+
+					this.m[1][0] = 0.0;
 					this.m[1][1] = 1.0;
+					this.m[1][2] = 0.0;
+					this.m[1][3] = 0.0;
+
+					this.m[2][0] = 0.0;
+					this.m[2][1] = 0.0;
 					this.m[2][2] = 1.0;
+					this.m[2][3] = 0.0;
+
+					this.m[3][0] = 0.0;
+					this.m[3][1] = 0.0;
+					this.m[3][2] = 0.0;
+					this.m[3][3] = 1.0;
 				}
 				
-				set_translate_x(x, y)
+				set_translate_x(x, y, z)
 				{
-					this.m[0][2] = x;
-					this.m[1][2] = y;
+					this.m[0][3] = x;
+					this.m[1][3] = y;
+					this.m[2][3] = z;
 				}								
 
-				mult_mat3(m3)
+				mult_mat4(m4)
 				{
-					var tmp = [[0,0,0],[0,0,0],[0,0,0]];
-					tmp[0][0] = this.m[0][0] * m3.m[0][0] + 
-								this.m[0][1] * m3.m[1][0] +
-								this.m[0][2] * m3.m[2][0];
+					var tmp = [ [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0] ];
+
+					// R0
+					tmp[0][0] = this.m[0][0] * m4.m[0][0] + 
+								this.m[0][1] * m4.m[1][0] +
+								this.m[0][2] * m4.m[2][0] +
+								this.m[0][3] * m4.m[3][0];
 					
-					tmp[0][1] = this.m[0][0] * m3.m[0][1] + 
-								this.m[0][1] * m3.m[1][1] +
-								this.m[0][2] * m3.m[2][1];
+					tmp[0][1] = this.m[0][0] * m4.m[0][1] + 
+								this.m[0][1] * m4.m[1][1] +
+								this.m[0][2] * m4.m[2][1] +
+								this.m[0][3] * m4.m[3][1];
 					
-					tmp[0][2] = this.m[0][0] * m3.m[0][2] + 
-								this.m[0][1] * m3.m[1][2] +
-								this.m[0][2] * m3.m[2][2];
+					tmp[0][2] = this.m[0][0] * m4.m[0][2] + 
+								this.m[0][1] * m4.m[1][2] +
+								this.m[0][2] * m4.m[2][2] +
+								this.m[0][3] * m4.m[3][2];
+								
+					tmp[0][3] = this.m[0][0] * m4.m[0][3] + 
+								this.m[0][1] * m4.m[1][3] + 
+								this.m[0][2] * m4.m[2][3] + 
+								this.m[0][3] * m4.m[3][3];
+
+				
+					// R1
+					tmp[1][0] = this.m[1][0] * m4.m[0][0] + 
+								this.m[1][1] * m4.m[1][0] +
+								this.m[1][2] * m4.m[2][0] +
+								this.m[1][3] * m4.m[3][0];
 					
-					tmp[1][0] = this.m[1][0] * m3.m[0][0] + 
-								this.m[1][1] * m3.m[1][0] +
-								this.m[1][2] * m3.m[2][0];
+					tmp[1][1] = this.m[1][0] * m4.m[0][1] + 
+								this.m[1][1] * m4.m[1][1] +
+								this.m[1][2] * m4.m[2][1] +
+								this.m[1][3] * m4.m[3][1];
 					
-					tmp[1][1] = this.m[1][0] * m3.m[0][1] + 
-								this.m[1][1] * m3.m[1][1] +
-								this.m[1][2] * m3.m[2][1];
+					tmp[1][2] = this.m[1][0] * m4.m[0][2] + 
+								this.m[1][1] * m4.m[1][2] +
+								this.m[1][2] * m4.m[2][2] +
+								this.m[1][3] * m4.m[3][2];
+								
+					tmp[1][3] = this.m[1][0] * m4.m[0][3] + 
+								this.m[1][1] * m4.m[1][3] + 
+								this.m[1][2] * m4.m[2][3] + 
+								this.m[1][3] * m4.m[3][3];
+
+
+					// R2
+					tmp[2][0] = this.m[2][0] * m4.m[0][0] + 
+								this.m[2][1] * m4.m[1][0] +
+								this.m[2][2] * m4.m[2][0] +
+								this.m[2][3] * m4.m[3][0];
 					
-					tmp[1][2] = this.m[1][0] * m3.m[0][2] + 
-								this.m[1][1] * m3.m[1][2] +
-								this.m[1][2] * m3.m[2][2];
+					tmp[2][1] = this.m[2][0] * m4.m[0][1] + 
+								this.m[2][1] * m4.m[1][1] +
+								this.m[2][2] * m4.m[2][1] +
+								this.m[2][3] * m4.m[3][1];
 					
-					tmp[2][0] = this.m[2][0] * m3.m[0][0] + 
-								this.m[2][1] * m3.m[1][0] +
-								this.m[2][2] * m3.m[2][0];
+					tmp[2][2] = this.m[2][0] * m4.m[0][2] + 
+								this.m[2][1] * m4.m[1][2] +
+								this.m[2][2] * m4.m[2][2] +
+								this.m[2][3] * m4.m[3][2];
+								
+					tmp[2][3] = this.m[2][0] * m4.m[0][3] + 
+								this.m[2][1] * m4.m[1][3] + 
+								this.m[2][2] * m4.m[2][3] + 
+								this.m[2][3] * m4.m[3][3];
+
+
+					// R3
+					tmp[3][0] = this.m[3][0] * m4.m[0][0] + 
+								this.m[3][1] * m4.m[1][0] +
+								this.m[3][2] * m4.m[2][0] +
+								this.m[3][3] * m4.m[3][0];
 					
-					tmp[2][1] = this.m[2][0] * m3.m[0][1] + 
-								this.m[2][1] * m3.m[1][1] +
-								this.m[2][2] * m3.m[2][1];
+					tmp[3][1] = this.m[3][0] * m4.m[0][1] + 
+								this.m[3][1] * m4.m[1][1] +
+								this.m[3][2] * m4.m[2][1] +
+								this.m[3][3] * m4.m[3][1];
 					
-					tmp[2][2] = this.m[2][0] * m3.m[0][2] + 
-								this.m[2][1] * m3.m[1][2] +
-								this.m[2][2] * m3.m[2][2];
+					tmp[3][2] = this.m[3][0] * m4.m[0][2] + 
+								this.m[3][1] * m4.m[1][2] +
+								this.m[3][2] * m4.m[2][2] +
+								this.m[3][3] * m4.m[3][2];
+								
+					tmp[3][3] = this.m[3][0] * m4.m[0][3] + 
+								this.m[3][1] * m4.m[1][3] + 
+								this.m[3][2] * m4.m[2][3] + 
+								this.m[3][3] * m4.m[3][3];
+
 					
-					
-					rv = new mat3();
+					rv = new mat4();
 					
 					rv.m[0][0] = tmp[0][0];
 					rv.m[0][1] = tmp[0][1];
 					rv.m[0][2] = tmp[0][2];
+					rv.m[0][3] = tmp[0][3];
 
 					rv.m[1][0] = tmp[1][0];
 					rv.m[1][1] = tmp[1][1];
 					rv.m[1][2] = tmp[1][2];
+					rv.m[1][3] = tmp[1][3];
 
 					rv.m[2][0] = tmp[2][0];
 					rv.m[2][1] = tmp[2][1];
 					rv.m[2][2] = tmp[2][2];
+					rv.m[2][3] = tmp[2][3];
 				
 					return rv;				
 				}
 								
-				mult_vec2(v2, w)
+				mult_vec4(v4)
 				{
-					var x = this.m[0][0] * v2.x + this.m[0][1] * v2.y + this.m[0][2] * w;
-					var y = this.m[1][0] * v2.x + this.m[1][1] * v2.y + this.m[1][2] * w;
-					var z = this.m[2][0] * v2.x + this.m[2][1] * v2.y + this.m[2][2] * w;
-				
-					if (z != 0)
-					{
-						return vec2(x/z, y/z);
-					}
-					else
-					{
-						alert("Error in mult_vec2");
-						return null;
-					}
+					var x = this.m[0][0] * v4.x + this.m[0][1] * v4.y + this.m[0][2] * v4.z + this.m[0][3] * v4.w;
+					var y = this.m[1][0] * v4.x + this.m[1][1] * v4.y + this.m[1][2] * v4.z + this.m[1][3] * v4.w;
+					var z = this.m[2][0] * v4.x + this.m[2][1] * v4.y + this.m[2][2] * v4.z + this.m[2][3] * v4.w;
+					var w = this.m[3][0] * v4.x + this.m[3][0] * v4.y + this.m[3][2] * v4.z + this.m[3][3] * v4.w;
+
+					return new vec4(x, y, z, w);
 				}
 				
 			}
@@ -473,231 +571,6 @@
 				}					
 			}
 			
-		
-			function parse_path(d, fill)
-			{		
-				var i;
-
-				// Segment out the text
-				i = 0;
-				var segments = [];
-				while (i < d.length)
-				{
-					if (d[i] == ' ')
-					{
-						i += 1;
-					}
-					else if (d[i] == 'M' || d[i] == 'L' || d[i] == 'H' || d[i] == 'V' || d[i] == 'C' || d[i] == 'Z')
-					{
-						segments.push(d[i])
-						i += 1;
-					}
-					else if (d[i] >= 'A' && d[i] <= 'Z')
-					{
-						alert('Unsupported SVG Path sentinel ' + d[i]);
-						return;
-					}
-					else
-					{
-						var num = parseFloat(d.substring(i));
-						if (isNaN(num))
-						{
-							alert('Failed to parse number at input: ' + d[i] + '__' + i + '__' + d);
-							return;
-						}
-						
-						segments.push(num);
-						var str_num = num.toString();
-						i += str_num.length;
-					}
-					
-					continue;				
-				}
-
-
-
-				var set = new line2_list_set();
-			
-				
-				// Recover the line segments / cubic bezier curve samples
-				var mark_pt = new vec2(0, 0);
-				var prev_pt = new vec2(0, 0);
-				var ctr0_pt = new vec2(0, 0);
-				var ctr1_pt = new vec2(0, 0);
-				var curr_pt = new vec2(0, 0);
-				i = 0;
-				while (i < segments.length)
-				{
-					if (segments[i] == "C")
-					{
-						prev_pt.x = curr_pt.x;
-						prev_pt.y = curr_pt.y;
-						
-						ctr0_pt.x = parseFloat(segments[i+1]);
-						ctr0_pt.y = parseFloat(segments[i+2]);
-
-						ctr1_pt.x = parseFloat(segments[i+3]);
-						ctr1_pt.y = parseFloat(segments[i+4]);
-					
-						curr_pt.x = parseFloat(segments[i+5])
-						curr_pt.y = parseFloat(segments[i+6]);						
-						
-						add_cubic_bezier_points(set.last(), prev_pt, ctr0_pt, ctr1_pt, curr_pt, parseInt(slider.value));					 
-						
-						i += 7;
-					}
-					else if (segments[i] == "M")
-					{
-						mark_pt.x = parseFloat(segments[i+1])
-						mark_pt.y = parseFloat(segments[i+2]);											
-					
-						curr_pt.x = mark_pt.x;
-						curr_pt.y = mark_pt.y;						
-						
-						set.begin_new_list(fill);
-						set.last().add_pt( new vec2(curr_pt.x, curr_pt.y) );
-						
-						i += 3;
-					}
-					else if (segments[i] == "L")
-					{
-						curr_pt.x = parseFloat(segments[i+1])
-						curr_pt.y = parseFloat(segments[i+2]);						
-						
-						set.last().add_pt( new vec2(curr_pt.x, curr_pt.y) );
-						
-						i += 3;
-					}
-					else if (segments[i] == "H")
-					{
-						curr_pt.x = parseFloat(segments[i+1])
-						set.last().add_pt( new vec2(curr_pt.x, curr_pt.y) );						 
-
-						i += 2;
-					}
-					else if (segments[i] == "V")
-					{
-						curr_pt.y = parseFloat(segments[i+1])
-						set.last().add_pt( new vec2(curr_pt.x, curr_pt.y) );						 
-
-						i += 2;					
-					}
-					else if (segments[i] == "Z")
-					{
-						if (set.last().count() < 1)
-						{
-							alert("Bad SVG path preprocessing. Found 'Z' too early");
-							return;
-						}
-						
-						set.last().add_pt( new vec2(mark_pt.x, mark_pt.y) );
-						i += 1;
-					}
-					else
-					{
-						alert("SVG path preprocessing error");
-						return;
-					}
-				}
-				
-
-				return set;
-
-
-				/*
-				// Remove redundant points
-				var filtered = [];
-				filtered.push( points[0] == null ? null : new vec2(points[0].x, points[0].y) );
-				i = 1;
-				var last = points[0];
-				while (i < points.length)
-				{
-					var last = filtered[filtered.length-1];
-					var curr = points[i];
-				
-					if (last != null && curr != null)
-					{
-						if (Math.round(last.x) != Math.round(curr.x) ||
-							Math.round(last.y) != Math.round(curr.y))
-							{
-								filtered.push(new vec2(curr.x, curr.y));
-							}
-					}
-					
-					i += 1;
-				}
-				
-				return filtered;
-				*/
-			}
-			
-			
-			function parse_hex_char(character)
-			{
-				if (character >= '0' && character <= '9')
-				{
-					return parseInt(character);
-				}
-				else if (character == 'A')
-				{
-					return 10;
-				}
-				else if (character == 'B')
-				{
-					return 11;
-				}
-				else if (character == 'C')
-				{
-					return 12;
-				}
-				else if (character == 'D')
-				{
-					return 13;
-				}
-				else if (character == 'E')
-				{
-					return 14;
-				}
-				else if (character == 'F')
-				{
-					return 15;
-				}
-				
-				else
-				{
-					alert('Bogus hex character: ' + character);
-					return null;
-				}
-			}
-			
-			
-			function fill_to_rgba(fill)
-			{
-				var color = null;
-				if (fill == 'black')
-				{
-					color = new rgba(0, 0, 0, 255);
-				}
-				else if (fill[0] == '#')
-				{
-					var r = parse_hex_char(fill[1]) * 16 + 
-							parse_hex_char(fill[2]);
-					var g = parse_hex_char(fill[3]) * 16 + 
-							parse_hex_char(fill[4]);
-					var b = parse_hex_char(fill[5]) * 16 + 
-							parse_hex_char(fill[6]);
-							
-					color = new rgba(r, g, b, 255);
-				}
-				else
-				{
-					alert('Unsupported text string for SVG fill color: ' + fill);
-					return null;
-				}
-				
-				return color;
-			}
-			
 			
 			function determinant(pt_a, pt_b)
 			{
@@ -784,33 +657,278 @@
 				}
 			
 			}
-			
-
-
-			
-			
-
-
-			function draw_svg_canvas()
-			{
-				var combined_sets = new line2_list_set();
-				var element = document.getElementById("svg_canvas");
-				var paths = element.getElementsByTagName("path");
-			
-				var i;
 				
-				// Build a complete set of line lists
-				i = 0;
-				while (i < paths.length)
+
+			class vertex_with_attribute
+			{
+				constructor(fragCoord, fragColor)
 				{
-					var path_set = parse_path( paths[i].getAttribute('d'), 
-											   fill_to_rgba(paths[i].getAttribute('fill')) );
-												  
-					combined_sets.add_from_other_set(path_set);
-					i += 1;
+					this.fragCoord = fragCoord; // vec4
+					this.fragColor = fragColor; // vec4
+				}
+			}
+
+
+			function lerp_v4(va, vb, coef)
+			{
+				return new vec4(  va.x + coef * (vb.x - va.x),
+								  va.y + coef * (vb.y - va.y),
+								  va.z + coef * (vb.z - va.z),
+								  va.w + coef * (vb.w - va.w)  );
+			}
+	
+
+			function lerp_two_vert_with_attributes(va, vb, coef)
+			{
+				return new vertex_with_attribute(  lerp_v4(va.fragCoord, vb.fragCoord, coef),
+												   lerp_v4(va.fragColor, vb.fragColor, coef)  );
+			}
+
+				
+	
+			function clip_x_left(clip_in)
+			{
+				clip_out = [];
+				
+				
+				prev_idx = clip_in.length - 1;
+				prev_out = clip_in[prev_idx].x < clip_in[prev_idx].w;
+
+				var curr_idx = 0;
+				while (curr_idx < clip_in.length)
+				{					
+					curr_out = clip_in[curr_idx].x < clip_in[curr_idx].w;
+
+
+					if (prev_out != curr_out)
+					{
+						if (clip_in[prev_idx].w != 0.0 && clip_in[curr_idx].x != 0.0)
+						{
+							// Both are regular points
+							if (clip_in[curr_idx].w != 0.0)
+							{
+							
+							}
+							// Previous is regular, current is infinite
+							else
+							{
+							
+							}						
+						}
+						else
+						{
+						
+						
+						}
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+						// Find value at intersect
+						var coef = (-1.0 - clipped_in[prev_idx].x
+					
+						new_vert = lerp_two_vert_with_attributes(clipped_in[prev_idx], 
+																 clipped_in[curr_idx], 
+																 );
+						
+						// Insert
+					}
+					if (curr_out == false)
+					{
+						clipped_out.push(clipped_in[curr_idx]);
+						//Insert
+					}
+										
+					prev_idx = curr_idx;
+					prev_out = curr_out;
+										
+					curr_idx += 1;
 				}
 				
+				return clip_out;			
+			}
 
+			function clip_x_right(clip_in)
+			{
+			
+			}
+
+			function clip_y_bottom(clip_in)
+			{
+			
+			}
+
+			function clip_y_top(clip_in)
+			{
+			
+			}
+
+			function clip_z_low(clip_in)
+			{
+			
+			}
+
+			function clip_z_high(clip_in)
+			{
+			
+			}
+			
+
+			function clip_to_ndc(vert_a, vert_b, vert_c)
+			{
+				clip_a = [vert_a, vert_b, vert_c];
+				clip_b = [];
+				
+				// Make 'W' nonnegative
+				var c = 0;
+				while (c < 3)
+				{
+					if (clip_a[c].w < 0.0)
+					{
+						clip_a[c].x *= -1.0;
+						clip_a[c].y *= -1.0;
+						clip_a[c].z *= -1.0;
+						clip_a[c].w *= -1.0;					
+					}
+					c += 1;
+				}
+				
+				
+				// X sides
+				clip_b = this.clip_x_left(clip_a);
+
+				clip_a = this.clip_x_right(clip_b);
+
+
+				// Y sides
+				clip_b = this.clip_y_bottom(clip_a);
+				
+				clip_a = this.clip_y_top(clip_b);
+				
+				
+				// Z sides
+				clip_b = this.clip_z_low(clip_a);
+				
+				clip_a = this.clip_z_high(clip_b);
+				
+				
+				// Return filtered
+				return clip_a;
+			}
+			
+			
+			function homogeneous_normalization(v4)
+			{
+				var coef = 1.0 / v4.fragCoord.w;
+				
+				v4.fragCoord.x *= coef;
+				v4.fragCoord.y *= coef;
+				v4.fragCoord.z *= coef;
+				v4.fragCoord.w  = coef;
+			}
+			
+			
+			function viewport_transform(ndc)
+			{
+				ndc.fragCoord.x = 0.5 * this.ctx_width * ndc.fragCoord.x + this.ctx_width;
+								  // this.ctx_width *  ( (v4.x * 0.5) + 1.0 ); 
+				
+				ndc.fragCoord.y = 0.5 * this.ctx_height * ndc.fragCoord.y + this.ctx_height;
+								  // this.ctx_height * ( (v4.y * 0.5) + 1.0 );
+			}
+			
+			
+			function software_pipeline_draw(verts_with_attributes, num_verts, vertex_shader, uniforms)
+			{
+				var i = 0;
+				while (i < num_verts)
+				{
+					// Vertex Shader
+					vert_a = vertex_shader(verts_with_attributes[i+0], uniforms);
+					vert_b = vertex_shader(verts_with_attributes[i+1], uniforms);
+					vert_c = vertex_shader(verts_with_attributes[i+2], uniforms);
+					
+
+					// Clipping					
+					verts = this.clip_to_ndc(vert_output_a, vert_output_b, vert_output_c);
+					
+					
+					// Homogeneous normalization
+					var n = 0;
+					while (n < clipped_verts.length)
+					{
+						this.homogeneous_normalization(verts[n]);
+
+						n += 1;
+					}
+					
+					
+					// Viewport Transform
+					var v = 0;
+					while (v < normalized_device_coords.length)
+					{
+						this.viewport_transform(verts[v]);
+
+						v += 1;
+					}
+					
+					
+					// Rasterize
+					var t = 0;
+					while (t < clipped_verts.length - 2)
+					{
+						draw_triangle(verts[  0].fragCoord,
+									  verts[t+1].fragCoord,
+									  verts[t+2].fragCoord,
+									  verts[  0].fragColor,
+									  verts[t+1].fragColor,
+									  verts[t+2].fragColor);
+									  
+						t += 1;
+					}
+					
+					
+					
+					// Fragment Shader
+					// fragColor = vert_shader_color;
+					; // (Not implemented)
+					
+					
+					// Blending
+					
+					; // (Not impleneted)
+
+					
+					// Z-Buffer
+					
+					; // (Not implemented)
+					
+								
+					// Logical Operators
+					
+					; // (Not implemented)
+					
+					
+				
+					i += 3;
+				}
+			}
+			
+			
+			
+			
+			
+			function draw_canvas()
+			{
+			
 				var pt_a = new vec2(50.0, 70.0);
 				var pt_b = new vec2(200.0, 250.0);
 				var pt_c = new vec2(250.0, 40.0);
@@ -821,8 +939,6 @@
 				clear_canvas(new rgba(0, 0, 0, 255));
 				
 				draw_triangle(pt_a, pt_b, pt_c, color_a, color_b, color_c);
-
-				
 
 			}
 
@@ -838,21 +954,10 @@
 				update_slider_view();
 				
 				clear_canvas(new rgba(255, 255, 255, 255));
-				draw_svg_canvas();
+				draw_canvas();
 			}
 
 				
-			function reset_edge_list()
-			{
-				edge_list = new Array(ctx_height);
-				var i = 0;
-				while (i < ctx_height)
-				{
-					edge_list[i] = null;
-					i += 1;
-				}
-			}	
-			
 			function main()
 			{
 				var frame_canvas = document.getElementById("frame_canvas");
@@ -863,7 +968,7 @@
 				slider = document.getElementById("samples_slider");
 				slider_view = document.getElementById("samples_slider_count");
 
-				draw_svg_canvas();
+				draw_canvas();
 				update_slider_view();
 			}
 		</script>

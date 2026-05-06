@@ -89,7 +89,21 @@ print('Num faces: ', len(faces))
 print('\t[0]', faces[0])
 
 
+min_x = verts[0].x
+min_y = verts[0].y
+min_z = verts[0].z
+max_x = min_x
+max_y = min_y
+max_z = min_z
+for i in range(1, len(verts)):
+    min_x = min(min_x, verts[i].x)
+    min_y = min(min_y, verts[i].y)
+    min_z = min(min_z, verts[i].z)
+    max_x = max(max_x, verts[i].x)
+    max_y = max(max_y, verts[i].y)
+    max_z = max(max_z, verts[i].z)
 
-
+print('MODEL Extents:')
+print(min_x, '<--->', max_x, '\n', min_y, '<--->', max_y, '\n', min_z, '<--->', max_z)
 
 
