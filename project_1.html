@@ -5,6 +5,8 @@
 			table {border: 0px solid;}
 		</style>
 		<script>
+			var renderer = null;
+			
 			var ctx = null;
 			var ctx_width = null;
 			var ctx_height = null;
@@ -614,347 +616,416 @@
 			}
 			
 			
-			function draw_triangle(pt_a, pt_b, pt_c, color_a, color_b, color_c)
-			{
-				var pt_min = new vec2(min_of_3(pt_a.x, pt_b.x, pt_c.x), min_of_3(pt_a.y, pt_b.y, pt_c.y));
-				var pt_max = new vec2(max_of_3(pt_a.x, pt_b.x, pt_c.x), max_of_3(pt_a.y, pt_b.y, pt_c.y));
-
-
-				var tri_area = determinant(new vec2(pt_a.x - pt_b.x, pt_a.y - pt_b.y), new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y));
-				var tri_coef = 1.0 / tri_area;
-				var edge_ab = new vec2(pt_b.x - pt_a.x, pt_b.y - pt_a.y);
-				var edge_bc = new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y);
-
-
-				var it = new vec2(pt_min.x, pt_min.y);
-				while (it.y <= pt_max.y)
-				{
-					while (it.x <= pt_max.x)
-					{
-						var edge_ax = new vec2(it.x - pt_a.x, it.y - pt_a.y);
-						var edge_bx = new vec2(it.x - pt_b.x, it.y - pt_b.y);
-					
-						var interp_a = tri_coef * determinant(edge_ax, edge_ab);
-						var interp_b = tri_coef * determinant(edge_bx, edge_bc);
-						var interp_c = 1.0 - (interp_a + interp_b);
-					
-						if (interp_a >= 0 && interp_b >= 0 && interp_c >= 0)
-						{
-							draw_pixel( it, mix_3(interp_a, interp_b, interp_c, color_a, color_b, color_c) );
-						}
-						/*
-						else
-						{
-							var debug_color = new rgba(255, 0, 0, 255);
-							draw_pixel(it, debug_color);					
-						}
-						*/
-						it.x += 1;
-					}
-					
-					it.x = pt_min.x;
-					it.y += 1;				
-				}
-			
-			}
-				
 
 			class vertex_with_attribute
 			{
 				constructor(fragCoord, fragColor)
 				{
 					this.fragCoord = fragCoord; // vec4
-					this.fragColor = fragColor; // vec4
+					this.fragColor = fragColor; // rgba
 				}
 			}
 
 
-			function lerp_v4(va, vb, coef)
+			class software_renderer
 			{
-				return new vec4(  va.x + coef * (vb.x - va.x),
-								  va.y + coef * (vb.y - va.y),
-								  va.z + coef * (vb.z - va.z),
-								  va.w + coef * (vb.w - va.w)  );
-			}
-	
-
-			function lerp_two_vert_with_attributes(va, vb, coef)
-			{
-				return new vertex_with_attribute(  lerp_v4(va.fragCoord, vb.fragCoord, coef),
-												   lerp_v4(va.fragColor, vb.fragColor, coef)  );
-			}
-
+				constructor(ctx)
+				{
+					this.ctx = ctx;
+					this.window_width = this.ctx.canvas.width;
+					this.window_height = this.ctx.canvas.height;
+					
+					this.viewport_x_offset = 0;
+					this.viewport_y_offset = 0;
+					this.viewport_width = this.window_width;
+					this.viewport_height = this.window_height;
+					
+					this.clear_color = new rgba(255, 255, 0, 255);
+				}
+			
+			
+				clearColor(color)
+				{
+					this.clear_color = color;
+				}
+			
+			
+				clear()
+				{
+					this.ctx.fillStyle = "rgba("+this.clear_color.r+","+this.clear_color.g+","+this.clear_color.b+","+(this.clear_color.a/255)+")";
+					this.ctx.fillRect(0, 0, this.window_width, this.window_height);			
+				}
+			
+			
+				viewport(x_offset, y_offset, width, height)
+				{
+					this.viewport_x_offset = Math.max(0, Math.min(x_offset, this.viewport_width-1));
+					this.viewport_y_offset = Math.max(0, Math.min(y_offset, this.viewport_height-1));
 				
-	
-			function clip_x_left(clip_in)
-			{
-				clip_out = [];
-				
-				
-				prev_idx = clip_in.length - 1;
-				prev_out = clip_in[prev_idx].x < clip_in[prev_idx].w;
-
-				var curr_idx = 0;
-				while (curr_idx < clip_in.length)
-				{					
-					curr_out = clip_in[curr_idx].x < clip_in[curr_idx].w;
-
-
-					if (prev_out != curr_out)
+					
+					var view_width = this.viewport_x_offset + width;
+					var delta_width = view_width - this.viewport_width;
+					if (delta_width > 0)
 					{
-						if (clip_in[prev_idx].w != 0.0 && clip_in[curr_idx].x != 0.0)
+						view_width -= delta_width;					
+					}
+
+					
+					var view_height = this.viewport_y_offset + height;
+					var delta_height = view_height - this.viewport_height;
+					if (delta_width > 0)
+					{
+						view_height -= delta_height;					
+					}
+					
+					
+					this.viewport_width  = view_width;
+					this.viewport_height = view_height;
+				}
+					
+					
+				raster_triangle(pt_a, pt_b, pt_c, color_a, color_b, color_c)
+				{
+					var pt_min = new vec2(min_of_3(pt_a.x, pt_b.x, pt_c.x), min_of_3(pt_a.y, pt_b.y, pt_c.y));
+					var pt_max = new vec2(max_of_3(pt_a.x, pt_b.x, pt_c.x), max_of_3(pt_a.y, pt_b.y, pt_c.y));
+
+
+					var tri_area = determinant(new vec2(pt_a.x - pt_b.x, pt_a.y - pt_b.y), new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y));
+					var tri_coef = 1.0 / tri_area;
+					var edge_ab = new vec2(pt_b.x - pt_a.x, pt_b.y - pt_a.y);
+					var edge_bc = new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y);
+
+
+					var it = new vec2(pt_min.x, pt_min.y);
+					while (it.y <= pt_max.y)
+					{
+						while (it.x <= pt_max.x)
 						{
-							// Both are regular points
-							if (clip_in[curr_idx].w != 0.0)
+							var edge_ax = new vec2(it.x - pt_a.x, it.y - pt_a.y);
+							var edge_bx = new vec2(it.x - pt_b.x, it.y - pt_b.y);
+						
+							var interp_a = tri_coef * determinant(edge_ax, edge_ab);
+							var interp_b = tri_coef * determinant(edge_bx, edge_bc);
+							var interp_c = 1.0 - (interp_a + interp_b);
+						
+							if (interp_a >= 0 && interp_b >= 0 && interp_c >= 0)
 							{
-							
+								draw_pixel( it, mix_3(interp_a, interp_b, interp_c, color_a, color_b, color_c) );
 							}
-							// Previous is regular, current is infinite
+							/*
 							else
 							{
-							
-							}						
+								var debug_color = new rgba(255, 0, 0, 255);
+								draw_pixel(it, debug_color);					
+							}
+							*/
+							it.x += 1;
 						}
-						else
+						
+						it.x = pt_min.x;
+						it.y += 1;				
+					}
+				
+				}
+				
+					
+				draw_triangles(verts_with_attributes, num_verts, vertex_shader, uniforms)
+				{
+					var i = 0;
+					while (i < num_verts)
+					{
+						// Vertex Shader
+						var vert_a = vertex_shader(verts_with_attributes[i+0], uniforms);
+						var vert_b = vertex_shader(verts_with_attributes[i+1], uniforms);
+						var vert_c = vertex_shader(verts_with_attributes[i+2], uniforms);
+						
+
+						// Clipping	& Homogeneous normalization			
+						var verts = this._clip_to_ndc(vert_a, vert_b, vert_c);
+						
+									
+						// Viewport Transform
+						var v = 0;
+						while (v < verts.length)
 						{
-						
-						
+							this._viewport_transform(verts[v]);
+
+							v += 1;
 						}
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-						// Find value at intersect
-						var coef = (-1.0 - clipped_in[prev_idx].x
-					
-						new_vert = lerp_two_vert_with_attributes(clipped_in[prev_idx], 
-																 clipped_in[curr_idx], 
-																 );
 						
-						// Insert
+						
+						// Rasterize
+						v = 0;
+						while (v < verts.length - 2)
+						{
+							this.raster_triangle(verts[v+0].fragCoord,
+												 verts[v+1].fragCoord,
+												 verts[v+2].fragCoord,
+												 verts[v+0].fragColor,
+												 verts[v+1].fragColor,
+												 verts[v+2].fragColor);
+										  
+							v += 1;
+						}
+
+						
+						i += 3;
 					}
-					if (curr_out == false)
-					{
-						clipped_out.push(clipped_in[curr_idx]);
-						//Insert
-					}
-										
-					prev_idx = curr_idx;
-					prev_out = curr_out;
-										
-					curr_idx += 1;
 				}
-				
-				return clip_out;			
-			}
-
-			function clip_x_right(clip_in)
-			{
 			
-			}
-
-			function clip_y_bottom(clip_in)
-			{
 			
-			}
-
-			function clip_y_top(clip_in)
-			{
-			
-			}
-
-			function clip_z_low(clip_in)
-			{
-			
-			}
-
-			function clip_z_high(clip_in)
-			{
-			
-			}
-			
-
-			function clip_to_ndc(vert_a, vert_b, vert_c)
-			{
-				clip_a = [vert_a, vert_b, vert_c];
-				clip_b = [];
-				
-				// Make 'W' nonnegative
-				var c = 0;
-				while (c < 3)
+				_viewport_transform(ndc)
 				{
-					if (clip_a[c].w < 0.0)
-					{
-						clip_a[c].x *= -1.0;
-						clip_a[c].y *= -1.0;
-						clip_a[c].z *= -1.0;
-						clip_a[c].w *= -1.0;					
-					}
-					c += 1;
+					// As specified on: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glViewport.xhtml
+					
+					ndc.fragCoord.x = (ndc.fragCoord.x + 1) * (this.viewport_width  / 2) + this.viewport_x_offset;					
+					ndc.fragCoord.y = (ndc.fragCoord.y + 1) * (this.viewport_height / 2) + this.viewport_y_offset;
 				}
-				
-				
-				// X sides
-				clip_b = this.clip_x_left(clip_a);
-
-				clip_a = this.clip_x_right(clip_b);
 
 
-				// Y sides
-				clip_b = this.clip_y_bottom(clip_a);
-				
-				clip_a = this.clip_y_top(clip_b);
-				
-				
-				// Z sides
-				clip_b = this.clip_z_low(clip_a);
-				
-				clip_a = this.clip_z_high(clip_b);
-				
-				
-				// Return filtered
-				return clip_a;
-			}
-			
-			
-			function homogeneous_normalization(v4)
-			{
-				var coef = 1.0 / v4.fragCoord.w;
-				
-				v4.fragCoord.x *= coef;
-				v4.fragCoord.y *= coef;
-				v4.fragCoord.z *= coef;
-				v4.fragCoord.w  = coef;
-			}
-			
-			
-			function viewport_transform(ndc)
-			{
-				ndc.fragCoord.x = 0.5 * this.ctx_width * ndc.fragCoord.x + this.ctx_width;
-								  // this.ctx_width *  ( (v4.x * 0.5) + 1.0 ); 
-				
-				ndc.fragCoord.y = 0.5 * this.ctx_height * ndc.fragCoord.y + this.ctx_height;
-								  // this.ctx_height * ( (v4.y * 0.5) + 1.0 );
-			}
-			
-			
-			function software_pipeline_draw(verts_with_attributes, num_verts, vertex_shader, uniforms)
-			{
-				var i = 0;
-				while (i < num_verts)
+				_clip_x_left(clip_in)
 				{
-					// Vertex Shader
-					vert_a = vertex_shader(verts_with_attributes[i+0], uniforms);
-					vert_b = vertex_shader(verts_with_attributes[i+1], uniforms);
-					vert_c = vertex_shader(verts_with_attributes[i+2], uniforms);
+					var clip_out = [];
 					
+					var prev_idx = clip_in.length - 1;
+					var prev_out = (-clip_in[prev_idx].fragCoord.x > clip_in[prev_idx].fragCoord.w);
 
-					// Clipping					
-					verts = this.clip_to_ndc(vert_output_a, vert_output_b, vert_output_c);
+					var curr_idx = 0;
+					while (curr_idx < clip_in.length)
+					{					
+						var curr_out = (-clip_in[prev_idx].fragCoord.x > clip_in[prev_idx].fragCoord.w);
 					
-					
-					// Homogeneous normalization
-					var n = 0;
-					while (n < clipped_verts.length)
-					{
-						this.homogeneous_normalization(verts[n]);
+						if (curr_out != prev_out)
+						{
+							var case_no =  (clip_in[prev_idx].fragCoord.w != 0.0) ? 2 : 0;
+								case_no += (clip_in[curr_idx].fragCoord.w != 0.0) ? 1 : 0;
 
-						n += 1;
-					}
-					
-					
-					// Viewport Transform
-					var v = 0;
-					while (v < normalized_device_coords.length)
-					{
-						this.viewport_transform(verts[v]);
+						
+							// 4 Cases:						
+							switch(case_no)
+							{
+								// (PREV) INF --> INF (CURR)
+								case 0:
+									var new_coord = new vec4(0.5 * clip_in[prev_idx].fragCoord.x + 0.5 * clip_in[curr_idx].fragCoord.x,
+															 0.5 * clip_in[prev_idx].fragCoord.y + 0.5 * clip_in[curr_idx].fragCoord.y,
+															 0.5 * clip_in[prev_idx].fragCoord.z + 0.5 * clip_in[curr_idx].fragCoord.z,
+															 1.0);
+									var new_color = new rgba(0.5 * clip_in[prev_idx].fragColor.r + 0.5 * clip_in[curr_idx].fragColor.r,
+															 0.5 * clip_in[prev_idx].fragColor.g + 0.5 * clip_in[curr_idx].fragColor.g,
+															 0.5 * clip_in[prev_idx].fragColor.b + 0.5 * clip_in[curr_idx].fragColor.b,
+															 0.5 * clip_in[prev_idx].fragColor.a + 0.5 * clip_in[curr_idx].fragColor.a);
 
-						v += 1;
-					}
-					
-					
-					// Rasterize
-					var t = 0;
-					while (t < clipped_verts.length - 2)
-					{
-						draw_triangle(verts[  0].fragCoord,
-									  verts[t+1].fragCoord,
-									  verts[t+2].fragCoord,
-									  verts[  0].fragColor,
-									  verts[t+1].fragColor,
-									  verts[t+2].fragColor);
-									  
-						t += 1;
-					}
-					
-					
-					
-					// Fragment Shader
-					// fragColor = vert_shader_color;
-					; // (Not implemented)
-					
-					
-					// Blending
-					
-					; // (Not impleneted)
-
-					
-					// Z-Buffer
-					
-					; // (Not implemented)
-					
+									clip_out.push( new vertex_with_attribute(new_coord, new_color) );								
+									break;
+									
+								// (PREV) INF --> REG (CURR)
+								case 1:
+									var T = -clip_in[curr_idx].fragCoord.x / clip_in[prev_idx].fragCoord.x
+									var U = 1.0 - T;
+									
+									var new_coord = new vec4(U * clip_in[prev_idx].fragCoord.x + T * clip_in[curr_idx].fragCoord.x,
+															 U * clip_in[prev_idx].fragCoord.y + T * clip_in[curr_idx].fragCoord.y,
+															 U * clip_in[prev_idx].fragCoord.z + T * clip_in[curr_idx].fragCoord.z,
+															 1.0);
+									
+									var new_color = new rgba(clip_in[curr_idx].fragColor.r,
+															 clip_in[curr_idx].fragColor.g,
+															 clip_in[curr_idx].fragColor.b,
+															 clip_in[curr_idx].fragColor.a);
+									
+									clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+									break;
+									
+								// (PREV) REG --> INF (CURR)
+								case 2:
+									var T = -clip_in[prev_idx].fragCoord.x / clip_in[curr_idx].fragCoord.x;
+									var U = 1.0 - T;
 								
-					// Logical Operators
+									var new_coord = new vec4(T * clip_in[prev_idx].fragCoord.x + U * clip_in[curr_idx].fragCoord.x,
+															 T * clip_in[prev_idx].fragCoord.y + U * clip_in[curr_idx].fragCoord.y,
+															 T * clip_in[prev_idx].fragCoord.z + U * clip_in[curr_idx].fragCoord.z,
+															 1.0);
+									
+									var new_color = new rgba(clip_in[prev_idx].fragColor.r,
+															 clip_in[prev_idx].fragColor.g,
+															 clip_in[prev_idx].fragColor.b,
+															 clip_in[prev_idx].fragColor.a);
+									
+									clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+									break;
+								
+								// (PREV) REG --> REG (CURR)
+								case 3:
+									var T = (-1 - X0 ) / (X1 - X0);
+									var U = 1.0 - T;
+									
+									var new_coord = new vec4(T * clip_in[prev_idx].fragCoord.x + U * clip_in[curr_idx].fragCoord.x,
+															 T * clip_in[prev_idx].fragCoord.y + U * clip_in[curr_idx].fragCoord.y,
+															 T * clip_in[prev_idx].fragCoord.z + U * clip_in[curr_idx].fragCoord.z,
+															 1.0);
+									
+									var new_color = new rgba(T * clip_in[prev_idx].fragColor.r + U * clip_in[curr_idx].fragColor.r,
+															 T * clip_in[prev_idx].fragColor.g + U * clip_in[curr_idx].fragColor.g,
+															 T * clip_in[prev_idx].fragColor.b + U * clip_in[curr_idx].fragColor.b,
+															 T * clip_in[prev_idx].fragColor.a + U * clip_in[curr_idx].fragColor.a);
+
+									clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+									break;
+							}
+						}
+
+
+						if (curr_out == false)
+						{
+							clip_out.push( clip_in[curr_idx] );						
+						}
+
+
+						prev_idx = curr_idx;
+						prev_out = curr_out;
+											
+						curr_idx += 1;
+					}
 					
-					; // (Not implemented)
-					
-					
-				
-					i += 3;
+					return clip_out;			
 				}
+
+
+				_clip_x_right(clip_in)
+				{
+				
+				}
+
+
+				_clip_y_bottom(clip_in)
+				{
+				
+				}
+
+
+				_clip_y_top(clip_in)
+				{
+				
+				}
+
+
+				_clip_z_low(clip_in)
+				{
+				
+				}
+
+
+				_clip_z_high(clip_in)
+				{
+				
+				}
+				
+
+				_clip_to_ndc(vert_a, vert_b, vert_c)
+				{
+					var clip_a = [vert_a, vert_b, vert_c];
+					var clip_b = [];
+					
+					// Project Coordinates 
+					var c = 0;
+					while (c < 3)
+					{
+						if (clip_a[c].fragCoord.w != 0.0)
+						{
+							var inv_w = 1.0 / clip_a[c].fragCoord.w;
+							clip_a[c].fragCoord.x *= inv_w;
+							clip_a[c].fragCoord.y *= inv_w;
+							clip_a[c].fragCoord.z *= inv_w;
+							clip_a[c].fragCoord.w  = inv_w;					
+						}
+						c += 1;
+					}
+					
+					
+					// X sides
+					clip_b = this._clip_x_left(clip_a);
+
+
+					// debug;
+					return clip_b;
+
+
+					clip_a = this._clip_x_right(clip_b);
+
+
+					// Y sides
+					clip_b = this._clip_y_bottom(clip_a);
+					
+					clip_a = this._clip_y_top(clip_b);
+					
+					
+					// Z sides
+					clip_b = this._clip_z_low(clip_a);
+					
+					clip_a = this._clip_z_high(clip_b);
+					
+					
+					// Return filtered
+					return clip_a;
+				}
+				
 			}
+		
 			
 			
+			
+			
+			
+			
+			
+			
+			
+			
+			// TODO: Add ctx limits vs viewport drawing... enumerate OpenGL style functions here:
+			// glClear
+			// glViewport
+			// draw_triangles_with_attributes(...)
+			
+			
+			
+			
+			function vertex_shader(vert_with_attribute, uniforms)
+			{
+				var rv = new vertex_with_attribute(vert_with_attribute.fragCoord,
+												   vert_with_attribute.fragColor);			
+												   												   
+				
+				// TODO: Write Vertex Shader code here...
+				
+												   
+				return rv;
+			}
 			
 			
 			
 			function draw_canvas()
 			{
 			
-				var pt_a = new vec2(50.0, 70.0);
-				var pt_b = new vec2(200.0, 250.0);
-				var pt_c = new vec2(250.0, 40.0);
+				var pt_a = new vec4(-0.5, -0.5, 0.0, 1.0);
+				var pt_b = new vec4( 0.0,  0.5, 0.0, 1.0);
+				var pt_c = new vec4( 0.5, -0.5, 0.0, 1.0);
 				var color_a = new rgba(0, 255, 0, 255);
 				var color_b = new rgba(255, 255, 0, 255);
 				var color_c = new rgba(0, 255, 255, 255);
-				
-				clear_canvas(new rgba(0, 0, 0, 255));
-				
-				draw_triangle(pt_a, pt_b, pt_c, color_a, color_b, color_c);
 
-			}
-
-			
-			function update_slider_view()
-			{
-				slider_view.textContent = slider.value + " Sample(s)";
-			}
-
-			
-			function update_samples()
-			{
-				update_slider_view();
 				
-				clear_canvas(new rgba(255, 255, 255, 255));
-				draw_canvas();
+				var verts = [
+								new vertex_with_attribute(pt_a, color_a),
+								new vertex_with_attribute(pt_b, color_b),
+								new vertex_with_attribute(pt_c, color_c),				
+							];
+
+				uniforms = null;
+
+
+				renderer.clear();
+				renderer.draw_triangles(verts, verts.length, vertex_shader, uniforms);
+							
 			}
 
 				
@@ -962,15 +1033,14 @@
 			{
 				var frame_canvas = document.getElementById("frame_canvas");
 				ctx = frame_canvas.getContext("2d");
-				ctx_width = frame_canvas.width;
-				ctx_height = frame_canvas.height;
-
-				slider = document.getElementById("samples_slider");
-				slider_view = document.getElementById("samples_slider_count");
-
+				renderer = new software_renderer(ctx);				
+				renderer.clearColor(new rgba(0, 0, 0, 255));				
+				
+				
 				draw_canvas();
-				update_slider_view();
 			}
+			
+			
 		</script>
 		
 	</head>	
