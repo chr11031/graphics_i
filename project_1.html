@@ -390,9 +390,9 @@
 							var edge_ax = new vec2(it.x - pt_a.x, it.y - pt_a.y);
 							var edge_bx = new vec2(it.x - pt_b.x, it.y - pt_b.y);
 						
-							var interp_a = tri_coef * vec2_determinant(edge_ax, edge_ab);
-							var interp_b = tri_coef * vec2_determinant(edge_bx, edge_bc);
-							var interp_c = 1.0 - (interp_a + interp_b);
+							var interp_c = tri_coef * vec2_determinant(edge_ax, edge_ab);
+							var interp_a = tri_coef * vec2_determinant(edge_bx, edge_bc);
+							var interp_b = 1.0 - (interp_c + interp_a);
 						
 							if (interp_a >= 0 && interp_b >= 0 && interp_c >= 0)
 							{
@@ -444,10 +444,10 @@
 						v = 0;
 						while (v < verts.length - 2)
 						{
-							this.raster_triangle(verts[v+0].fragCoord,
+							this.raster_triangle(verts[  0].fragCoord,
 												 verts[v+1].fragCoord,
 												 verts[v+2].fragCoord,
-												 verts[v+0].fragColor,
+												 verts[  0].fragColor,
 												 verts[v+1].fragColor,
 												 verts[v+2].fragColor);
 										  
@@ -479,25 +479,23 @@
 					var curr_idx = 0;
 					while (curr_idx < clip_in.length)
 					{					
-						var curr_out = (-clip_in[prev_idx].fragCoord.x > clip_in[prev_idx].fragCoord.w);
+						var curr_out = (-clip_in[curr_idx].fragCoord.x > clip_in[curr_idx].fragCoord.w);
 					
 						if (curr_out != prev_out)
 						{
-							var case_no =  (clip_in[prev_idx].fragCoord.w != 0.0) ? 2 : 0;
-								case_no += (clip_in[curr_idx].fragCoord.w != 0.0) ? 1 : 0;
-								
+							var X0 = clip_in[prev_idx].fragCoord.x;
+							var X1 = clip_in[curr_idx].fragCoord.x;						
 							var T = (-1 - X0 ) / (X1 - X0);
-							var U = 1.0 - T;
 							
-							var new_coord = new vec4(T * clip_in[prev_idx].fragCoord.x + U * clip_in[curr_idx].fragCoord.x,
-													 T * clip_in[prev_idx].fragCoord.y + U * clip_in[curr_idx].fragCoord.y,
-													 T * clip_in[prev_idx].fragCoord.z + U * clip_in[curr_idx].fragCoord.z,
+							var new_coord = new vec4(clip_in[prev_idx].fragCoord.x + T * (clip_in[curr_idx].fragCoord.x - clip_in[prev_idx].fragCoord.x),
+													 clip_in[prev_idx].fragCoord.y + T * (clip_in[curr_idx].fragCoord.y - clip_in[prev_idx].fragCoord.y),
+													 clip_in[prev_idx].fragCoord.z + T * (clip_in[curr_idx].fragCoord.z - clip_in[prev_idx].fragCoord.z),
 													 1.0);
 							
-							var new_color = new rgba(T * clip_in[prev_idx].fragColor.r + U * clip_in[curr_idx].fragColor.r,
-													 T * clip_in[prev_idx].fragColor.g + U * clip_in[curr_idx].fragColor.g,
-													 T * clip_in[prev_idx].fragColor.b + U * clip_in[curr_idx].fragColor.b,
-													 T * clip_in[prev_idx].fragColor.a + U * clip_in[curr_idx].fragColor.a);
+							var new_color = new rgba(clip_in[prev_idx].fragColor.r + T * (clip_in[curr_idx].fragColor.r - clip_in[prev_idx].fragColor.r),
+													 clip_in[prev_idx].fragColor.g + T * (clip_in[curr_idx].fragColor.g - clip_in[prev_idx].fragColor.g),
+													 clip_in[prev_idx].fragColor.b + T * (clip_in[curr_idx].fragColor.b - clip_in[prev_idx].fragColor.b),
+													 clip_in[prev_idx].fragColor.a + T * (clip_in[curr_idx].fragColor.a - clip_in[prev_idx].fragColor.a));
 
 							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
 						}
@@ -640,7 +638,7 @@
 			function draw_canvas()
 			{
 			
-				var pt_a = new vec4(-0.5, -0.5, 0.0, 1.0);
+				var pt_a = new vec4(-1.5, -0.5, 0.0, 1.0);
 				var pt_b = new vec4( 0.0,  0.5, 0.0, 1.0);
 				var pt_c = new vec4( 0.5, -0.5, 0.0, 1.0);
 				var color_a = new rgba(255, 0, 0, 255);
