@@ -69,13 +69,13 @@
 			{
 				var frame_canvas = document.getElementById("frame_canvas");
 				
-				gl = frame_canvas.getContext("webgl2");
+				gl = frame_canvas.getContext("webgl2", {preserveDrawingBuffer: true});
 				
 				
 				var positions = new Float32Array([
-					-0.5, -0.5, 0.0, 1.0,
-					 0.5, -0.5, 0.0, 1.0,
-					 0.0, 0.0,  0.0, 0.01,			
+					-0.75, -0.0, 0.0, 1.0,
+					 0.0, -0.0, 0.0, 1.0,
+					 0.0, 0.1,  0.0, 0.000003814697265625, /*  2^-18 = (1/(32,768*8))  */			
 				]);
 				
 				
@@ -145,8 +145,8 @@
 								precision highp float;
 								layout(location=0) in vec4 aPos;
 								layout(location=1) in vec3 aCol;
-								
-								out vec3 vCol;
+
+								flat out vec3 vCol;
 								
 								void main(){
 
@@ -169,13 +169,15 @@
 				var fs_code = `#version 300 es
 								precision highp float;
 								
-								in vec3 vCol;
+								flat in vec3 vCol;
 								
 								out vec4 outCol;
 								
 								void main() {
 								
-									outCol = vec4(vCol, 1.0);
+									float f = 1.0 / gl_FragCoord.w;
+									outCol = vec4(f, f, f, 1.0);
+									//outCol = vec4(vCol, 1.0);
 									
 								}`;
 								
@@ -221,8 +223,8 @@
 				<td>
 					<canvas	id="frame_canvas"
 							style="background-color: #FFFFFF;" 
-							width=320 
-							height=480>
+							width=1024 
+							height=1024>
 					</canvas>	
 			</tr>
 			<tr>
