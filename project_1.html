@@ -368,7 +368,22 @@
 					this.ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
 					this.ctx.fillRect(pt.x, this.window_height - (pt.y+1), 1, 1);
 				}
-							
+						
+
+				_edge_is_top_or_left(pt_a, pt_b, other_pt)
+				{
+					var dy = pt_b.y - pt_a.y;
+				
+					// Is top
+					if (dy && pt_a.y > other_pt.y)
+					{
+						return 1;
+					}
+				
+					// Is left
+					return dy < 0;
+				}
+						
 					
 				raster_triangle(pt_a, pt_b, pt_c, color_a, color_b, color_c)
 				{
@@ -376,10 +391,14 @@
 					var pt_max = new vec2(max_of_3(pt_a.x, pt_b.x, pt_c.x), max_of_3(pt_a.y, pt_b.y, pt_c.y));
 
 
-					var tri_area = vec2_determinant(new vec2(pt_a.x - pt_b.x, pt_a.y - pt_b.y), new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y));
+					var tri_area = vec2_determinant(new vec2(pt_a.x - pt_b.x, pt_a.y - pt_b.y), 
+													new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y));
 					var tri_coef = 1.0 / tri_area;
-					var edge_ab = new vec2(pt_b.x - pt_a.x, pt_b.y - pt_a.y);
-					var edge_bc = new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y);
+					var edge_ab = new vec2(pt_b.x - pt_a.x, pt_b.y - pt_a.y);// - this._edge_is_top_or_left(pt_a, pt_b, pt_c);
+					var edge_bc = new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y);// - this._edge_is_top_or_left(pt_b, pt_c, pt_a);
+					var edge_ca = new vec2(pt_a.x - pt_c.x, pt_a.y - pt_c.y);// - this._edge_is_top_or_left(pt_c, pt_a, pt_b);
+					
+					
 
 
 					var it = new vec2(pt_min.x, pt_min.y);
@@ -389,15 +408,21 @@
 						{
 							var edge_ax = new vec2(it.x - pt_a.x, it.y - pt_a.y);
 							var edge_bx = new vec2(it.x - pt_b.x, it.y - pt_b.y);
+							var edge_cx = new vec2(it.x - pt_c.x, it.y - pt_c.y);
 						
 							var interp_c = tri_coef * vec2_determinant(edge_ax, edge_ab);
 							var interp_a = tri_coef * vec2_determinant(edge_bx, edge_bc);
-							var interp_b = 1.0 - (interp_c + interp_a);
-						
+							var interp_b = tri_coef * vec2_determinant(edge_cx, edge_ca);
+							//var interp_b = 1.0 - (interp_c + interp_a);
+							
 							if (interp_a >= 0 && interp_b >= 0 && interp_c >= 0)
 							{
 								this.draw_pixel( it, mix_3(interp_a, interp_b, interp_c, color_a, color_b, color_c) );
 							}
+							
+							// Dx Dy version with edge mapping rules is missing/needed
+							// MSAA ? ? ? 
+							
 							/*
 							else
 							{
