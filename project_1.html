@@ -399,6 +399,8 @@
 					var edge_ca = new vec2(pt_a.x - pt_c.x, pt_a.y - pt_c.y);// - this._edge_is_top_or_left(pt_c, pt_a, pt_b);
 					
 					
+					// Dx Dx version (implement this next)...
+					
 
 
 					var it = new vec2(pt_min.x, pt_min.y);
@@ -412,24 +414,12 @@
 						
 							var interp_c = tri_coef * vec2_determinant(edge_ax, edge_ab);
 							var interp_a = tri_coef * vec2_determinant(edge_bx, edge_bc);
-							var interp_b = tri_coef * vec2_determinant(edge_cx, edge_ca);
-							//var interp_b = 1.0 - (interp_c + interp_a);
+							var interp_b = tri_coef * vec2_determinant(edge_cx, edge_ca); //var interp_b = 1.0 - (interp_c + interp_a);
 							
 							if (interp_a >= 0 && interp_b >= 0 && interp_c >= 0)
 							{
 								this.draw_pixel( it, mix_3(interp_a, interp_b, interp_c, color_a, color_b, color_c) );
-							}
-							
-							// Dx Dy version with edge mapping rules is missing/needed
-							// MSAA ? ? ? 
-							
-							/*
-							else
-							{
-								var debug_color = new rgba(255, 0, 0, 255);
-								draw_pixel(it, debug_color);					
-							}
-							*/
+							}							
 							it.x += 1;
 						}
 						
@@ -476,9 +466,9 @@
 						
 						
 						// Normalization & Attribute Correction
-						this._project_clip_coordinate_and_attributes_to_ndc(vert_a);
-						this._project_clip_coordinate_and_attributes_to_ndc(vert_b);
-						this._project_clip_coordinate_and_attributes_to_ndc(vert_c);
+						this._project_clip_coordinate_and_attributes_to_ndc(verts[0]);
+						this._project_clip_coordinate_and_attributes_to_ndc(verts[1]);
+						this._project_clip_coordinate_and_attributes_to_ndc(verts[2]);
 	
 	
 						// Viewport Transform
