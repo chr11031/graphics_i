@@ -438,6 +438,26 @@
 					}
 				
 				}
+
+				
+				_project_clip_coordinate_and_attributes_to_ndc(vert)
+				{
+					var inv_w = 1.0 / vert.fragCoord.w;						
+					var xyz_coef = inv_w;						
+					
+					// For our vertex, project X/Y/Z. Use W for interpolating 1/W
+					vert.fragCoord.x *= xyz_coef;
+					vert.fragCoord.y *= xyz_coef;
+					vert.fragCoord.z *= xyz_coef;
+					vert.fragCoord.w  = inv_w;					
+					
+					
+					// For all perspective-corrected attributes, Multiply attribute by 1/W
+					vert.fragColor.r *= inv_w;
+					vert.fragColor.g *= inv_w;
+					vert.fragColor.b *= inv_w;
+					vert.fragColor.a *= inv_w;		
+				}
 				
 					
 				draw_triangles(verts_with_attributes, num_verts, vertex_shader, uniforms)
@@ -452,9 +472,15 @@
 						
 
 						// Clipping	& Homogeneous normalization			
-						var verts = this._clip_to_ndc(vert_a, vert_b, vert_c);
+						var verts = this._clip_triangle(vert_a, vert_b, vert_c);
 						
-									
+						
+						// Normalization & Attribute Correction
+						this._project_clip_coordinate_and_attributes_to_ndc(vert_a);
+						this._project_clip_coordinate_and_attributes_to_ndc(vert_b);
+						this._project_clip_coordinate_and_attributes_to_ndc(vert_c);
+	
+	
 						// Viewport Transform
 						for (var v = 0; v < verts.length; v++)
 						{
@@ -769,52 +795,132 @@
 					return clip_out;			
 				}
 				
-
-				_clip_to_ndc(vert_a, vert_b, vert_c)
+				_simplify_w(clip_in)
 				{
-					var clip_a = [vert_a, vert_b, vert_c];
-					var clip_b = [];
-					
-					// Filter & Project Coordinates 
-					var c = 0;
-					while (c < 3)
+					var clip_out = [];
+				
+					for (var v = 0; v < clip_in.length; v++)
 					{
-						// Clamp 'W' to non-inf values where we cannot differntiate between 
+						// Does 2 things:
+						// 1. Makes 'W' non-negative
+						// 2. Clamps 'W' to non-inf values where we cannot differntiate between 
 						// that and infinity for resolutions up to 32,768 @ MSAAx8 (1/2^-18)
-						var mag = Math.abs(clip_a[c].fragCoord.w);						
+						var mag = Math.abs(clip_in[v].fragCoord.w);						
+						var sign = Math.sign(clip_in[v].fragCoord.w);
 						var mag_clamped = mag < 0.000003814697265625 ? 0.000003814697265625 : mag;						
 
+						var new_coord = new vec4(sign * clip_in[v].fragCoord.x,
+										     	 sign * clip_in[v].fragCoord.y,
+												 sign * clip_in[v].fragCoord.z,
+											     sign * mag_clamped);
 
-						// Make 'W' non-negative / flip 'XYZ' if necessary to match
-						var inv_w = 1.0 / mag_clamped;						
-						var xyz_coef = Math.sign(clip_a[c].fragCoord.w) * inv_w;						
-						
-						clip_a[c].fragCoord.x *= xyz_coef;
-						clip_a[c].fragCoord.y *= xyz_coef;
-						clip_a[c].fragCoord.z *= xyz_coef;
-						clip_a[c].fragCoord.w  = inv_w;					
-						
-						c += 1;
+						var new_color = new rgba(sign * clip_in[v].fragColor.r,
+												 sign * clip_in[v].fragColor.g,
+												 sign * clip_in[v].fragColor.b,
+												 sign * clip_in[v].fragColor.a);
+												 
+						clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+					}
+					
+					return clip_out;
+				}
+				
+
+				_clip_triangle(vert_a, vert_b, vert_c)
+				{
+					// Simplify W
+					var clip = this._simplify_w([vert_a, vert_b, vert_c]);
+					
+					
+					// Boolean tests to save us from clipping (more efficient in HW)
+					var x_left_a   = clip[0].fragCoord.x < -clip[0].fragCoord.w;
+					var x_left_b   = clip[1].fragCoord.x < -clip[1].fragCoord.w;
+					var x_left_c   = clip[2].fragCoord.x < -clip[2].fragCoord.w;
+					if (x_left_a && x_left_b && x_left_c)
+					{
+						return [];
+					}
+					
+					
+					var x_right_a  = clip[0].fragCoord.x >  clip[0].fragCoord.w;
+					var x_right_b  = clip[1].fragCoord.x >  clip[1].fragCoord.w;
+					var x_right_c  = clip[2].fragCoord.x >  clip[2].fragCoord.w;
+					if (x_right_a && x_right_b && x_right_c)
+					{
+						return [];
+					}
+
+					
+					var y_top_a    = clip[0].fragCoord.y < -clip[0].fragCoord.w;
+					var y_top_b    = clip[1].fragCoord.y < -clip[1].fragCoord.w;
+					var y_top_c    = clip[2].fragCoord.y < -clip[2].fragCoord.w;
+					if (y_top_a && y_tob_b && y_top_c)
+					{
+						return [];
+					}
+					
+					
+					var y_bottom_a = clip[0].fragCoord.y >  clip[0].fragCoord.w;
+					var y_bottom_b = clip[1].fragCoord.y >  clip[1].fragCoord.w;
+					var y_bottom_c = clip[2].fragCoord.y >  clip[2].fragCoord.w;
+					if (y_top_a && y_tob_b && y_top_c)
+					{
+						return [];
+					}
+					
+					
+					var z_low_a  = clip[0].fragCoord.z   < -clip[0].fragCoord.w;
+					var z_low_b  = clip[1].fragCoord.z   < -clip[1].fragCoord.w;
+					var z_low_c  = clip[2].fragCoord.z   < -clip[2].fragCoord.w;
+					if (z_low_a && z_low_b && z_low_c)
+					{
+						return [];
+					}
+					
+					
+					var z_high_a = clip[0].fragCoord.z   >  clip[0].fragCoord.w;
+					var z_high_b = clip[1].fragCoord.z   >  clip[1].fragCoord.w;
+					var z_high_c = clip[2].fragCoord.z   >  clip[2].fragCoord.w;
+					if (z_high_a && z_high_b && z_high_c)
+					{
+						return [];
 					}
 					
 					
 					// X sides
-					clip_b = this._clip_x_left(clip_a);
-					clip_a = this._clip_x_right(clip_b);
-
-
+					if (x_left_a || x_left_b || x_left_c)
+					{
+						clip = this._clip_x_left(clip);
+					}
+					if (x_right_a || x_right_b || x_right_c)
+					{
+						clip = this._clip_x_right(clip);
+					}
+					
+					
 					// Y sides
-					clip_b = this._clip_y_bottom(clip_a);
-					clip_a = this._clip_y_top(clip_b);
+					if (y_bottom_a || y_bottom_b || y_bottom_c)
+					{
+						clip = this._clip_y_bottom(clip);
+					}
+					if (y_top_a || y_top_b || y_top_c)
+					{
+						clip = this._clip_y_top(clip);
+					}
 					
 					
 					// Z sides
-					clip_b = this._clip_z_low(clip_a);
-					clip_a = this._clip_z_high(clip_b);
-					
+					if (z_low_a || z_low_b || z_low_c)
+					{
+						clip = this._clip_z_low(clip);
+					}
+					if (z_high_a || z_high_b || z_high_c)
+					{
+						clip = this._clip_z_high(clip);
+					}
 					
 					// Return filtered
-					return clip_a;
+					return clip;
 				}
 				
 			}
