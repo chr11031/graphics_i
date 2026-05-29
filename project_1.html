@@ -456,18 +456,14 @@
 						
 									
 						// Viewport Transform
-						var v = 0;
-						while (v < verts.length)
+						for (var v = 0; v < verts.length; v++)
 						{
 							this._viewport_transform(verts[v]);
-
-							v += 1;
 						}
 						
 						
 						// Rasterize
-						v = 0;
-						while (v < verts.length - 2)
+						for (var v = 0; v < verts.length - 2; v++)
 						{
 							this.raster_triangle(verts[  0].fragCoord,
 												 verts[v+1].fragCoord,
@@ -475,8 +471,6 @@
 												 verts[  0].fragColor,
 												 verts[v+1].fragColor,
 												 verts[v+2].fragColor);
-										  
-							v += 1;
 						}
 
 						
