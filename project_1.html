@@ -325,6 +325,8 @@
 					this.gb_min_x = -32768 / this.viewport_width;
 					this.gb_max_y =  32767 / this.viewport_height;
 					this.gb_min_y = -32768 / this.viewport_height;
+					this.clip_min_z = -1;
+					this.clip_max_z =  1;
 					
 					this.clear_color = new rgba(255, 255, 0, 255);
 				}
@@ -540,28 +542,37 @@
 					var clip_out = [];
 					
 					var prev_idx = clip_in.length - 1;
-					var prev_out = (-clip_in[prev_idx].fragCoord.x > clip_in[prev_idx].fragCoord.w);	// TODO: Pick up here.,.
+					var prev_out = (clip_in[prev_idx].fragCoord.x < this.gb_min_x * clip_in[prev_idx].fragCoord.w);	
 
 					var curr_idx = 0;
 					while (curr_idx < clip_in.length)
 					{					
-						var curr_out = (-clip_in[curr_idx].fragCoord.x > clip_in[curr_idx].fragCoord.w);
+						var curr_out = (clip_in[curr_idx].fragCoord.x < this.gb_min_x * clip_in[curr_idx].fragCoord.w);
+					
 					
 						if (curr_out != prev_out)
 						{
-							var X0 = clip_in[prev_idx].fragCoord.x;
-							var X1 = clip_in[curr_idx].fragCoord.x;						
-							var T = (-1 - X0 ) / (X1 - X0);
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.gb_min_x;
+							var X0 = clip_in[in_idx].fragCoord.x;
+							var X1 = clip_in[ot_idx].fragCoord.x;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - X0) / ( X1 - X0 - G * (W1 - W0) );							
 							
-							var new_coord = new vec4(clip_in[prev_idx].fragCoord.x + T * (clip_in[curr_idx].fragCoord.x - clip_in[prev_idx].fragCoord.x),
-													 clip_in[prev_idx].fragCoord.y + T * (clip_in[curr_idx].fragCoord.y - clip_in[prev_idx].fragCoord.y),
-													 clip_in[prev_idx].fragCoord.z + T * (clip_in[curr_idx].fragCoord.z - clip_in[prev_idx].fragCoord.z),
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
 													 1.0);
 							
-							var new_color = new rgba(clip_in[prev_idx].fragColor.r + T * (clip_in[curr_idx].fragColor.r - clip_in[prev_idx].fragColor.r),
-													 clip_in[prev_idx].fragColor.g + T * (clip_in[curr_idx].fragColor.g - clip_in[prev_idx].fragColor.g),
-													 clip_in[prev_idx].fragColor.b + T * (clip_in[curr_idx].fragColor.b - clip_in[prev_idx].fragColor.b),
-													 clip_in[prev_idx].fragColor.a + T * (clip_in[curr_idx].fragColor.a - clip_in[prev_idx].fragColor.a));
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
 
 							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
 						}
@@ -587,28 +598,37 @@
 					var clip_out = [];
 					
 					var prev_idx = clip_in.length - 1;
-					var prev_out = (clip_in[prev_idx].fragCoord.x > clip_in[prev_idx].fragCoord.w);
+					var prev_out = (clip_in[prev_idx].fragCoord.x > this.gb_max_x * clip_in[prev_idx].fragCoord.w);	
 
 					var curr_idx = 0;
 					while (curr_idx < clip_in.length)
 					{					
-						var curr_out = (clip_in[curr_idx].fragCoord.x > clip_in[curr_idx].fragCoord.w);
+						var curr_out = (clip_in[curr_idx].fragCoord.x > this.gb_max_x * clip_in[curr_idx].fragCoord.w);
+					
 					
 						if (curr_out != prev_out)
 						{
-							var X0 = clip_in[prev_idx].fragCoord.x;
-							var X1 = clip_in[curr_idx].fragCoord.x;						
-							var T = ( 1 - X0 ) / (X1 - X0);
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.gb_max_x;
+							var X0 = clip_in[in_idx].fragCoord.x;
+							var X1 = clip_in[ot_idx].fragCoord.x;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - X0) / ( X1 - X0 - G * (W1 - W0) );							
 							
-							var new_coord = new vec4(clip_in[prev_idx].fragCoord.x + T * (clip_in[curr_idx].fragCoord.x - clip_in[prev_idx].fragCoord.x),
-													 clip_in[prev_idx].fragCoord.y + T * (clip_in[curr_idx].fragCoord.y - clip_in[prev_idx].fragCoord.y),
-													 clip_in[prev_idx].fragCoord.z + T * (clip_in[curr_idx].fragCoord.z - clip_in[prev_idx].fragCoord.z),
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
 													 1.0);
 							
-							var new_color = new rgba(clip_in[prev_idx].fragColor.r + T * (clip_in[curr_idx].fragColor.r - clip_in[prev_idx].fragColor.r),
-													 clip_in[prev_idx].fragColor.g + T * (clip_in[curr_idx].fragColor.g - clip_in[prev_idx].fragColor.g),
-													 clip_in[prev_idx].fragColor.b + T * (clip_in[curr_idx].fragColor.b - clip_in[prev_idx].fragColor.b),
-													 clip_in[prev_idx].fragColor.a + T * (clip_in[curr_idx].fragColor.a - clip_in[prev_idx].fragColor.a));
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
 
 							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
 						}
@@ -634,28 +654,37 @@
 					var clip_out = [];
 					
 					var prev_idx = clip_in.length - 1;
-					var prev_out = (-clip_in[prev_idx].fragCoord.y > clip_in[prev_idx].fragCoord.w);
+					var prev_out = (clip_in[prev_idx].fragCoord.y < this.gb_min_y * clip_in[prev_idx].fragCoord.w);	
 
 					var curr_idx = 0;
 					while (curr_idx < clip_in.length)
 					{					
-						var curr_out = (-clip_in[curr_idx].fragCoord.y > clip_in[curr_idx].fragCoord.w);
+						var curr_out = (clip_in[curr_idx].fragCoord.y < this.gb_min_y * clip_in[curr_idx].fragCoord.w);
+					
 					
 						if (curr_out != prev_out)
 						{
-							var Y0 = clip_in[prev_idx].fragCoord.y;
-							var Y1 = clip_in[curr_idx].fragCoord.y;						
-							var T = (-1 - Y0 ) / (Y1 - Y0);
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.gb_min_x;
+							var Y0 = clip_in[in_idx].fragCoord.y;
+							var Y1 = clip_in[ot_idx].fragCoord.y;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - Y0) / ( Y1 - Y0 - G * (W1 - W0) );							
 							
-							var new_coord = new vec4(clip_in[prev_idx].fragCoord.x + T * (clip_in[curr_idx].fragCoord.x - clip_in[prev_idx].fragCoord.x),
-													 clip_in[prev_idx].fragCoord.y + T * (clip_in[curr_idx].fragCoord.y - clip_in[prev_idx].fragCoord.y),
-													 clip_in[prev_idx].fragCoord.z + T * (clip_in[curr_idx].fragCoord.z - clip_in[prev_idx].fragCoord.z),
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
 													 1.0);
 							
-							var new_color = new rgba(clip_in[prev_idx].fragColor.r + T * (clip_in[curr_idx].fragColor.r - clip_in[prev_idx].fragColor.r),
-													 clip_in[prev_idx].fragColor.g + T * (clip_in[curr_idx].fragColor.g - clip_in[prev_idx].fragColor.g),
-													 clip_in[prev_idx].fragColor.b + T * (clip_in[curr_idx].fragColor.b - clip_in[prev_idx].fragColor.b),
-													 clip_in[prev_idx].fragColor.a + T * (clip_in[curr_idx].fragColor.a - clip_in[prev_idx].fragColor.a));
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
 
 							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
 						}
@@ -681,28 +710,37 @@
 					var clip_out = [];
 					
 					var prev_idx = clip_in.length - 1;
-					var prev_out = (clip_in[prev_idx].fragCoord.y > clip_in[prev_idx].fragCoord.w);
+					var prev_out = (clip_in[prev_idx].fragCoord.y > this.gb_max_y * clip_in[prev_idx].fragCoord.w);	
 
 					var curr_idx = 0;
 					while (curr_idx < clip_in.length)
 					{					
-						var curr_out = (clip_in[curr_idx].fragCoord.y > clip_in[curr_idx].fragCoord.w);
+						var curr_out = (clip_in[curr_idx].fragCoord.y > this.gb_max_y * clip_in[curr_idx].fragCoord.w);
+					
 					
 						if (curr_out != prev_out)
 						{
-							var Y0 = clip_in[prev_idx].fragCoord.y;
-							var Y1 = clip_in[curr_idx].fragCoord.y;						
-							var T = ( 1 - Y0 ) / (Y1 - Y0);
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.gb_max_y;
+							var Y0 = clip_in[in_idx].fragCoord.y;
+							var Y1 = clip_in[ot_idx].fragCoord.y;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - Y0) / ( Y1 - Y0 - G * (W1 - W0) );							
 							
-							var new_coord = new vec4(clip_in[prev_idx].fragCoord.x + T * (clip_in[curr_idx].fragCoord.x - clip_in[prev_idx].fragCoord.x),
-													 clip_in[prev_idx].fragCoord.y + T * (clip_in[curr_idx].fragCoord.y - clip_in[prev_idx].fragCoord.y),
-													 clip_in[prev_idx].fragCoord.z + T * (clip_in[curr_idx].fragCoord.z - clip_in[prev_idx].fragCoord.z),
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
 													 1.0);
 							
-							var new_color = new rgba(clip_in[prev_idx].fragColor.r + T * (clip_in[curr_idx].fragColor.r - clip_in[prev_idx].fragColor.r),
-													 clip_in[prev_idx].fragColor.g + T * (clip_in[curr_idx].fragColor.g - clip_in[prev_idx].fragColor.g),
-													 clip_in[prev_idx].fragColor.b + T * (clip_in[curr_idx].fragColor.b - clip_in[prev_idx].fragColor.b),
-													 clip_in[prev_idx].fragColor.a + T * (clip_in[curr_idx].fragColor.a - clip_in[prev_idx].fragColor.a));
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
 
 							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
 						}
@@ -721,35 +759,44 @@
 					
 					return clip_out;			
 				}
-
+				
 
 				_clip_z_low(clip_in)
 				{
 					var clip_out = [];
 					
 					var prev_idx = clip_in.length - 1;
-					var prev_out = (-clip_in[prev_idx].fragCoord.z > clip_in[prev_idx].fragCoord.w);
+					var prev_out = (clip_in[prev_idx].fragCoord.z < this.clip_min_z * clip_in[prev_idx].fragCoord.w);	
 
 					var curr_idx = 0;
 					while (curr_idx < clip_in.length)
 					{					
-						var curr_out = (-clip_in[curr_idx].fragCoord.z > clip_in[curr_idx].fragCoord.w);
+						var curr_out = (clip_in[curr_idx].fragCoord.z < this.clip_min_z * clip_in[curr_idx].fragCoord.w);
+					
 					
 						if (curr_out != prev_out)
 						{
-							var Z0 = clip_in[prev_idx].fragCoord.y;
-							var Z1 = clip_in[curr_idx].fragCoord.y;						
-							var T = (-1 - Z0 ) / (Z1 - Z0);
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.clip_min_z;
+							var Z0 = clip_in[in_idx].fragCoord.y;
+							var Z1 = clip_in[ot_idx].fragCoord.y;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - Z0) / ( Z1 - Z0 - G * (W1 - W0) );							
 							
-							var new_coord = new vec4(clip_in[prev_idx].fragCoord.x + T * (clip_in[curr_idx].fragCoord.x - clip_in[prev_idx].fragCoord.x),
-													 clip_in[prev_idx].fragCoord.y + T * (clip_in[curr_idx].fragCoord.y - clip_in[prev_idx].fragCoord.y),
-													 clip_in[prev_idx].fragCoord.z + T * (clip_in[curr_idx].fragCoord.z - clip_in[prev_idx].fragCoord.z),
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
 													 1.0);
 							
-							var new_color = new rgba(clip_in[prev_idx].fragColor.r + T * (clip_in[curr_idx].fragColor.r - clip_in[prev_idx].fragColor.r),
-													 clip_in[prev_idx].fragColor.g + T * (clip_in[curr_idx].fragColor.g - clip_in[prev_idx].fragColor.g),
-													 clip_in[prev_idx].fragColor.b + T * (clip_in[curr_idx].fragColor.b - clip_in[prev_idx].fragColor.b),
-													 clip_in[prev_idx].fragColor.a + T * (clip_in[curr_idx].fragColor.a - clip_in[prev_idx].fragColor.a));
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
 
 							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
 						}
@@ -775,28 +822,37 @@
 					var clip_out = [];
 					
 					var prev_idx = clip_in.length - 1;
-					var prev_out = (clip_in[prev_idx].fragCoord.z > clip_in[prev_idx].fragCoord.w);
+					var prev_out = (clip_in[prev_idx].fragCoord.z > this.clip_max_z * clip_in[prev_idx].fragCoord.w);	
 
 					var curr_idx = 0;
 					while (curr_idx < clip_in.length)
 					{					
-						var curr_out = (clip_in[curr_idx].fragCoord.z > clip_in[curr_idx].fragCoord.w);
+						var curr_out = (clip_in[curr_idx].fragCoord.z > this.clip_max_z * clip_in[curr_idx].fragCoord.w);
+					
 					
 						if (curr_out != prev_out)
 						{
-							var Z0 = clip_in[prev_idx].fragCoord.y;
-							var Z1 = clip_in[curr_idx].fragCoord.y;						
-							var T = ( 1 - Z0 ) / (Z1 - Z0);
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.clip_max_z;
+							var Z0 = clip_in[in_idx].fragCoord.y;
+							var Z1 = clip_in[ot_idx].fragCoord.y;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - Z0) / ( Z1 - Z0 - G * (W1 - W0) );							
 							
-							var new_coord = new vec4(clip_in[prev_idx].fragCoord.x + T * (clip_in[curr_idx].fragCoord.x - clip_in[prev_idx].fragCoord.x),
-													 clip_in[prev_idx].fragCoord.y + T * (clip_in[curr_idx].fragCoord.y - clip_in[prev_idx].fragCoord.y),
-													 clip_in[prev_idx].fragCoord.z + T * (clip_in[curr_idx].fragCoord.z - clip_in[prev_idx].fragCoord.z),
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
 													 1.0);
 							
-							var new_color = new rgba(clip_in[prev_idx].fragColor.r + T * (clip_in[curr_idx].fragColor.r - clip_in[prev_idx].fragColor.r),
-													 clip_in[prev_idx].fragColor.g + T * (clip_in[curr_idx].fragColor.g - clip_in[prev_idx].fragColor.g),
-													 clip_in[prev_idx].fragColor.b + T * (clip_in[curr_idx].fragColor.b - clip_in[prev_idx].fragColor.b),
-													 clip_in[prev_idx].fragColor.a + T * (clip_in[curr_idx].fragColor.a - clip_in[prev_idx].fragColor.a));
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
 
 							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
 						}
@@ -854,54 +910,54 @@
 					
 					
 					// Boolean tests to save us from clipping (more efficient in HW)
-					var x_left_a   = clip[0].fragCoord.x < -clip[0].fragCoord.w;
-					var x_left_b   = clip[1].fragCoord.x < -clip[1].fragCoord.w;
-					var x_left_c   = clip[2].fragCoord.x < -clip[2].fragCoord.w;
+					var x_left_a   = clip[0].fragCoord.x < this.gb_min_x * clip[0].fragCoord.w;
+					var x_left_b   = clip[1].fragCoord.x < this.gb_min_x * clip[1].fragCoord.w;
+					var x_left_c   = clip[2].fragCoord.x < this.gb_min_x * clip[2].fragCoord.w;
 					if (x_left_a && x_left_b && x_left_c)
 					{
 						return [];
 					}
 					
 					
-					var x_right_a  = clip[0].fragCoord.x >  clip[0].fragCoord.w;
-					var x_right_b  = clip[1].fragCoord.x >  clip[1].fragCoord.w;
-					var x_right_c  = clip[2].fragCoord.x >  clip[2].fragCoord.w;
+					var x_right_a  = clip[0].fragCoord.x > this.gb_max_x * clip[0].fragCoord.w;
+					var x_right_b  = clip[1].fragCoord.x > this.gb_max_x * clip[1].fragCoord.w;
+					var x_right_c  = clip[2].fragCoord.x > this.gb_max_x * clip[2].fragCoord.w;
 					if (x_right_a && x_right_b && x_right_c)
 					{
 						return [];
 					}
 
 					
-					var y_top_a    = clip[0].fragCoord.y < -clip[0].fragCoord.w;
-					var y_top_b    = clip[1].fragCoord.y < -clip[1].fragCoord.w;
-					var y_top_c    = clip[2].fragCoord.y < -clip[2].fragCoord.w;
+					var y_top_a    = clip[0].fragCoord.y < this.gb_min_y * clip[0].fragCoord.w;
+					var y_top_b    = clip[1].fragCoord.y < this.gb_min_y * clip[1].fragCoord.w;
+					var y_top_c    = clip[2].fragCoord.y < this.gb_min_y * clip[2].fragCoord.w;
 					if (y_top_a && y_tob_b && y_top_c)
 					{
 						return [];
 					}
 					
 					
-					var y_bottom_a = clip[0].fragCoord.y >  clip[0].fragCoord.w;
-					var y_bottom_b = clip[1].fragCoord.y >  clip[1].fragCoord.w;
-					var y_bottom_c = clip[2].fragCoord.y >  clip[2].fragCoord.w;
+					var y_bottom_a = clip[0].fragCoord.y > this.gb_max_y * clip[0].fragCoord.w;
+					var y_bottom_b = clip[1].fragCoord.y > this.gb_max_y * clip[1].fragCoord.w;
+					var y_bottom_c = clip[2].fragCoord.y > this.gb_max_y * clip[2].fragCoord.w;
 					if (y_top_a && y_tob_b && y_top_c)
 					{
 						return [];
 					}
 					
 					
-					var z_low_a  = clip[0].fragCoord.z   < -clip[0].fragCoord.w;
-					var z_low_b  = clip[1].fragCoord.z   < -clip[1].fragCoord.w;
-					var z_low_c  = clip[2].fragCoord.z   < -clip[2].fragCoord.w;
+					var z_low_a  = clip[0].fragCoord.z   < this.clip_min_z * clip[0].fragCoord.w;
+					var z_low_b  = clip[1].fragCoord.z   < this.clip_min_z * clip[1].fragCoord.w;
+					var z_low_c  = clip[2].fragCoord.z   < this.clip_min_z * clip[2].fragCoord.w;
 					if (z_low_a && z_low_b && z_low_c)
 					{
 						return [];
 					}
 					
 					
-					var z_high_a = clip[0].fragCoord.z   >  clip[0].fragCoord.w;
-					var z_high_b = clip[1].fragCoord.z   >  clip[1].fragCoord.w;
-					var z_high_c = clip[2].fragCoord.z   >  clip[2].fragCoord.w;
+					var z_high_a = clip[0].fragCoord.z   >  this.clip_max_z * clip[0].fragCoord.w;
+					var z_high_b = clip[1].fragCoord.z   >  this.clip_max_z * clip[1].fragCoord.w;
+					var z_high_c = clip[2].fragCoord.z   >  this.clip_max_z * clip[2].fragCoord.w;
 					if (z_high_a && z_high_b && z_high_c)
 					{
 						return [];
@@ -939,6 +995,7 @@
 					{
 						clip = this._clip_z_high(clip);
 					}
+					
 					
 					// Return filtered
 					return clip;
