@@ -317,8 +317,14 @@
 					
 					this.viewport_x_offset = 0;
 					this.viewport_y_offset = 0;
-					this.viewport_width = this.window_width;
-					this.viewport_height = this.window_height;
+					this.viewport_width = this.window_width - 1;
+					this.viewport_height = this.window_height - 1;
+					
+					// Guard-Band coefficients
+					this.gb_max_x =  32767 / this.viewport_width;
+					this.gb_min_x = -32768 / this.viewport_width;
+					this.gb_max_y =  32767 / this.viewport_height;
+					this.gb_min_y = -32768 / this.viewport_height;
 					
 					this.clear_color = new rgba(255, 255, 0, 255);
 				}
@@ -339,8 +345,8 @@
 			
 				viewport(x_offset, y_offset, width, height)
 				{
-					this.viewport_x_offset = Math.max(0, Math.min(x_offset, this.viewport_width-1));
-					this.viewport_y_offset = Math.max(0, Math.min(y_offset, this.viewport_height-1));
+					this.viewport_x_offset = Math.max(0, Math.min(x_offset, this.viewport_width));
+					this.viewport_y_offset = Math.max(0, Math.min(y_offset, this.viewport_height));
 				
 					
 					var view_width = this.viewport_x_offset + width;
@@ -375,7 +381,7 @@
 					var dy = pt_b.y - pt_a.y;
 				
 					// Is top
-					if (dy && pt_a.y > other_pt.y)
+					if (dy > 0 && pt_a.y > other_pt.y)
 					{
 						return 1;
 					}
@@ -387,8 +393,10 @@
 					
 				raster_triangle(pt_a, pt_b, pt_c, color_a, color_b, color_c)
 				{
-					var pt_min = new vec2(min_of_3(pt_a.x, pt_b.x, pt_c.x), min_of_3(pt_a.y, pt_b.y, pt_c.y));
-					var pt_max = new vec2(max_of_3(pt_a.x, pt_b.x, pt_c.x), max_of_3(pt_a.y, pt_b.y, pt_c.y));
+					var pt_min = new vec2( Math.max(this.viewport_x_offset, 					   min_of_3(pt_a.x, pt_b.x, pt_c.x)), 
+										   Math.max(this.viewport_y_offset, 					   min_of_3(pt_a.y, pt_b.y, pt_c.y)) );
+					var pt_max = new vec2( Math.min(this.viewport_x_offset + this.viewport_width,  max_of_3(pt_a.x, pt_b.x, pt_c.x)), 
+										   Math.min(this.viewport_y_offset + this.viewport_height, max_of_3(pt_a.y, pt_b.y, pt_c.y)) );
 
 
 					var tri_area = vec2_determinant(new vec2(pt_a.x - pt_b.x, pt_a.y - pt_b.y), 
@@ -399,8 +407,16 @@
 					var edge_ca = new vec2(pt_a.x - pt_c.x, pt_a.y - pt_c.y);// - this._edge_is_top_or_left(pt_c, pt_a, pt_b);
 					
 					
+					
+					// Part 1. Barycentric coverage test 
+					
 					// Dx Dx version (implement this next)...
 					
+					
+					// Analytical barycentric bounds?
+					//var edge_ax = new vec2(it.x - pt_a.x, it.y - pt_a.y);
+					//var edge_bx = new vec2(it.x - pt_b.x, it.y - pt_b.y);
+					//var edge_cx = new vec2(it.x - pt_c.x, it.y - pt_c.y);
 
 
 					var it = new vec2(pt_min.x, pt_min.y);
@@ -411,13 +427,19 @@
 							var edge_ax = new vec2(it.x - pt_a.x, it.y - pt_a.y);
 							var edge_bx = new vec2(it.x - pt_b.x, it.y - pt_b.y);
 							var edge_cx = new vec2(it.x - pt_c.x, it.y - pt_c.y);
-						
-							var interp_c = tri_coef * vec2_determinant(edge_ax, edge_ab);
-							var interp_a = tri_coef * vec2_determinant(edge_bx, edge_bc);
-							var interp_b = tri_coef * vec2_determinant(edge_cx, edge_ca); //var interp_b = 1.0 - (interp_c + interp_a);
+
+
+							var det_c = vec2_determinant(edge_ax, edge_ab) - this._edge_is_top_or_left(pt_a, pt_b, pt_c);
+							var det_a = vec2_determinant(edge_bx, edge_bc) - this._edge_is_top_or_left(pt_b, pt_c, pt_a);
+							var det_b = vec2_determinant(edge_cx, edge_ca) - this._edge_is_top_or_left(pt_c, pt_a, pt_b);
+					
 							
-							if (interp_a >= 0 && interp_b >= 0 && interp_c >= 0)
+							if (det_a >= 0 && det_b >= 0 && det_c >= 0)
 							{
+								var interp_c = tri_coef * det_c;
+								var interp_a = tri_coef * det_a;
+								var interp_b = tri_coef * det_b;
+								
 								this.draw_pixel( it, mix_3(interp_a, interp_b, interp_c, color_a, color_b, color_c) );
 							}							
 							it.x += 1;
@@ -426,6 +448,11 @@
 						it.x = pt_min.x;
 						it.y += 1;				
 					}
+					
+					
+					// Part 2. X-Y Coordinate space interpolation
+					
+					
 				
 				}
 
@@ -498,9 +525,13 @@
 				_viewport_transform(ndc)
 				{
 					// As specified on: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glViewport.xhtml
+					var new_x = (ndc.fragCoord.x + 1) * (this.viewport_width  / 2) + this.viewport_x_offset;
+					var new_y = (ndc.fragCoord.y + 1) * (this.viewport_height / 2) + this.viewport_y_offset;
+
+					// Avoid possible off-by-one errors here (seen in simulation)
+					ndc.fragCoord.x = Math.round(new_x, 1);
+					ndc.fragCoord.y = Math.round(new_y, 1);
 					
-					ndc.fragCoord.x = (ndc.fragCoord.x + 1) * (this.viewport_width  / 2) + this.viewport_x_offset;					
-					ndc.fragCoord.y = (ndc.fragCoord.y + 1) * (this.viewport_height / 2) + this.viewport_y_offset;
 				}
 
 
@@ -509,7 +540,7 @@
 					var clip_out = [];
 					
 					var prev_idx = clip_in.length - 1;
-					var prev_out = (-clip_in[prev_idx].fragCoord.x > clip_in[prev_idx].fragCoord.w);
+					var prev_out = (-clip_in[prev_idx].fragCoord.x > clip_in[prev_idx].fragCoord.w);	// TODO: Pick up here.,.
 
 					var curr_idx = 0;
 					while (curr_idx < clip_in.length)
