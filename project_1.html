@@ -382,14 +382,20 @@
 				{
 					var dy = pt_b.y - pt_a.y;
 				
-					// Is top
-					if (dy > 0 && pt_a.y > other_pt.y)
+					// Is top 
+					if (dy == 0 && pt_a.x > pt_b.x)
+					{
+						return 1;
+					}
+					
+					// Is left					
+					if (dy < 0 && pt_b.y > other_pt.y)
 					{
 						return 1;
 					}
 				
-					// Is left
-					return dy < 0;
+					// Neither
+					return 0;
 				}
 						
 					
@@ -401,12 +407,12 @@
 										   Math.min(this.viewport_y_offset + this.viewport_height, max_of_3(pt_a.y, pt_b.y, pt_c.y)) );
 
 
-					var tri_area = vec2_determinant(new vec2(pt_a.x - pt_b.x, pt_a.y - pt_b.y), 
-													new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y));
+					var edge_ab = new vec2(pt_b.x - pt_a.x, pt_b.y - pt_a.y);
+					var edge_bc = new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y);
+					var edge_ca = new vec2(pt_a.x - pt_c.x, pt_a.y - pt_c.y);
+					
+					var tri_area = vec2_determinant(edge_ab, new vec2(pt_c.x - pt_a.x, pt_c.y - pt_a.y));
 					var tri_coef = 1.0 / tri_area;
-					var edge_ab = new vec2(pt_b.x - pt_a.x, pt_b.y - pt_a.y);// - this._edge_is_top_or_left(pt_a, pt_b, pt_c);
-					var edge_bc = new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y);// - this._edge_is_top_or_left(pt_b, pt_c, pt_a);
-					var edge_ca = new vec2(pt_a.x - pt_c.x, pt_a.y - pt_c.y);// - this._edge_is_top_or_left(pt_c, pt_a, pt_b);
 					
 					
 					
@@ -431,9 +437,9 @@
 							var edge_cx = new vec2(it.x - pt_c.x, it.y - pt_c.y);
 
 
-							var det_c = vec2_determinant(edge_ax, edge_ab) - this._edge_is_top_or_left(pt_a, pt_b, pt_c);
-							var det_a = vec2_determinant(edge_bx, edge_bc) - this._edge_is_top_or_left(pt_b, pt_c, pt_a);
-							var det_b = vec2_determinant(edge_cx, edge_ca) - this._edge_is_top_or_left(pt_c, pt_a, pt_b);
+							var det_c = vec2_determinant(edge_ab, edge_ax) - this._edge_is_top_or_left(pt_a, pt_b, pt_c);
+							var det_a = vec2_determinant(edge_bc, edge_bx) - this._edge_is_top_or_left(pt_b, pt_c, pt_a);
+							var det_b = vec2_determinant(edge_ca, edge_cx) - this._edge_is_top_or_left(pt_c, pt_a, pt_b);
 					
 							
 							if (det_a >= 0 && det_b >= 0 && det_c >= 0)
@@ -1035,13 +1041,14 @@
 			
 			
 			
+			
 			function draw_canvas()
 			{
-				var pt_a = new vec4(-1.5, -0.5, 0.0, 1.0);
-				var pt_b = new vec4( 0.0,  1.5, 0.0, 1.0);
+				var pt_a = new vec4( 0.0,  1.5, 0.0, 1.0);
+				var pt_b = new vec4(-1.5, -0.5, 0.0, 1.0);
 				var pt_c = new vec4( 1.5, -1.5, 0.0, 1.0);
-				var color_a = new rgba(255, 0, 0, 255);
-				var color_b = new rgba(0, 255, 0, 255);
+				var color_a = new rgba(0, 255, 0, 255);
+				var color_b = new rgba(255, 0, 0, 255);
 				var color_c = new rgba(0, 0, 255, 255);
 
 				
@@ -1051,12 +1058,17 @@
 								new vertex_with_attribute(pt_c, color_c),				
 							];
 
+
 				uniforms = null;
 
 
 				renderer.clear();
+				
+				
 				renderer.draw_triangles(verts, verts.length, vertex_shader, uniforms);
-							
+				
+				
+				// renderer.resolve();
 			}
 
 				
