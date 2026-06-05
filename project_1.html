@@ -306,6 +306,315 @@
 				}
 			}
 
+		
+		
+			class sampling_layout
+			{
+				constructor()
+				{
+					throw new NotImplementedError("Pure virtual function");				
+				}
+				
+							
+				unique_id()
+				{
+					throw new NotImplementedError("Pure virtual function");	
+				}
+			
+
+				num_color_samples()
+				{
+					throw new NotImplementedError("Pure virtual function");	
+				}
+				
+				
+				num_coverage_samples()
+				{
+					throw new NotImplementedError("Pure virtual function");					
+				}
+
+			
+				color_sample_locations()
+				{
+					throw new NotImplementedError("Pure virtual function");				
+				}
+
+				
+				coverage_sample_locations()
+				{
+					throw new NotImplementedError("Pure virtual function");				
+				}
+			}
+		
+		
+			class single_sample_layout extends sampling_layout
+			{
+				constructor()
+				{
+					; // NA
+				}
+				
+							
+				unique_id()
+				{
+					return "Single_Sample_Layout";
+				}
+			
+
+				num_color_samples()
+				{
+					return 1;
+				}
+				
+				
+				num_coverage_samples()
+				{
+					return 1;
+				}
+
+			
+				color_sample_locations()
+				{
+					return [new vec2(0.5, 0.5)];				
+				}
+
+				
+				coverage_sample_locations()
+				{
+					return [new vec2(0.5, 0.5)];				
+				}			
+			}	
+
+
+			class color_target
+			{
+				constructor()
+				{
+					throw new NotImplementedError("Pure virtual function");				
+				}
+				
+							
+				sample_layout()
+				{
+					throw new NotImplementedError("Pure virtual function");	
+				}
+			
+
+				load(r, c, sample_index)
+				{
+					throw new NotImplementedError("Pure virtual function");	
+				}
+				
+				
+				store(r, c, coverage_indices, sample_values)
+				{
+					throw new NotImplementedError("Pure virtual function");					
+				}
+
+			
+				clear(clear_color)
+				{
+					throw new NotImplementedError("Pure virtual function");				
+				}
+				
+			}
+
+
+			class canvas_target extends color_target
+			{
+				constructor(canvas_element)
+				{
+					this.canvas_element = document.getElementById("frame_canvas");
+					this.ctx = this.canvas_element.getContext("2d");
+					this.width = this.ctx.canvas.width;
+					this.height = this.ctx.canvas.height;
+
+					this.sample_layout = new single_sample_layout();
+					this.mirror = [];
+
+					var r = 0;
+					while (r < this.height)
+					{
+						this.mirror.push( [] );
+						
+						var c = 0;
+						while (c < this.width)
+						{
+							this.mirror[r].push( new rgba(0.0, 0.0, 0.0, 1.0) );
+						}
+						
+						r += 1;
+					}
+					var c = 0;
+					
+				}
+				
+				
+				sample_layout()
+				{
+					return this.sample_layout();
+				}
+
+				
+				load(r, c, sample_index)
+				{				
+					return this.mirror[r][c];
+				}
+				
+				
+				store(r, c, coverage_indices, sample_values)
+				{				
+					color = sample_values[0];
+				
+					this.mirror[r][c].r = color.r;
+					this.mirror[r][c].g = color.g;
+					this.mirror[r][c].b = color.b;
+					this.mirror[r][c].a = color.a;
+					
+					this.ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
+					this.ctx.fillRect(c, this.window_height - (r+1), 1, 1); 				
+					// Flip is used here ^^^ to model OpenGL coordiante system
+				}
+				
+				
+				clear(clear_color)
+				{
+					var r = 0;
+					while (r < this.height)
+					{
+						var c = 0;
+						while (c < this.width)
+						{								
+							this.mirror[r][c].r = clear_color.r;
+							this.mirror[r][c].g = clear_color.g;
+							this.mirror[r][c].b = clear_color.b;
+							this.mirror[r][c].a = clear_color.a;
+							
+							this.store(r, c, null, [clear_color]);
+							
+							c += 1;
+						}						
+						r += 1;
+					}
+				}
+			
+			}
+
+		
+		
+			class depth_target
+			{
+				constructor()
+				{
+					throw new NotImplementedError("Pure virtual function");				
+				}
+				
+							
+				sample_layout()
+				{
+					throw new NotImplementedError("Pure virtual function");	
+				}
+			
+
+				load(r, c, coverage_index)
+				{
+					throw new NotImplementedError("Pure virtual function");	
+				}
+				
+				
+				store(r, c, coverage_index, value)
+				{
+					throw new NotImplementedError("Pure virtual function");					
+				}
+
+			
+				clear(clear_color)
+				{
+					throw new NotImplementedError("Pure virtual function");				
+				}
+				
+			}
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+			class depth_1x_target extends depth_target
+			{
+				constructor(width, height, init_val, sample_layout)
+				{
+					this.width = width;
+					this.height = height;
+					
+					this.layout = sample_layout;
+
+					this.data = [];
+
+					var r = 0;
+					while (r < this.height)
+					{
+						this.data.push( [] );
+						
+						var c = 0;
+						while (c < this.width)
+						{
+							this.data[r].push( val );
+						}
+						
+						r += 1;
+					}
+					var c = 0;
+				}
+
+
+				coverage_per_pixel()
+				{
+					return 1;
+				}
+
+				
+				samples_per_pixel()
+				{
+					return 1;
+				}				
+
+				
+				load(r, c)
+				{
+					return this.data[r][c];
+				}
+
+				
+				store(r, c, coverage_index, value)
+				{
+					this.data[r][c] = val;
+				}
+
+
+				clear(val)
+				{
+					var r = 0;
+					while (r < this.height)
+					{
+						var c = 0;
+						while (c < this.width)
+						{
+							this.data[r][c] = val;
+							c += 1;
+						}						
+						r += 1;
+					}
+				}
+			}
+
+	
+
 
 			class software_renderer
 			{
@@ -369,14 +678,6 @@
 					
 					this.viewport_width  = view_width;
 					this.viewport_height = view_height;
-				}
-					
-				draw_pixel(pt, color)
-				{			
-					this.ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
-					this.ctx.fillRect(pt.x, this.window_height - (pt.y+1), 1, 1); 
-
-					// Flip is used here ^^^ to model OpenGL coordiante system
 				}
 						
 
@@ -446,7 +747,7 @@
 							var det_b = vec2_determinant(edge_ca, edge_cx) ;
 					
 												
-							if (det_a - bias_bc>= 0 && det_b - bias_ca >= 0 && det_c - bias_ab >= 0)
+							if (det_a - bias_bc >= 0 && det_b - bias_ca >= 0 && det_c - bias_ab >= 0)
 							{
 								var interp_c = tri_coef * det_c;
 								var interp_a = tri_coef * det_a;
