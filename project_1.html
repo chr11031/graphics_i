@@ -374,7 +374,9 @@
 				draw_pixel(pt, color)
 				{			
 					this.ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
-					this.ctx.fillRect(pt.x, this.window_height - (pt.y+1), 1, 1);
+					this.ctx.fillRect(pt.x, this.window_height - (pt.y+1), 1, 1); 
+
+					// Flip is used here ^^^ to model OpenGL coordiante system
 				}
 						
 
@@ -389,7 +391,7 @@
 					}
 					
 					// Is left					
-					if (dy < 0 && pt_b.y > other_pt.y)
+					if (dy < 0 && pt_b.y >= other_pt.y)
 					{
 						return 1;
 					}
@@ -401,10 +403,11 @@
 					
 				raster_triangle(pt_a, pt_b, pt_c, color_a, color_b, color_c)
 				{
-					var pt_min = new vec2( Math.max(this.viewport_x_offset, 					   min_of_3(pt_a.x, pt_b.x, pt_c.x)), 
-										   Math.max(this.viewport_y_offset, 					   min_of_3(pt_a.y, pt_b.y, pt_c.y)) );
-					var pt_max = new vec2( Math.min(this.viewport_x_offset + this.viewport_width,  max_of_3(pt_a.x, pt_b.x, pt_c.x)), 
-										   Math.min(this.viewport_y_offset + this.viewport_height, max_of_3(pt_a.y, pt_b.y, pt_c.y)) );
+					var pt_min = new vec2( Math.max(this.viewport_x_offset, min_of_3(Math.floor(pt_a.x), Math.floor(pt_b.x), Math.floor(pt_c.x))), 
+										   Math.max(this.viewport_y_offset, min_of_3(Math.floor(pt_a.y), Math.floor(pt_b.y), Math.floor(pt_c.y))) );
+
+					var pt_max = new vec2( Math.min(this.viewport_x_offset + this.viewport_width,  max_of_3(Math.ceil(pt_a.x), Math.ceil(pt_b.x), Math.ceil(pt_c.x))), 
+										   Math.min(this.viewport_y_offset + this.viewport_height, max_of_3(Math.ceil(pt_a.y), Math.ceil(pt_b.y), Math.ceil(pt_c.y))) );
 
 
 					var edge_ab = new vec2(pt_b.x - pt_a.x, pt_b.y - pt_a.y);
@@ -412,44 +415,46 @@
 					var edge_ca = new vec2(pt_a.x - pt_c.x, pt_a.y - pt_c.y);
 					
 					var tri_area = vec2_determinant(edge_ab, new vec2(pt_c.x - pt_a.x, pt_c.y - pt_a.y));
+					
+					// Back-Face Culling
+					if (tri_area < 0)
+					{
+						return; 
+					}
+	
 					var tri_coef = 1.0 / tri_area;
 					
 					
-					
-					// Part 1. Barycentric coverage test 
-					
-					// Dx Dx version (implement this next)...
-					
-					
-					// Analytical barycentric bounds?
-					//var edge_ax = new vec2(it.x - pt_a.x, it.y - pt_a.y);
-					//var edge_bx = new vec2(it.x - pt_b.x, it.y - pt_b.y);
-					//var edge_cx = new vec2(it.x - pt_c.x, it.y - pt_c.y);
+					// Barycentric coverage test 
+					var bias_ab = this._edge_is_top_or_left(pt_a, pt_b, pt_c);
+					var bias_bc = this._edge_is_top_or_left(pt_b, pt_c, pt_a);
+					var bias_ca = this._edge_is_top_or_left(pt_c, pt_a, pt_b);
 
 
-					var it = new vec2(pt_min.x, pt_min.y);
-					while (it.y <= pt_max.y)
+					var it = new vec2(pt_min.x + 0.5, pt_min.y + 0.5);
+					while (it.y < pt_max.y)
 					{
-						while (it.x <= pt_max.x)
+						while (it.x < pt_max.x)
 						{
 							var edge_ax = new vec2(it.x - pt_a.x, it.y - pt_a.y);
 							var edge_bx = new vec2(it.x - pt_b.x, it.y - pt_b.y);
 							var edge_cx = new vec2(it.x - pt_c.x, it.y - pt_c.y);
 
-
-							var det_c = vec2_determinant(edge_ab, edge_ax) - this._edge_is_top_or_left(pt_a, pt_b, pt_c);
-							var det_a = vec2_determinant(edge_bc, edge_bx) - this._edge_is_top_or_left(pt_b, pt_c, pt_a);
-							var det_b = vec2_determinant(edge_ca, edge_cx) - this._edge_is_top_or_left(pt_c, pt_a, pt_b);
-					
 							
-							if (det_a >= 0 && det_b >= 0 && det_c >= 0)
+							var det_c = vec2_determinant(edge_ab, edge_ax) ;
+							var det_a = vec2_determinant(edge_bc, edge_bx) ;
+							var det_b = vec2_determinant(edge_ca, edge_cx) ;
+					
+												
+							if (det_a - bias_bc>= 0 && det_b - bias_ca >= 0 && det_c - bias_ab >= 0)
 							{
 								var interp_c = tri_coef * det_c;
 								var interp_a = tri_coef * det_a;
 								var interp_b = tri_coef * det_b;
 								
 								this.draw_pixel( it, mix_3(interp_a, interp_b, interp_c, color_a, color_b, color_c) );
-							}							
+							}			
+							
 							it.x += 1;
 						}
 						
@@ -458,10 +463,7 @@
 					}
 					
 					
-					// Part 2. X-Y Coordinate space interpolation
-					
-					
-				
+					// X-Y Coordinate space interpolation
 				}
 
 				
@@ -539,6 +541,10 @@
 					// Avoid possible off-by-one errors here (seen in simulation)
 					ndc.fragCoord.x = Math.round(new_x, 1);
 					ndc.fragCoord.y = Math.round(new_y, 1);
+					
+					// Treat points so they are at the 'center' of the pixel 
+					ndc.fragCoord.x += 0.5;
+					ndc.fragCoord.y += 0.5;
 					
 				}
 
@@ -1044,12 +1050,14 @@
 			
 			function draw_canvas()
 			{
-				var pt_a = new vec4( 0.0,  1.5, 0.0, 1.0);
-				var pt_b = new vec4(-1.5, -0.5, 0.0, 1.0);
-				var pt_c = new vec4( 1.5, -1.5, 0.0, 1.0);
+				var pt_a = new vec4( 0.5,  0.5, 0.0, 1.0);
+				var pt_b = new vec4(-0.5, -0.5, 0.0, 1.0);
+				var pt_c = new vec4( 0.5, -0.5, 0.0, 1.0);
+				
 				var color_a = new rgba(0, 255, 0, 255);
 				var color_b = new rgba(255, 0, 0, 255);
 				var color_c = new rgba(0, 0, 255, 255);
+				
 
 				
 				var verts = [
