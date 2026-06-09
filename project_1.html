@@ -322,11 +322,11 @@
 				}
 			
 
-				num_color_samples()
+				coverage_sample_locations()
 				{
-					throw new NotImplementedError("Pure virtual function");	
+					throw new NotImplementedError("Pure virtual function");				
 				}
-				
+
 				
 				num_coverage_samples()
 				{
@@ -334,16 +334,16 @@
 				}
 
 			
-				color_sample_locations()
+				map_coverage_locations_to_color_locations(coverage_indices)
 				{
 					throw new NotImplementedError("Pure virtual function");				
 				}
 
-				
-				coverage_sample_locations()
+
+				max_color_samples()
 				{
 					throw new NotImplementedError("Pure virtual function");				
-				}
+				}				
 			}
 		
 		
@@ -351,7 +351,13 @@
 			{
 				constructor()
 				{
-					; // NA
+					this.coverage_offsets = [
+							new vec2(0.5, 0.5)
+					];
+					
+					this.sample_offsets = [
+							new vec2(0.5, 0.5)
+					];
 				}
 				
 							
@@ -361,11 +367,11 @@
 				}
 			
 
-				num_color_samples()
+				coverage_sample_locations()
 				{
-					return 1;
+					return this.coverage_offsets;				
 				}
-				
+
 				
 				num_coverage_samples()
 				{
@@ -373,22 +379,103 @@
 				}
 
 			
-				color_sample_locations()
+				map_coverage_locations_to_color_locations(coverage_indices)
 				{
-					return [new vec2(0.5, 0.5)];				
+					list = [];
+					var i = 0; 
+					while (i < coverage_indices.length)
+					{
+						list.push( this.sample_offsets[coverage_indices[i] ) );
+						i += 1;
+					}
+					
+					return list;
 				}
-
 				
+				
+				max_color_samples()
+				{
+					return 1;
+				}
+			}	
+			
+			
+			class ssaa_4x_layout extends sampling_layout 
+			{
+				constructor() 
+				{
+					this.coverage_offsets = [
+							new vec2(0.25, 0.25),
+							new vec2(0.75, 0.25),
+							new vec2(0.25, 0.75),
+							new vec2(0.75, 0.75)
+					];
+					
+					this.sample_offsets = [
+							new vec2(0.25, 0.25),
+							new vec2(0.75, 0.25),
+							new vec2(0.25, 0.75),
+							new vec2(0.75, 0.75)
+					];
+				}
+			
+			
+				unique_id()
+				{
+					return "SSAA_4x_Layout";
+				}
+			
+			
 				coverage_sample_locations()
 				{
-					return [new vec2(0.5, 0.5)];				
-				}			
-			}	
+					return this.coverage_offsets;
+				}
+				
+				
+				num_coverage_samples()
+				{
+					return 4;
+				}
+
+			
+				map_coverage_locations_to_color_locations(coverage_indices)
+				{
+					list = [];
+					var i = 0; 
+					while (i < coverage_indices.length)
+					{
+						list.push( this.sample_offsets[coverage_indices[i] ) );
+						i += 1;
+					}
+					
+					return list;
+				}
+				
+				
+				max_color_samples()
+				{
+					return 4;
+				}
+			}
+			
+
 
 
 			class color_target
 			{
 				constructor()
+				{
+					throw new NotImplementedError("Pure virtual function");				
+				}
+				
+				
+				width()
+				{
+					throw new NotImplementedError("Pure virtual function");				
+				}
+				
+				
+				height()
 				{
 					throw new NotImplementedError("Pure virtual function");				
 				}
@@ -450,6 +537,18 @@
 				}
 				
 				
+				width()
+				{
+					return this.width;
+				}
+				
+				
+				height()
+				{
+					return this.height;
+				}
+				
+				
 				sample_layout()
 				{
 					return this.sample_layout();
@@ -500,6 +599,169 @@
 			
 			}
 
+
+			class ssaa_color_target extends color_target
+			{
+				constructor(width, height, num_samples)
+				{
+					this.width = width;
+					this.height = height;
+					this.num_samples = num_samples;
+					
+					switch (num_samples) 
+					{
+						case 4:
+							this.sample_layout = new ssaa_4x_layout();
+							break;
+						default:
+							throw new Error("Unsupported MSAA mode: " + num_samples);
+							break;
+					
+					}					
+					
+					
+					// Allocate 2D array
+					this.samples = [];
+					var r = 0;
+					while (r < this.height)
+					{
+						this.samples.push( [] );
+						
+						var c = 0;
+						while (c < this.width)
+						{	
+							this.samples[r].push( [] );
+							
+							var s = 0;
+							while (s < this.num_samples)
+							{
+								this.samples[r][c].push( new rgba(0.0, 0.0, 0.0, 1.0) );
+								s += 1;
+							}
+							
+							c += 1;
+						}
+						
+						r += 1;
+					}					
+				}
+
+				
+				width()
+				{
+					return this.width;
+				}
+				
+				
+				height()
+				{
+					return this.height;
+				}
+
+				sample_layout()
+				{
+					return this.sample_layout();
+				}
+
+				
+				load(r, c, sample_index)
+				{				
+					return this.mirror[r][c][sample_index];
+				}
+				
+
+				store(r, c, coverage_indices, sample_values)
+				{			
+					var i = 0;
+					
+					while (i < coverage_indices.length)
+					{
+						var coverage_idx = coverage_indices[i];
+						var sample_value = sample_values[i];
+						
+						this.samples[r][c][coverage_idx].r = sample_value.r;
+						this.samples[r][c][coverage_idx].g = sample_value.g;
+						this.samples[r][c][coverage_idx].b = sample_value.b;
+						this.samples[r][c][coverage_idx].a = sample_value.a;						
+						
+						i += 1;
+					}				
+				}
+				
+				
+				clear(clear_color)
+				{
+					var r = 0;
+					while (r < this.height)
+					{
+						var c = 0;
+						while (c < this.width)
+						{								
+							var s = 0;
+							while (s < this.num_samples)
+							{
+								this.samples[r][c][s].r = clear_color.r;
+								this.samples[r][c][s].g = clear_color.g;
+								this.samples[r][c][s].b = clear_color.b;
+								this.samples[r][c][s].a = clear_color.a;
+
+								s += 1;
+							}
+							
+							c += 1;
+						}						
+						r += 1;
+					}
+				}
+				
+				resolve(target)
+				{
+					if (target.sample_layout.unique_id() != "Single_Sample_Layout")
+					{
+						throw new Error("Unsupported MSAA mode: " + num_samples);
+						return;
+					}
+
+					if (target.width() != this.width() || target.height() != this.height())
+					{
+						throw new Error("Source and target have mismatched dimensions: " + 
+										this.width() + "x" + this.height() + " vs " + target.width()+ "x" + target.height());
+						return;					
+					}
+					
+					
+					var r = 0;
+					while (r < this.height)
+					{
+						var c = 0;
+						while (c < this.width)
+						{
+							var avg_color = new rgba(0.0, 0.0, 0.0, 0.0);
+							
+							var s = 0;
+							while (s < this.num_samples)
+							{
+								avg_color.r += this.samples[r][c][s].r;
+								avg_color.g += this.samples[r][c][s].g;
+								avg_color.b += this.samples[r][c][s].b;
+								avg_color.a += this.samples[r][c][s].a;
+
+								s += 1;
+							}
+							
+							avg_color.r /= this.num_samples;
+							avg_color.g /= this.num_samples;
+							avg_color.b /= this.num_samples;
+							avg_color.a /= this.num_samples;
+							
+							target.store(r, c, null, [avg_color]);
+							
+							c += 1;
+						}
+					}
+				}
+			}
+
 		
 		
 			class depth_target
@@ -509,6 +771,17 @@
 					throw new NotImplementedError("Pure virtual function");				
 				}
 				
+				
+				width()
+				{
+					return this.width;
+				}
+				
+				
+				height()
+				{
+					return this.height;
+				}
 							
 				sample_layout()
 				{
@@ -787,6 +1060,8 @@
 					vert.fragColor.a *= inv_w;		
 				}
 				
+					
+					// TODO: canvas_target : framebuffer abstraction with attachments...
 					
 				draw_triangles(verts_with_attributes, num_verts, vertex_shader, uniforms)
 				{
@@ -1194,10 +1469,10 @@
 						// Does 2 things:
 						// 1. Makes 'W' non-negative
 						// 2. Clamps 'W' to non-inf values where we cannot differntiate between 
-						// that and infinity for resolutions up to 32,768 @ MSAAx8 (1/2^-18)
+						// that and infinity for resolutions up to 32,768 @ 1/16th spaced sub samples (1/2^-19)
 						var mag = Math.abs(clip_in[v].fragCoord.w);						
 						var sign = Math.sign(clip_in[v].fragCoord.w);
-						var mag_clamped = mag < 0.000003814697265625 ? 0.000003814697265625 : mag;						
+						var mag_clamped = mag < 0.0000019073486328125 ? 0.0000019073486328125 : mag;						
 
 						var new_coord = new vec4(sign * clip_in[v].fragCoord.x,
 										     	 sign * clip_in[v].fragCoord.y,
