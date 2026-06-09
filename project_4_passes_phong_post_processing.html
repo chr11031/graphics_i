@@ -1,6 +1,6 @@
 <html>
 	<head>
-		<title>Project 2: Level Viewer</title>
+		<title>Cell Shading</title>
 		<style>
 			table {border: 0px solid;}
 		</style>
@@ -8,8 +8,8 @@
 			var ctx = null;
 			var ctx_width = null;
 			var ctx_height = null;
-			var slider = null;
-			var slider_view = null;
+			
+			var big_r = 0.0;
 			
 			var gl;
 			var vbo1;
@@ -45,11 +45,39 @@
 				}
 			
 			}			
-
 			
-			function draw_gl_canvas()
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			function draw_scene()
 			{
-				gl.clearColor(0,1,1,1);
+				gl.clearColor(big_r,1,1,1);
+				
+				big_r += 0.01;
+				if (big_r > 0.8)
+				{
+					big_r = 0.0;
+				}
+				
 				gl.clear(gl.COLOR_BUFFER_BIT);		
 
 				gl.bindVertexArray(vao);
@@ -60,12 +88,10 @@
 					0,
 					3
 				);
+
 				
+				window.requestAnimationFrame(draw_scene);				
 			}
-
-
-
-
 
 			
 			
@@ -208,13 +234,15 @@
 				
 				
 				draw_gl_canvas();
+				
+				window.requestAnimationFrame(draw_scene);
 			}
 		</script>
 		
 	</head>	
 
 	<body onload="main()">
-		<h1>Project 2: Level Viewer</h1>	
+		<h1>Project 4: Shadow Mapping</h1>	
 		<p>
 			Name: Yours here</br>
 			Date: Submission date
@@ -244,71 +272,6 @@
 		</table>
 	
 		</br>
-		
-		<h2>Description</h2>
-		In this assignment, you will create:</br>
-		
-		<ol>
-			<li>Write function "draw_line" that draws arbitrary lines using Bresenham's Line Drawing Algorithm.
-				<ul><br/></ul>
-				<ul>
-					<li>Highly Optimized for special cases</li>
-					<li>General cases are simplified into no more than 2 octants</li>
-					<li>Inner loop calculations are minimally complex</li>
-					<li>Does NOT draw the last point in a line</li>
-				</ul>
-			</li>
-			<br/>
-			<li>Implement function "add_cubic_bezier_points" that creates a number of sample points based on "num_steps".
-				<ul><br/></ul>
-				<ul>
-					<li>Efficient and highly readable code</li>
-					<li>Appends outputs to "list" pass-by-reference parameter container</li>
-					<li>Fires an alert when inputs are invalid/incorrect</li>
-				</ul>
-			</li>
-			<br/>
-			<li>Complete canvas drawing that matches the outline of the image beneath it.
-				<ul><br/></ul>
-				<ul>
-					<li>Lines form continuous paths</li>
-					<li>Lines are colored correctly</li>
-				</ul>
-			</li>
-			<br/>
-			<li>Comments &amp Submission
-				<ul><br/></ul>
-				<ul>
-					<li>Clearly describe code structure</li>
-					<li>Neither too frequent nor infrequent</li>
-					<li>Explain math involved where relevant</li>
-					<li>Edit this to include your submission data, name. Also, submit as "last_name_first_name.html"</li>
-				</ul>
-			</li>
-		</ol>
-		
-		<h2>Score Breakdown</h2>
-		<table style="border-width:1px;">
-			<tr>
-				<td style="padding:2px; border-top: 0px solid">draw_line</td>
-				<td style="padding:2px; border-left: 1px solid">20 pts</td>
-			</tr>
-			<tr>
-				<td style="padding:2px; border-top: 1px solid">add_cubic_bezier_points</td>
-				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">10 pts</td>
-			</tr>
-			<tr>
-				<td style="padding:2px; border-top: 1px solid">Render</td>
-				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">5 pts</td>
-			</tr>
-			<tr>
-				<td style="padding:2px; border-top: 1px solid">Comments</td>
-				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">5 pts</td>
-			</tr>
-		</table>		
-		<br/>
-		
-
 		
 
 

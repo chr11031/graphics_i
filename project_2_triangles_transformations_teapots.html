@@ -1,0 +1,1192 @@
+<html>
+	<head>
+		<title>Project 1: SVG Fill</title>
+		<style>
+			table {border: 0px solid;}
+		</style>
+		<script>
+			var renderer = null;
+			
+			class vec2 
+			{
+				constructor(x, y) 
+				{
+					this.x = x;
+					this.y = y;
+				}
+			}
+
+			class rgba
+			{
+				constructor(r, g, b, a)
+				{
+					this.r = r;
+					this.g = g;
+					this.b = b;
+					this.a = a;
+				}
+				
+				equals(other)
+				{
+					return (this.r == other.r &&
+							this.g == other.g &&
+							this.b == other.b &&
+							this.a == other.a);
+				}
+			
+			}			
+			
+			class vec4
+			{
+				constructor (x, y, z, w)
+				{
+					this.x = x;
+					this.y = y;
+					this.z = z;
+					this.w = w;
+				}
+				
+				dot(v4)
+				{
+					return 	this.x * v4.x + 
+							this.y * v4.y + 
+							this.z * v4.z + 
+							this.w * v4.w;
+				}
+				
+				normalize()
+				{
+					var len = this.x * this.x +
+							  this.y * this.y +
+							  this.z * this.z + 
+							  this.w * this.w;
+
+					len = Math.sqrt(len);
+					this.x /= len;
+					this.y /= len;
+					this.z /= len;
+					this.w /= len;
+				}
+			}
+			
+			
+			class mat4
+			{
+				constructor ()
+				{
+					this.m = [ [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0] ];
+					this.set_identity();
+				}
+				
+				set(r, c, v)
+				{
+					this.m[r][c] = v;
+				}
+				
+				get(r,c)
+				{
+					return this.m[r][c];
+				}
+				
+				set_identity()
+				{
+					this.m[0][0] = 1.0;
+					this.m[0][1] = 0.0;
+					this.m[0][2] = 0.0;
+					this.m[0][3] = 0.0;
+
+					this.m[1][0] = 0.0;
+					this.m[1][1] = 1.0;
+					this.m[1][2] = 0.0;
+					this.m[1][3] = 0.0;
+
+					this.m[2][0] = 0.0;
+					this.m[2][1] = 0.0;
+					this.m[2][2] = 1.0;
+					this.m[2][3] = 0.0;
+
+					this.m[3][0] = 0.0;
+					this.m[3][1] = 0.0;
+					this.m[3][2] = 0.0;
+					this.m[3][3] = 1.0;
+				}
+				
+				set_translate_x(x, y, z)
+				{
+					this.m[0][3] = x;
+					this.m[1][3] = y;
+					this.m[2][3] = z;
+				}								
+
+				mult_mat4(m4)
+				{
+					var tmp = [ [0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0] ];
+
+					// R0
+					tmp[0][0] = this.m[0][0] * m4.m[0][0] + 
+								this.m[0][1] * m4.m[1][0] +
+								this.m[0][2] * m4.m[2][0] +
+								this.m[0][3] * m4.m[3][0];
+					
+					tmp[0][1] = this.m[0][0] * m4.m[0][1] + 
+								this.m[0][1] * m4.m[1][1] +
+								this.m[0][2] * m4.m[2][1] +
+								this.m[0][3] * m4.m[3][1];
+					
+					tmp[0][2] = this.m[0][0] * m4.m[0][2] + 
+								this.m[0][1] * m4.m[1][2] +
+								this.m[0][2] * m4.m[2][2] +
+								this.m[0][3] * m4.m[3][2];
+								
+					tmp[0][3] = this.m[0][0] * m4.m[0][3] + 
+								this.m[0][1] * m4.m[1][3] + 
+								this.m[0][2] * m4.m[2][3] + 
+								this.m[0][3] * m4.m[3][3];
+
+				
+					// R1
+					tmp[1][0] = this.m[1][0] * m4.m[0][0] + 
+								this.m[1][1] * m4.m[1][0] +
+								this.m[1][2] * m4.m[2][0] +
+								this.m[1][3] * m4.m[3][0];
+					
+					tmp[1][1] = this.m[1][0] * m4.m[0][1] + 
+								this.m[1][1] * m4.m[1][1] +
+								this.m[1][2] * m4.m[2][1] +
+								this.m[1][3] * m4.m[3][1];
+					
+					tmp[1][2] = this.m[1][0] * m4.m[0][2] + 
+								this.m[1][1] * m4.m[1][2] +
+								this.m[1][2] * m4.m[2][2] +
+								this.m[1][3] * m4.m[3][2];
+								
+					tmp[1][3] = this.m[1][0] * m4.m[0][3] + 
+								this.m[1][1] * m4.m[1][3] + 
+								this.m[1][2] * m4.m[2][3] + 
+								this.m[1][3] * m4.m[3][3];
+
+
+					// R2
+					tmp[2][0] = this.m[2][0] * m4.m[0][0] + 
+								this.m[2][1] * m4.m[1][0] +
+								this.m[2][2] * m4.m[2][0] +
+								this.m[2][3] * m4.m[3][0];
+					
+					tmp[2][1] = this.m[2][0] * m4.m[0][1] + 
+								this.m[2][1] * m4.m[1][1] +
+								this.m[2][2] * m4.m[2][1] +
+								this.m[2][3] * m4.m[3][1];
+					
+					tmp[2][2] = this.m[2][0] * m4.m[0][2] + 
+								this.m[2][1] * m4.m[1][2] +
+								this.m[2][2] * m4.m[2][2] +
+								this.m[2][3] * m4.m[3][2];
+								
+					tmp[2][3] = this.m[2][0] * m4.m[0][3] + 
+								this.m[2][1] * m4.m[1][3] + 
+								this.m[2][2] * m4.m[2][3] + 
+								this.m[2][3] * m4.m[3][3];
+
+
+					// R3
+					tmp[3][0] = this.m[3][0] * m4.m[0][0] + 
+								this.m[3][1] * m4.m[1][0] +
+								this.m[3][2] * m4.m[2][0] +
+								this.m[3][3] * m4.m[3][0];
+					
+					tmp[3][1] = this.m[3][0] * m4.m[0][1] + 
+								this.m[3][1] * m4.m[1][1] +
+								this.m[3][2] * m4.m[2][1] +
+								this.m[3][3] * m4.m[3][1];
+					
+					tmp[3][2] = this.m[3][0] * m4.m[0][2] + 
+								this.m[3][1] * m4.m[1][2] +
+								this.m[3][2] * m4.m[2][2] +
+								this.m[3][3] * m4.m[3][2];
+								
+					tmp[3][3] = this.m[3][0] * m4.m[0][3] + 
+								this.m[3][1] * m4.m[1][3] + 
+								this.m[3][2] * m4.m[2][3] + 
+								this.m[3][3] * m4.m[3][3];
+
+					
+					rv = new mat4();
+					
+					rv.m[0][0] = tmp[0][0];
+					rv.m[0][1] = tmp[0][1];
+					rv.m[0][2] = tmp[0][2];
+					rv.m[0][3] = tmp[0][3];
+
+					rv.m[1][0] = tmp[1][0];
+					rv.m[1][1] = tmp[1][1];
+					rv.m[1][2] = tmp[1][2];
+					rv.m[1][3] = tmp[1][3];
+
+					rv.m[2][0] = tmp[2][0];
+					rv.m[2][1] = tmp[2][1];
+					rv.m[2][2] = tmp[2][2];
+					rv.m[2][3] = tmp[2][3];
+				
+					return rv;				
+				}
+								
+				mult_vec4(v4)
+				{
+					var x = this.m[0][0] * v4.x + this.m[0][1] * v4.y + this.m[0][2] * v4.z + this.m[0][3] * v4.w;
+					var y = this.m[1][0] * v4.x + this.m[1][1] * v4.y + this.m[1][2] * v4.z + this.m[1][3] * v4.w;
+					var z = this.m[2][0] * v4.x + this.m[2][1] * v4.y + this.m[2][2] * v4.z + this.m[2][3] * v4.w;
+					var w = this.m[3][0] * v4.x + this.m[3][0] * v4.y + this.m[3][2] * v4.z + this.m[3][3] * v4.w;
+
+					return new vec4(x, y, z, w);
+				}
+			}
+				
+			
+			function vec2_lerp(v0, v1, coef)
+			{
+				var dx = v1.x - v0.x;
+				var dy = v1.y - v0.y;
+				
+				var v = new vec2(v0.x + coef*dx,
+								 v0.y + coef*dy);
+				
+				return v;
+			}
+						
+			
+			function vec2_determinant(pt_a, pt_b)
+			{
+				//		 (A)  *  (D)   -   (B)  *  (C)
+				return pt_a.x * pt_b.y - pt_a.y * pt_b.x;
+			}
+			
+			
+			function min_of_3(a, b, c)
+			{
+				if (a < b)
+				{
+					return a < c ? a : c;
+				}
+				else
+				{
+					return b < c ? b : c;
+				}
+			}
+			
+			
+			function max_of_3(a, b, c)
+			{
+				if (a > b)
+				{
+					return a > c ? a : c;
+				}
+				else
+				{
+					return b > c ? b : c;
+				}
+			}
+			
+			
+			function mix_3(weight_a, weight_b, weight_c, color_a, color_b, color_c)
+			{
+				return new rgba( (weight_a * color_a.r) + (weight_b * color_b.r) + (weight_c * color_c.r),
+								 (weight_a * color_a.g) + (weight_b * color_b.g) + (weight_c * color_c.g),
+								 (weight_a * color_a.b) + (weight_b * color_b.b) + (weight_c * color_c.b),
+								 (weight_a * color_a.a) + (weight_b * color_b.a) + (weight_c * color_c.a) );				
+			}
+			
+			
+
+			class vertex_with_attribute
+			{
+				constructor(fragCoord, fragColor)
+				{
+					this.fragCoord = fragCoord; // vec4
+					this.fragColor = fragColor; // rgba
+				}
+			}
+
+
+			class software_renderer
+			{
+				constructor(ctx)
+				{
+					this.ctx = ctx;
+					this.window_width = this.ctx.canvas.width;
+					this.window_height = this.ctx.canvas.height;
+					
+					this.viewport_x_offset = 0;
+					this.viewport_y_offset = 0;
+					this.viewport_width = this.window_width - 1;
+					this.viewport_height = this.window_height - 1;
+					
+					// Guard-Band coefficients
+					this.gb_max_x =  32767 / this.viewport_width;
+					this.gb_min_x = -32768 / this.viewport_width;
+					this.gb_max_y =  32767 / this.viewport_height;
+					this.gb_min_y = -32768 / this.viewport_height;
+					this.clip_min_z = -1;
+					this.clip_max_z =  1;
+					
+					this.clear_color = new rgba(255, 255, 0, 255);
+				}
+			
+			
+				clearColor(color)
+				{
+					this.clear_color = color;
+				}
+			
+			
+				clear()
+				{
+					this.ctx.fillStyle = "rgba("+this.clear_color.r+","+this.clear_color.g+","+this.clear_color.b+","+(this.clear_color.a/255)+")";
+					this.ctx.fillRect(0, 0, this.window_width, this.window_height);			
+				}
+			
+			
+				viewport(x_offset, y_offset, width, height)
+				{
+					this.viewport_x_offset = Math.max(0, Math.min(x_offset, this.viewport_width));
+					this.viewport_y_offset = Math.max(0, Math.min(y_offset, this.viewport_height));
+				
+					
+					var view_width = this.viewport_x_offset + width;
+					var delta_width = view_width - this.viewport_width;
+					if (delta_width > 0)
+					{
+						view_width -= delta_width;					
+					}
+
+					
+					var view_height = this.viewport_y_offset + height;
+					var delta_height = view_height - this.viewport_height;
+					if (delta_width > 0)
+					{
+						view_height -= delta_height;					
+					}
+					
+					
+					this.viewport_width  = view_width;
+					this.viewport_height = view_height;
+				}
+						
+
+				_edge_is_top_or_left(pt_a, pt_b, other_pt)
+				{
+					var dy = pt_b.y - pt_a.y;
+				
+					// Is top 
+					if (dy == 0 && pt_a.x > pt_b.x)
+					{
+						return 1;
+					}
+					
+					// Is left					
+					if (dy < 0 && pt_b.y >= other_pt.y)
+					{
+						return 1;
+					}
+				
+					// Neither
+					return 0;
+				}
+						
+					
+				raster_triangle(pt_a, pt_b, pt_c, color_a, color_b, color_c)
+				{
+					var pt_min = new vec2( Math.max(this.viewport_x_offset, min_of_3(Math.floor(pt_a.x), Math.floor(pt_b.x), Math.floor(pt_c.x))), 
+										   Math.max(this.viewport_y_offset, min_of_3(Math.floor(pt_a.y), Math.floor(pt_b.y), Math.floor(pt_c.y))) );
+
+					var pt_max = new vec2( Math.min(this.viewport_x_offset + this.viewport_width,  max_of_3(Math.ceil(pt_a.x), Math.ceil(pt_b.x), Math.ceil(pt_c.x))), 
+										   Math.min(this.viewport_y_offset + this.viewport_height, max_of_3(Math.ceil(pt_a.y), Math.ceil(pt_b.y), Math.ceil(pt_c.y))) );
+
+
+					var edge_ab = new vec2(pt_b.x - pt_a.x, pt_b.y - pt_a.y);
+					var edge_bc = new vec2(pt_c.x - pt_b.x, pt_c.y - pt_b.y);
+					var edge_ca = new vec2(pt_a.x - pt_c.x, pt_a.y - pt_c.y);
+					
+					var tri_area = vec2_determinant(edge_ab, new vec2(pt_c.x - pt_a.x, pt_c.y - pt_a.y));
+					
+					// Back-Face Culling
+					if (tri_area < 0)
+					{
+						return; 
+					}
+	
+					var tri_coef = 1.0 / tri_area;
+					
+					
+					// Barycentric coverage test 
+					var bias_ab = this._edge_is_top_or_left(pt_a, pt_b, pt_c);
+					var bias_bc = this._edge_is_top_or_left(pt_b, pt_c, pt_a);
+					var bias_ca = this._edge_is_top_or_left(pt_c, pt_a, pt_b);
+
+
+					var it = new vec2(pt_min.x + 0.5, pt_min.y + 0.5);
+					while (it.y < pt_max.y)
+					{
+						while (it.x < pt_max.x)
+						{
+							var edge_ax = new vec2(it.x - pt_a.x, it.y - pt_a.y);
+							var edge_bx = new vec2(it.x - pt_b.x, it.y - pt_b.y);
+							var edge_cx = new vec2(it.x - pt_c.x, it.y - pt_c.y);
+
+							
+							var det_c = vec2_determinant(edge_ab, edge_ax) ;
+							var det_a = vec2_determinant(edge_bc, edge_bx) ;
+							var det_b = vec2_determinant(edge_ca, edge_cx) ;
+					
+												
+							if (det_a - bias_bc >= 0 && det_b - bias_ca >= 0 && det_c - bias_ab >= 0)
+							{
+								var interp_c = tri_coef * det_c;
+								var interp_a = tri_coef * det_a;
+								var interp_b = tri_coef * det_b;
+								
+								this.draw_pixel( it, mix_3(interp_a, interp_b, interp_c, color_a, color_b, color_c) );
+							}			
+							
+							it.x += 1;
+						}
+						
+						it.x = pt_min.x;
+						it.y += 1;				
+					}
+					
+					
+					// X-Y Coordinate space interpolation
+				}
+
+				
+				_project_clip_coordinate_and_attributes_to_ndc(vert)
+				{
+					var inv_w = 1.0 / vert.fragCoord.w;						
+					var xyz_coef = inv_w;						
+					
+					// For our vertex, project X/Y/Z. Use W for interpolating 1/W
+					vert.fragCoord.x *= xyz_coef;
+					vert.fragCoord.y *= xyz_coef;
+					vert.fragCoord.z *= xyz_coef;
+					vert.fragCoord.w  = inv_w;					
+					
+					
+					// For all perspective-corrected attributes, Multiply attribute by 1/W
+					vert.fragColor.r *= inv_w;
+					vert.fragColor.g *= inv_w;
+					vert.fragColor.b *= inv_w;
+					vert.fragColor.a *= inv_w;		
+				}
+				
+					
+				draw_triangles(verts_with_attributes, num_verts, vertex_shader, uniforms)
+				{
+					var i = 0;
+					while (i < num_verts)
+					{
+						// Vertex Shader
+						var vert_a = vertex_shader(verts_with_attributes[i+0], uniforms);
+						var vert_b = vertex_shader(verts_with_attributes[i+1], uniforms);
+						var vert_c = vertex_shader(verts_with_attributes[i+2], uniforms);
+						
+
+						// Clipping	& Homogeneous normalization			
+						var verts = this._clip_triangle(vert_a, vert_b, vert_c);
+						
+						
+						// Normalization & Attribute Correction
+						this._project_clip_coordinate_and_attributes_to_ndc(verts[0]);
+						this._project_clip_coordinate_and_attributes_to_ndc(verts[1]);
+						this._project_clip_coordinate_and_attributes_to_ndc(verts[2]);
+	
+	
+						// Viewport Transform
+						for (var v = 0; v < verts.length; v++)
+						{
+							this._viewport_transform(verts[v]);
+						}
+						
+						
+						// Rasterize
+						for (var v = 0; v < verts.length - 2; v++)
+						{
+							this.raster_triangle(verts[  0].fragCoord,
+												 verts[v+1].fragCoord,
+												 verts[v+2].fragCoord,
+												 verts[  0].fragColor,
+												 verts[v+1].fragColor,
+												 verts[v+2].fragColor);
+						}
+
+						
+						i += 3;
+					}
+				}
+			
+			
+				_viewport_transform(ndc)
+				{
+					// As specified on: https://registry.khronos.org/OpenGL-Refpages/gl4/html/glViewport.xhtml
+					var new_x = (ndc.fragCoord.x + 1) * (this.viewport_width  / 2) + this.viewport_x_offset;
+					var new_y = (ndc.fragCoord.y + 1) * (this.viewport_height / 2) + this.viewport_y_offset;
+
+					// Avoid possible off-by-one errors here (seen in simulation)
+					ndc.fragCoord.x = Math.round(new_x, 1);
+					ndc.fragCoord.y = Math.round(new_y, 1);
+					
+					// Treat points so they are at the 'center' of the pixel 
+					ndc.fragCoord.x += 0.5;
+					ndc.fragCoord.y += 0.5;
+					
+				}
+
+
+				_clip_x_left(clip_in)
+				{
+					var clip_out = [];
+					
+					var prev_idx = clip_in.length - 1;
+					var prev_out = (clip_in[prev_idx].fragCoord.x < this.gb_min_x * clip_in[prev_idx].fragCoord.w);	
+
+					var curr_idx = 0;
+					while (curr_idx < clip_in.length)
+					{					
+						var curr_out = (clip_in[curr_idx].fragCoord.x < this.gb_min_x * clip_in[curr_idx].fragCoord.w);
+					
+					
+						if (curr_out != prev_out)
+						{
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.gb_min_x;
+							var X0 = clip_in[in_idx].fragCoord.x;
+							var X1 = clip_in[ot_idx].fragCoord.x;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - X0) / ( X1 - X0 - G * (W1 - W0) );							
+							
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
+													 1.0);
+							
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
+
+							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+						}
+
+						if (curr_out == false)
+						{
+							clip_out.push( clip_in[curr_idx] );						
+						}
+
+
+						prev_idx = curr_idx;
+						prev_out = curr_out;
+											
+						curr_idx += 1;
+					}
+					
+					return clip_out;			
+				}
+
+
+				_clip_x_right(clip_in)
+				{
+					var clip_out = [];
+					
+					var prev_idx = clip_in.length - 1;
+					var prev_out = (clip_in[prev_idx].fragCoord.x > this.gb_max_x * clip_in[prev_idx].fragCoord.w);	
+
+					var curr_idx = 0;
+					while (curr_idx < clip_in.length)
+					{					
+						var curr_out = (clip_in[curr_idx].fragCoord.x > this.gb_max_x * clip_in[curr_idx].fragCoord.w);
+					
+					
+						if (curr_out != prev_out)
+						{
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.gb_max_x;
+							var X0 = clip_in[in_idx].fragCoord.x;
+							var X1 = clip_in[ot_idx].fragCoord.x;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - X0) / ( X1 - X0 - G * (W1 - W0) );							
+							
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
+													 1.0);
+							
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
+
+							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+						}
+
+						if (curr_out == false)
+						{
+							clip_out.push( clip_in[curr_idx] );						
+						}
+
+
+						prev_idx = curr_idx;
+						prev_out = curr_out;
+											
+						curr_idx += 1;
+					}
+					
+					return clip_out;			
+				}
+
+
+				_clip_y_bottom(clip_in)
+				{
+					var clip_out = [];
+					
+					var prev_idx = clip_in.length - 1;
+					var prev_out = (clip_in[prev_idx].fragCoord.y < this.gb_min_y * clip_in[prev_idx].fragCoord.w);	
+
+					var curr_idx = 0;
+					while (curr_idx < clip_in.length)
+					{					
+						var curr_out = (clip_in[curr_idx].fragCoord.y < this.gb_min_y * clip_in[curr_idx].fragCoord.w);
+					
+					
+						if (curr_out != prev_out)
+						{
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.gb_min_x;
+							var Y0 = clip_in[in_idx].fragCoord.y;
+							var Y1 = clip_in[ot_idx].fragCoord.y;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - Y0) / ( Y1 - Y0 - G * (W1 - W0) );							
+							
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
+													 1.0);
+							
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
+
+							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+						}
+
+						if (curr_out == false)
+						{
+							clip_out.push( clip_in[curr_idx] );						
+						}
+
+
+						prev_idx = curr_idx;
+						prev_out = curr_out;
+											
+						curr_idx += 1;
+					}
+					
+					return clip_out;			
+				}
+
+
+				_clip_y_top(clip_in)
+				{
+					var clip_out = [];
+					
+					var prev_idx = clip_in.length - 1;
+					var prev_out = (clip_in[prev_idx].fragCoord.y > this.gb_max_y * clip_in[prev_idx].fragCoord.w);	
+
+					var curr_idx = 0;
+					while (curr_idx < clip_in.length)
+					{					
+						var curr_out = (clip_in[curr_idx].fragCoord.y > this.gb_max_y * clip_in[curr_idx].fragCoord.w);
+					
+					
+						if (curr_out != prev_out)
+						{
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.gb_max_y;
+							var Y0 = clip_in[in_idx].fragCoord.y;
+							var Y1 = clip_in[ot_idx].fragCoord.y;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - Y0) / ( Y1 - Y0 - G * (W1 - W0) );							
+							
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
+													 1.0);
+							
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
+
+							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+						}
+
+						if (curr_out == false)
+						{
+							clip_out.push( clip_in[curr_idx] );						
+						}
+
+
+						prev_idx = curr_idx;
+						prev_out = curr_out;
+											
+						curr_idx += 1;
+					}
+					
+					return clip_out;			
+				}
+				
+
+				_clip_z_low(clip_in)
+				{
+					var clip_out = [];
+					
+					var prev_idx = clip_in.length - 1;
+					var prev_out = (clip_in[prev_idx].fragCoord.z < this.clip_min_z * clip_in[prev_idx].fragCoord.w);	
+
+					var curr_idx = 0;
+					while (curr_idx < clip_in.length)
+					{					
+						var curr_out = (clip_in[curr_idx].fragCoord.z < this.clip_min_z * clip_in[curr_idx].fragCoord.w);
+					
+					
+						if (curr_out != prev_out)
+						{
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.clip_min_z;
+							var Z0 = clip_in[in_idx].fragCoord.y;
+							var Z1 = clip_in[ot_idx].fragCoord.y;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - Z0) / ( Z1 - Z0 - G * (W1 - W0) );							
+							
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
+													 1.0);
+							
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
+
+							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+						}
+
+						if (curr_out == false)
+						{
+							clip_out.push( clip_in[curr_idx] );						
+						}
+
+
+						prev_idx = curr_idx;
+						prev_out = curr_out;
+											
+						curr_idx += 1;
+					}
+					
+					return clip_out;			
+				}
+
+
+				_clip_z_high(clip_in)
+				{
+					var clip_out = [];
+					
+					var prev_idx = clip_in.length - 1;
+					var prev_out = (clip_in[prev_idx].fragCoord.z > this.clip_max_z * clip_in[prev_idx].fragCoord.w);	
+
+					var curr_idx = 0;
+					while (curr_idx < clip_in.length)
+					{					
+						var curr_out = (clip_in[curr_idx].fragCoord.z > this.clip_max_z * clip_in[curr_idx].fragCoord.w);
+					
+					
+						if (curr_out != prev_out)
+						{
+							var in_idx = curr_out ? prev_idx : curr_idx;
+							var ot_idx = curr_out ? curr_idx : prev_idx;
+						
+						
+							var G  = this.clip_max_z;
+							var Z0 = clip_in[in_idx].fragCoord.y;
+							var Z1 = clip_in[ot_idx].fragCoord.y;						
+							var W0 = clip_in[in_idx].fragCoord.w;
+							var W1 = clip_in[ot_idx].fragCoord.w;
+							var T  = (G * W0 - Z0) / ( Z1 - Z0 - G * (W1 - W0) );							
+							
+							
+							var new_coord = new vec4(clip_in[in_idx].fragCoord.x + T * (clip_in[ot_idx].fragCoord.x - clip_in[in_idx].fragCoord.x),
+													 clip_in[in_idx].fragCoord.y + T * (clip_in[ot_idx].fragCoord.y - clip_in[in_idx].fragCoord.y),
+													 clip_in[in_idx].fragCoord.z + T * (clip_in[ot_idx].fragCoord.z - clip_in[in_idx].fragCoord.z),
+													 1.0);
+							
+							var new_color = new rgba(clip_in[in_idx].fragColor.r + T * (clip_in[ot_idx].fragColor.r - clip_in[in_idx].fragColor.r),
+													 clip_in[in_idx].fragColor.g + T * (clip_in[ot_idx].fragColor.g - clip_in[in_idx].fragColor.g),
+													 clip_in[in_idx].fragColor.b + T * (clip_in[ot_idx].fragColor.b - clip_in[in_idx].fragColor.b),
+													 clip_in[in_idx].fragColor.a + T * (clip_in[ot_idx].fragColor.a - clip_in[in_idx].fragColor.a));
+
+							clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+						}
+
+						if (curr_out == false)
+						{
+							clip_out.push( clip_in[curr_idx] );						
+						}
+
+
+						prev_idx = curr_idx;
+						prev_out = curr_out;
+											
+						curr_idx += 1;
+					}
+					
+					return clip_out;			
+				}
+				
+				_simplify_w(clip_in)
+				{
+					var clip_out = [];
+				
+					for (var v = 0; v < clip_in.length; v++)
+					{
+						// Does 2 things:
+						// 1. Makes 'W' non-negative
+						// 2. Clamps 'W' to non-inf values where we cannot differntiate between 
+						// that and infinity for resolutions up to 32,768 @ MSAAx8 (1/2^-18)
+						var mag = Math.abs(clip_in[v].fragCoord.w);						
+						var sign = Math.sign(clip_in[v].fragCoord.w);
+						var mag_clamped = mag < 0.000003814697265625 ? 0.000003814697265625 : mag;						
+
+						var new_coord = new vec4(sign * clip_in[v].fragCoord.x,
+										     	 sign * clip_in[v].fragCoord.y,
+												 sign * clip_in[v].fragCoord.z,
+											     sign * mag_clamped);
+
+						var new_color = new rgba(sign * clip_in[v].fragColor.r,
+												 sign * clip_in[v].fragColor.g,
+												 sign * clip_in[v].fragColor.b,
+												 sign * clip_in[v].fragColor.a);
+												 
+						clip_out.push( new vertex_with_attribute(new_coord, new_color) );
+					}
+					
+					return clip_out;
+				}
+				
+
+				_clip_triangle(vert_a, vert_b, vert_c)
+				{
+					// Simplify W
+					var clip = this._simplify_w([vert_a, vert_b, vert_c]);
+					
+					
+					// Boolean tests to save us from clipping (more efficient in HW)
+					var x_left_a   = clip[0].fragCoord.x < this.gb_min_x * clip[0].fragCoord.w;
+					var x_left_b   = clip[1].fragCoord.x < this.gb_min_x * clip[1].fragCoord.w;
+					var x_left_c   = clip[2].fragCoord.x < this.gb_min_x * clip[2].fragCoord.w;
+					if (x_left_a && x_left_b && x_left_c)
+					{
+						return [];
+					}
+					
+					
+					var x_right_a  = clip[0].fragCoord.x > this.gb_max_x * clip[0].fragCoord.w;
+					var x_right_b  = clip[1].fragCoord.x > this.gb_max_x * clip[1].fragCoord.w;
+					var x_right_c  = clip[2].fragCoord.x > this.gb_max_x * clip[2].fragCoord.w;
+					if (x_right_a && x_right_b && x_right_c)
+					{
+						return [];
+					}
+
+					
+					var y_top_a    = clip[0].fragCoord.y < this.gb_min_y * clip[0].fragCoord.w;
+					var y_top_b    = clip[1].fragCoord.y < this.gb_min_y * clip[1].fragCoord.w;
+					var y_top_c    = clip[2].fragCoord.y < this.gb_min_y * clip[2].fragCoord.w;
+					if (y_top_a && y_tob_b && y_top_c)
+					{
+						return [];
+					}
+					
+					
+					var y_bottom_a = clip[0].fragCoord.y > this.gb_max_y * clip[0].fragCoord.w;
+					var y_bottom_b = clip[1].fragCoord.y > this.gb_max_y * clip[1].fragCoord.w;
+					var y_bottom_c = clip[2].fragCoord.y > this.gb_max_y * clip[2].fragCoord.w;
+					if (y_top_a && y_tob_b && y_top_c)
+					{
+						return [];
+					}
+					
+					
+					var z_low_a  = clip[0].fragCoord.z   < this.clip_min_z * clip[0].fragCoord.w;
+					var z_low_b  = clip[1].fragCoord.z   < this.clip_min_z * clip[1].fragCoord.w;
+					var z_low_c  = clip[2].fragCoord.z   < this.clip_min_z * clip[2].fragCoord.w;
+					if (z_low_a && z_low_b && z_low_c)
+					{
+						return [];
+					}
+					
+					
+					var z_high_a = clip[0].fragCoord.z   >  this.clip_max_z * clip[0].fragCoord.w;
+					var z_high_b = clip[1].fragCoord.z   >  this.clip_max_z * clip[1].fragCoord.w;
+					var z_high_c = clip[2].fragCoord.z   >  this.clip_max_z * clip[2].fragCoord.w;
+					if (z_high_a && z_high_b && z_high_c)
+					{
+						return [];
+					}
+					
+					
+					// X sides
+					if (x_left_a || x_left_b || x_left_c)
+					{
+						clip = this._clip_x_left(clip);
+					}
+					if (x_right_a || x_right_b || x_right_c)
+					{
+						clip = this._clip_x_right(clip);
+					}
+					
+					
+					// Y sides
+					if (y_bottom_a || y_bottom_b || y_bottom_c)
+					{
+						clip = this._clip_y_bottom(clip);
+					}
+					if (y_top_a || y_top_b || y_top_c)
+					{
+						clip = this._clip_y_top(clip);
+					}
+					
+					
+					// Z sides
+					if (z_low_a || z_low_b || z_low_c)
+					{
+						clip = this._clip_z_low(clip);
+					}
+					if (z_high_a || z_high_b || z_high_c)
+					{
+						clip = this._clip_z_high(clip);
+					}
+					
+					
+					// Return filtered
+					return clip;
+				}
+				
+			}
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			// TODO: Add ctx limits vs viewport drawing... enumerate OpenGL style functions here:
+			// glClear
+			// glViewport
+			// draw_triangles_with_attributes(...)
+			
+			
+			
+			
+			function vertex_shader(vert_with_attribute, uniforms)
+			{
+				var rv = new vertex_with_attribute(vert_with_attribute.fragCoord,
+												   vert_with_attribute.fragColor);			
+												   												   
+				
+				// TODO: Write Vertex Shader code here...
+				
+												   
+				return rv;
+			}
+			
+			
+			
+			
+			function draw_canvas()
+			{
+				var pt_a = new vec4( 0.5,  0.5, 0.0, 1.0);
+				var pt_b = new vec4(-0.5, -0.5, 0.0, 1.0);
+				var pt_c = new vec4( 0.5, -0.5, 0.0, 1.0);
+				
+				var color_a = new rgba(0, 255, 0, 255);
+				var color_b = new rgba(255, 0, 0, 255);
+				var color_c = new rgba(0, 0, 255, 255);
+				
+
+				
+				var verts = [
+								new vertex_with_attribute(pt_a, color_a),
+								new vertex_with_attribute(pt_b, color_b),
+								new vertex_with_attribute(pt_c, color_c),				
+							];
+
+
+				uniforms = null;
+
+
+				renderer.clear();
+				
+				
+				renderer.draw_triangles(verts, verts.length, vertex_shader, uniforms);
+				
+				
+				// renderer.resolve();
+			}
+
+				
+			function main()
+			{
+				var frame_canvas = document.getElementById("frame_canvas");
+				var ctx = frame_canvas.getContext("2d");
+				renderer = new software_renderer(ctx);				
+				renderer.clearColor(new rgba(0, 0, 0, 255));				
+				
+				
+				draw_canvas();
+			}
+			
+			
+		</script>
+		
+	</head>	
+
+	<body onload="main()">
+		<h1>Project 1: SVG Fill</h1>	
+		<p>
+			Name: Yours here</br>
+			Date: Submission date
+		</p>
+		
+		<table>
+			<tr>
+				<td width=100px>
+				</td>
+				<td>
+					<canvas	id="frame_canvas"
+							style="background-color: #FFFFFF;" 
+							width=512 
+							height=512>
+					</canvas>
+			</tr>
+			<tr>
+				<td width=100px>
+				</td>
+				<td style="text-align: center; text-height:100px;">
+					<input type="range" onchange="update_samples()" style="width:320px;" id="samples_slider" value="1" min="1" max="16"/>
+					<br/>
+					<br/>
+					<label id="samples_slider_count" for="samples_slider">1</label>
+				</td>
+			</tr>
+		</table>
+	
+		</br>
+		
+		<h2>Description</h2>
+		In this assignment, you will create:</br>
+		
+		<ol>
+			<li>Write function "draw_line" that draws arbitrary lines using Bresenham's Line Drawing Algorithm.
+				<ul><br/></ul>
+				<ul>
+					<li>Highly Optimized for special cases</li>
+					<li>General cases are simplified into no more than 2 octants</li>
+					<li>Inner loop calculations are minimally complex</li>
+					<li>Does NOT draw the last point in a line</li>
+				</ul>
+			</li>
+			<br/>
+			<li>Implement function "add_cubic_bezier_points" that creates a number of sample points based on "num_steps".
+				<ul><br/></ul>
+				<ul>
+					<li>Efficient and highly readable code</li>
+					<li>Appends outputs to "list" pass-by-reference parameter container</li>
+					<li>Fires an alert when inputs are invalid/incorrect</li>
+				</ul>
+			</li>
+			<br/>
+			<li>Complete canvas drawing that matches the outline of the image beneath it.
+				<ul><br/></ul>
+				<ul>
+					<li>Lines form continuous paths</li>
+					<li>Lines are colored correctly</li>
+				</ul>
+			</li>
+			<br/>
+			<li>Comments &amp Submission
+				<ul><br/></ul>
+				<ul>
+					<li>Clearly describe code structure</li>
+					<li>Neither too frequent nor infrequent</li>
+					<li>Explain math involved where relevant</li>
+					<li>Edit this to include your submission data, name. Also, submit as "last_name_first_name.html"</li>
+				</ul>
+			</li>
+		</ol>
+		
+		<h2>Score Breakdown</h2>
+		<table style="border-width:1px;">
+			<tr>
+				<td style="padding:2px; border-top: 0px solid">draw_line</td>
+				<td style="padding:2px; border-left: 1px solid">20 pts</td>
+			</tr>
+			<tr>
+				<td style="padding:2px; border-top: 1px solid">add_cubic_bezier_points</td>
+				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">10 pts</td>
+			</tr>
+			<tr>
+				<td style="padding:2px; border-top: 1px solid">Render</td>
+				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">5 pts</td>
+			</tr>
+			<tr>
+				<td style="padding:2px; border-top: 1px solid">Comments</td>
+				<td style="padding:2px; border-top: 1px solid; border-left: 1px solid">5 pts</td>
+			</tr>
+		</table>		
+		<br/>
+		
+
+		
+
+
+	</body>
+
+</html>

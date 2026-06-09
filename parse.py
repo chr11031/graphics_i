@@ -107,3 +107,13 @@ print('MODEL Extents:')
 print(min_x, '<--->', max_x, '\n', min_y, '<--->', max_y, '\n', min_z, '<--->', max_z)
 
 
+print('[', end = ' ')
+for i in range(1, len(faces)):
+    face_str = '\t['
+    face_str += str(faces[i].v0) + ', ' + str(faces[i].v1) + ', ' + str(faces[i].v2) + ', '
+    face_str += str(faces[i].t0) + ', ' + str(faces[i].t1) + ', ' + str(faces[i].t2) + ', ' 
+    face_str += str(faces[i].n0) + ', ' + str(faces[i].n1) + ', ' + str(faces[i].n2)
+    face_str += '],'
+    print(face_str, end=' ')
+print(']\n')
+

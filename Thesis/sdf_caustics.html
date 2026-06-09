@@ -1,0 +1,1455 @@
+<!DOCTYPE HTML>
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+        <title>Real Time Caustics Demo</title>
+    </head>
+    <body style="background:black; font-family: 'Roboto', sans-serif;">
+        <canvas id="gl_canvas_0" width="1024" height="1024"></canvas>
+		<br>
+			<div id="sphere_button" style="text-align: center; line-height: 80px; margin-right: 5px; width: 338px; height:80px; display: inline-block; background-color: #333333; color:white; font-size: xx-large;" onclick="selectsphere()">
+				Sphere
+			</div><div id="glass_button" style="text-align: center; line-height: 80px; width: 338px; height:80px; display: inline-block; background-color: #333333; color:white; font-size: xx-large;" onclick="selectglass()">
+				Glass
+			</div><div id="bunny_button" style="text-align: center; line-height: 80px; margin-left: 5px; width: 338px; height:80px; display: inline-block; background-color: #333333; color:white; font-size: xx-large;" onclick="selectbunny()">
+				Bunny
+			</div>
+	
+		</div>
+
+	<script type="text/javascript" src="/js/Resource_Loader.js"></script>
+	<script type="text/javascript" src="/js/Matrix4x4.js"></script>
+	<script type="text/javascript" src="/js/Observe_Control.js"></script>
+	<script type="text/javascript" src="/js/Camera.js"></script>
+	<script type="text/javascript" src="/js/Cubemap_Camera.js"></script>
+	<script type="text/javascript" src="/js/SDFV_Data.js"></script>
+
+	<script type="text/javascript" src="/js/Render_Target_Null.js"></script>
+	<script type="text/javascript" src="/js/Render_Target.js"></script>
+	<script type="text/javascript" src="/js/Render_Target_Cubemap.js"></script>
+	<script type="text/javascript" src="/js/Shader_Program.js"></script>
+	<script type="text/javascript" src="/js/Geometry_Helper.js"></script>
+	<script type="text/javascript" src="/js/VAO_Helper.js"></script>
+	<script type="text/javascript" src="/js/Uniform_Helper.js"></script>
+	<script type="text/javascript" src="/js/Texture_Helper.js"></script>
+	<script type="text/javascript" src="/js/Renderbuffer_Helper.js"></script>
+	<script type="text/javascript" src="/js/Framebuffer_Helper.js"></script>
+	<script type="text/javascript" src="/js/Geometry.js"></script>
+	<script type="text/javascript" src="/js/Geometry_Factory.js"></script>
+	<script type="text/javascript" src="/js/Geometry_Posprocess.js"></script>
+	<script type="text/javascript" src="/js/Render_Engine.js"></script>	
+	<script>
+
+		// DOM CALLS
+		function selectsphere()
+		{
+			reel_selection = 'sphere';
+		}
+		function selectglass()
+		{
+			reel_selection = 'glass';
+		}
+		function selectbunny()
+		{
+			reel_selection = 'bunny';
+		}
+
+		// GLOBAL Varaibles
+		var ext = null;
+		var performances = [];
+
+		var reel_selection = 'glass';
+
+		var gl = null;
+		var re = null;
+        var time_start = null;
+		var time_delta = null;
+		var splat_colors = null;
+		
+		var resources = null;
+		var geometry_factory = null;
+		var geometry 		 = {};
+		var textures         = {};
+		var renderbuffers    = {};
+		var render_targets 	 = {};
+
+		var subject_pos = null;
+		var light_pos = null;
+		var shadow_cubemap_camera = null;
+		var subject_cubemap_camera = null; 
+		var user_camera = null;
+		var observe_control = null;
+		
+
+		function gl_Mouse_Down()
+		{
+			observe_control.update_mouse_active(true);
+		}
+		
+		function gl_Mouse_Release()
+		{
+			observe_control.update_mouse_active(false);
+		}
+		
+		function gl_Mouse_Move(event)
+		{
+			observe_control.update_mouse_move(event);
+		}
+		
+		function gl_Mouse_Wheel(event)
+		{
+			observe_control.update_zoom(event.deltaY);
+		}
+
+        function initialize_demo()
+        {
+            // DOM parsing
+            var canvas = document.getElementById('gl_canvas_0');
+            gl = canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});
+			canvas.addEventListener('mousedown',    gl_Mouse_Down);
+			canvas.addEventListener('mouseup',      gl_Mouse_Release);
+			canvas.addEventListener('mouserelease', gl_Mouse_Release);
+			canvas.addEventListener('mouseleave', 	gl_Mouse_Release);
+			canvas.addEventListener('mousemove',    gl_Mouse_Move);
+			canvas.addEventListener('wheel',        gl_Mouse_Wheel);
+            gl.viewport_width = canvas.width;
+            gl.viewport_height = canvas.height;
+
+			// ext = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+			// alert(ext);
+
+			// Check required extension(s)
+			var required_extensions = [
+				'OES_texture_float_linear',
+				'EXT_color_buffer_float',
+			];
+			for (var i = 0; i < required_extensions.length; i++)
+			{
+				var check = gl.getExtension(required_extensions[i]);
+				if (check == null)
+				{
+					alert("Required WebGL2 extension: " + required_extensions[i] + ' not supported');
+					return;
+				}
+			}
+
+
+			// Time
+			time_start = Date.now();
+
+			// Light source
+			light_pos = new Float32Array(3);
+			light_pos[0] =-0.0;
+			light_pos[1] = 0.6;
+			light_pos[2] =-0.0;
+
+			// Subject
+			subject_pos = new Float32Array(3);
+			subject_pos[0] = -0.0;
+			subject_pos[1] = -0.0;
+			subject_pos[2] =  0.0;
+
+			// Cubemap cameras
+			shadow_cubemap_camera = new Cubemap_Camera(0.01, 100.0, light_pos);
+			subject_cubemap_camera = new Cubemap_Camera(0.01, 100.0, subject_pos);
+
+			// User Camera
+			var user_camera_pos = new Float32Array([0.0, 0.0, -2.0]);
+			var user_camera_dir = new Float32Array([0.0, 0.0, 1.0]);
+			var user_camera_up = new Float32Array([0.0, 1.0, 0.0]);
+			user_camera = new Camera(90.0, 90.0, 0.1, 100.0, user_camera_pos, user_camera_dir, user_camera_up);
+			observe_control = new Observe_Control(user_camera, 0.1, 10.0);
+
+			// Render Engine
+			re = new Render_Engine();
+			re.register_gl(gl);
+			re.register_shaders([
+					{id: 'shadow_map',				vertex_shader: resources['shadow_map.vs'], 				frag_shader: resources['shadow_map.fs']				},
+					{id: 'geometry_opaque',			vertex_shader: resources['geometry_opaque.vs'], 		frag_shader: resources['geometry_opaque.fs']		},
+					{id: 'geometry_transmissive',	vertex_shader: resources['geometry_transmissive.vs'], 	frag_shader: resources['geometry_transmissive.fs']	},
+					{id: 'caustic_trace_through',	vertex_shader: resources['caustic_trace_through.vs'],	frag_shader: resources['caustic_trace_through.fs']  },
+					{id: 'refractive_sdfv_march',	vertex_shader: resources['refractive_sdfv_march.vs'],	frag_shader: resources['refractive_sdfv_march.fs']	},
+					{id: 'splat_mcguire_luebke',	vertex_shader: resources['splat_mcguire_luebke.vs'],	frag_shader: resources['splat_mcguire_luebke.fs']	},
+					{id: 'photon_impact',			vertex_shader: resources['photon_impact.vs'],			frag_shader: resources['photon_impact.fs']			},
+					{id: 'splat',					vertex_shader: resources['splat.vs'],					frag_shader: resources['splat.fs']					},
+					{id: 'shade_refracted_rays',	vertex_shader: resources['shade_refracted_rays.vs'],	frag_shader: resources['shade_refracted_rays.fs']	},					
+					{id: 'g_buffer_render',			vertex_shader: resources['g_buffer_render.vs'],			frag_shader: resources['g_buffer_render.fs']		},
+					{id: 'forward_brdf',			vertex_shader: resources['forward_brdf.vs'],			frag_shader: resources['forward_brdf.fs']			},
+					{id: 'caustic_surface',			vertex_shader: resources['caustic_surface.vs'],			frag_shader: resources['caustic_surface.fs']		},
+					{id: 'texture_quad',			vertex_shader: resources['texture_quad.vs'],			frag_shader: resources['texture_quad.fs']			},
+				]);
+
+
+			// Define color-specific IORs/colors
+			splat_colors = [
+					// { ior: 1.52, 	color: 	new Float32Array([5.0, 5.0, 5.0])},
+					{ ior: 1.50917, color:  new Float32Array([5.0, 0.0, 0.0])},
+					{ ior: 1.51534, color:  new Float32Array([0.0, 5.0, 0.0])},
+					{ ior: 1.52136, color:  new Float32Array([0.0, 0.0, 5.0])},
+			];
+
+
+			// Create geometry
+			geometry_factory = new Geometry_Factory(gl);
+
+			// GLOBAL SCOPE Geometry (Fair game for all shaders)
+			geometry['screen_pt'] 	= geometry_factory.generate(generate_screen_pt(), 	{});
+			geometry['screen_line'] = geometry_factory.generate(generate_screen_line(),	{});
+			geometry['screen_tri']  = geometry_factory.generate(generate_screen_tri(),	{});
+			geometry['screen_quad'] = geometry_factory.generate(generate_screen_quad(),	{});
+
+			// DEMO Geometry (Specific to this demo)
+			var supported_3d_texture_dim = gl.getParameter(gl.MAX_3D_TEXTURE_SIZE);
+			var sphere_sdfv = load_sdf_volume( resources['sphere_binary'] );
+			if (supported_3d_texture_dim < sphere_sdfv.x_size || 
+				supported_3d_texture_dim < sphere_sdfv.y_size || 
+				supported_3d_texture_dim < sphere_sdfv.z_size)
+			{
+				alert('Required 3D texture size is unsupported by implementation');
+			}
+			var sphere_mesh_data = generate_obj_buffers_with_vert_uv_norm(resources['sphere_obj']);
+			geometry['sphere'] = geometry_factory.generate(sphere_mesh_data, 
+															{
+																albedo: 			generate_2d_RGBA_HFLOAT_texture_from_img(	gl, resources['subject_albedo']		),
+																metal:				generate_2d_float_texture_from_img(			gl, resources['subject_metal']		),
+																roughness:			generate_2d_float_texture_from_img(			gl, resources['subject_roughness']	),
+																ao: 				generate_2d_float_texture_from_img(			gl, resources['subject_ao']			),
+																model:				new Matrix4x4(),
+																sdfv:				generate_3d_float_texture(gl, sphere_sdfv.data, sphere_sdfv.x_size, sphere_sdfv.y_size, sphere_sdfv.z_size),
+																sdfv_dim:			sphere_sdfv.x_size,
+																sdfv_world_to_vol:	load_Matrix_4x4_from_columns_array( sphere_sdfv.world_to_sdfv_transform ),	 	
+																IOR:				1.52,
+																max_radius: 		find_max_radius(sphere_mesh_data),	
+															});		
+
+			var glass_sdfv = load_sdf_volume( resources['glass_binary'] );
+			if (supported_3d_texture_dim < glass_sdfv.x_size || 
+				supported_3d_texture_dim < glass_sdfv.y_size || 
+				supported_3d_texture_dim < glass_sdfv.z_size)
+			{
+				alert('Required 3D texture size is unsupported by implementation');
+			}
+			var glass_mesh_data = generate_obj_buffers_with_vert_uv_norm(resources['glass_obj']);
+			geometry['glass'] = geometry_factory.generate(glass_mesh_data, 
+															{
+																albedo: 			generate_2d_RGBA_HFLOAT_texture_from_img(	gl, resources['subject_albedo']		),
+																metal:				generate_2d_float_texture_from_img(			gl, resources['subject_metal']		),
+																roughness:			generate_2d_float_texture_from_img(			gl, resources['subject_roughness']	),
+																ao: 				generate_2d_float_texture_from_img(			gl, resources['subject_ao']			),
+																model:				new Matrix4x4(),
+																sdfv:				generate_3d_float_texture(gl, glass_sdfv.data, glass_sdfv.x_size, glass_sdfv.y_size, glass_sdfv.z_size),
+																sdfv_dim:			glass_sdfv.x_size,
+																sdfv_world_to_vol:	load_Matrix_4x4_from_columns_array( glass_sdfv.world_to_sdfv_transform ),	 	
+																IOR:				1.52,
+																max_radius: 		find_max_radius(glass_mesh_data),	
+															});		
+			
+			var bunny_sdfv = load_sdf_volume( resources['bunny_binary'] );
+			var supported_3d_texture_dim = gl.getParameter(gl.MAX_3D_TEXTURE_SIZE);
+			if (supported_3d_texture_dim < bunny_sdfv.x_size || 
+				supported_3d_texture_dim < bunny_sdfv.y_size || 
+				supported_3d_texture_dim < bunny_sdfv.z_size)
+			{
+				alert('Required 3D texture size is unsupported by implementation');
+			}
+			var bunny_mesh_data = generate_obj_buffers_with_vert_uv_norm(resources['bunny_obj']);
+			geometry['bunny'] = geometry_factory.generate(bunny_mesh_data, 
+															{
+																albedo: 			generate_2d_RGBA_HFLOAT_texture_from_img(	gl, resources['subject_albedo']		),
+																metal:				generate_2d_float_texture_from_img(			gl, resources['subject_metal']		),
+																roughness:			generate_2d_float_texture_from_img(			gl, resources['subject_roughness']	),
+																ao: 				generate_2d_float_texture_from_img(			gl, resources['subject_ao']			),
+																model:				new Matrix4x4(),
+																sdfv:				generate_3d_float_texture(gl, bunny_sdfv.data, bunny_sdfv.x_size, bunny_sdfv.y_size, bunny_sdfv.z_size),
+																sdfv_dim:			bunny_sdfv.x_size,
+																sdfv_world_to_vol:	load_Matrix_4x4_from_columns_array( bunny_sdfv.world_to_sdfv_transform ),	 	
+																IOR:				1.52,
+																max_radius: 		find_max_radius(bunny_mesh_data),	
+															});		
+
+
+			geometry['scene'] = geometry_factory.generate(generate_box_buffers(1.0, false),
+														 {
+															 albedo: 	generate_2d_RGBA_HFLOAT_texture_from_img(	gl, resources['scene_albedo']		),
+															 metal:		generate_2d_float_texture_from_img(			gl, resources['scene_metal']		),
+															 roughness:	generate_2d_float_texture_from_img(			gl, resources['scene_roughness']	),
+															 ao: 		generate_2d_float_texture_from_img(			gl, resources['scene_ao']			),
+															 model: 	new Matrix4x4(),
+														 });
+			geometry['splat'] = geometry_factory.generate(generate_obj_buffers_with_vert_uv_norm(resources['icosphere_obj']), {});
+			
+			re.register_geometry([
+			{	
+										geometry:	geometry['sphere'],	
+										shaders:	[
+														'shadow_map', 
+														'geometry_opaque', 
+														'geometry_transmissive',
+														'caustic_trace_through',
+														'caustic_surface',
+													]
+									},
+									{	
+										geometry:	geometry['glass'],	
+										shaders:	[
+														'shadow_map', 
+														'geometry_opaque', 
+														'geometry_transmissive',
+														'caustic_trace_through',
+														'caustic_surface',
+													]
+									},
+									{	
+										geometry:	geometry['bunny'],	
+										shaders:	[
+														'shadow_map', 
+														'geometry_opaque', 
+														'geometry_transmissive',
+														'caustic_trace_through',
+														'caustic_surface',
+													]
+									},
+									{	
+										geometry:	geometry['scene'],	
+										shaders:	[
+														'shadow_map', 
+														'geometry_opaque', 
+														'forward_brdf',
+													]
+									},
+									{
+										geometry: 	geometry['splat'],
+										shaders: 	[
+														'splat_mcguire_luebke',
+													]
+									},
+									{	
+										geometry:	geometry['screen_quad'],	
+										shaders:	[
+														'refractive_sdfv_march', 
+														'photon_impact',
+														'shade_refracted_rays',
+														'g_buffer_render', 
+														'texture_quad', 
+													]
+									},
+									{
+										geometry:	geometry['screen_tri'],
+										shaders:	[
+														'splat',
+													]
+									},
+								]);
+			
+
+			// SCREEN (Monitor output) 
+			render_targets['null'] = new Render_Target_Null(gl.viewport_width, gl.viewport_height);
+
+			// MSAA TARGET
+			renderbuffers['msaa'] = gl.createRenderbuffer();
+			gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffers['msaa']);
+			gl.renderbufferStorageMultisample(gl.RENDERBUFFER, gl.getParameter(gl.MAX_SAMPLES), gl.RGBA8, gl.viewport_width, gl.viewport_height);			
+			renderbuffers['msaa_depth'] = gl.createRenderbuffer();
+			gl.bindRenderbuffer(gl.RENDERBUFFER, renderbuffers['msaa_depth']);
+			gl.renderbufferStorageMultisample(gl.RENDERBUFFER, gl.getParameter(gl.MAX_SAMPLES), gl.DEPTH_COMPONENT24, gl.viewport_width, gl.viewport_height);
+			render_targets['msaa'] = new Render_Target(gl, gl.viewport_width, gl.viewport_height,
+										[
+											{renderbuffer: 	renderbuffers['msaa'], 			att: gl.COLOR_ATTACHMENT0},
+											{renderbuffer: 	renderbuffers['msaa_depth'], 	att: gl.DEPTH_ATTACHMENT },
+										]);
+			
+
+
+
+			// SHADOW MAPS
+			textures['light_shadow_cubemap'] 		= generate_empty_cubemap_depth_texture(gl, canvas.width);
+			render_targets['light_shadow_cubemap']	= new Render_Target_Cubemap(gl, gl.viewport_width, gl.viewport_height, 
+														[
+															{texture: textures['light_shadow_cubemap'],	att: gl.DEPTH_ATTACHMENT},
+														]);
+
+			// SUBJECT G BUFFER CUBEMAP
+			textures['subject_env_pos_cubemap']				= generate_empty_cubemap_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['subject_env_normal_cubemap']			= generate_empty_cubemap_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['subject_env_albedo_cubemap']			= generate_empty_cubemap_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['subject_env_metal_rough_ao_cubemap']	= generate_empty_cubemap_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['subject_env_irradiance_cubemap']		= generate_empty_cubemap_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['subject_env_depth_cubemap']			= generate_empty_cubemap_depth_texture(gl, canvas.width); 
+			render_targets['subject_env_g_buffer_cubemap'] 	= new Render_Target_Cubemap(gl, gl.viewport_width, gl.viewport_height, 
+															[
+																{texture: textures['subject_env_pos_cubemap'],				att: gl.COLOR_ATTACHMENT0},
+																{texture: textures['subject_env_normal_cubemap'], 			att: gl.COLOR_ATTACHMENT1},
+																{texture: textures['subject_env_albedo_cubemap'], 			att: gl.COLOR_ATTACHMENT2},
+																{texture: textures['subject_env_metal_rough_ao_cubemap'], 	att: gl.COLOR_ATTACHMENT3},
+																{texture: textures['subject_env_irradiance_cubemap'],		att: gl.COLOR_ATTACHMENT4},
+																{texture: textures['subject_env_depth_cubemap'],			att: gl.DEPTH_ATTACHMENT },
+															]);
+
+			textures['world_enter_pos']   		   = generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['world_leave_pos']			   = generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['world_impact_pos_flux'] 	   = generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			var w_h = (1.0 / 4.0) * gl.viewport_width;
+			// w_h = gl.viewport_height;
+			render_targets['photon_trace_through'] = new Render_Target(gl, w_h, w_h,
+														[
+															{texture: textures['world_enter_pos'],			att: gl.COLOR_ATTACHMENT0,	tex: gl.TEXTURE_2D },
+															{texture: textures['world_leave_pos'],			att: gl.COLOR_ATTACHMENT1,  tex: gl.TEXTURE_2D },
+															{texture: textures['world_impact_pos_flux'],	att: gl.COLOR_ATTACHMENT2,	tex: gl.TEXTURE_2D },
+														]);
+
+
+			textures['OUT'] 					   = generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['DEBUG'] 					   = generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			render_targets['DEBUG'] = new Render_Target(gl, gl.viewport_width, gl.viewport_height,
+														[
+															{texture: textures['OUT'],						att: gl.COLOR_ATTACHMENT0,	tex: gl.TEXTURE_2D },
+															{texture: textures['DEBUG'],					att: gl.COLOR_ATTACHMENT1, 	tex: gl.TEXTURE_2D },
+														]);
+
+
+
+
+
+
+			// G BUFFER 
+			textures['g_buffer_pos_flux'] 			= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['g_buffer_normal'] 			= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['g_buffer_albedo'] 			= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['g_buffer_metal_rough_ao_so'] 	= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['g_buffer_depth'] 				= generate_2d_depth_texture(gl, gl.viewport_width, gl.viewport_height);			
+			render_targets['g_buffer'] 				= new Render_Target(gl, gl.viewport_width, gl.viewport_height,
+															[
+																{texture: textures['g_buffer_pos_flux'],			att: gl.COLOR_ATTACHMENT0, tex: gl.TEXTURE_2D },
+																{texture: textures['g_buffer_normal'],				att: gl.COLOR_ATTACHMENT1, tex: gl.TEXTURE_2D },
+																{texture: textures['g_buffer_albedo'],				att: gl.COLOR_ATTACHMENT2, tex: gl.TEXTURE_2D },
+																{texture: textures['g_buffer_metal_rough_ao_so'],	att: gl.COLOR_ATTACHMENT3, tex: gl.TEXTURE_2D },
+																{texture: textures['g_buffer_depth'],				att: gl.DEPTH_ATTACHMENT,  tex: gl.TEXTURE_2D },
+															]);
+
+			// TRANSMISSIVE RENDER 
+			textures['transmissive_render'] 			= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			render_targets['transmissive_render'] 		= new Render_Target(gl, gl.viewport_width, gl.viewport_height,
+															[
+																{texture: textures['transmissive_render'],		att: gl.COLOR_ATTACHMENT0, tex: gl.TEXTURE_2D },
+															]);
+															
+
+			// PHOTON TRANSMISSION
+			textures['photon_transmit_pos_flux'] 		= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['photon_transmit_dir'] 			= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['photon_transmit_depth'] 			= generate_2d_depth_texture(gl, gl.viewport_width, gl.viewport_height);			
+			render_targets['photon_transmit_g_buffer']	= new Render_Target(gl, gl.viewport_width, gl.viewport_height,
+														[
+															{texture: textures['photon_transmit_pos_flux'],	att: gl.COLOR_ATTACHMENT0, tex: gl.TEXTURE_2D },
+															{texture: textures['photon_transmit_dir'],		att: gl.COLOR_ATTACHMENT1, tex: gl.TEXTURE_2D },
+															{texture: textures['photon_transmit_depth'],	att: gl.DEPTH_ATTACHMENT,  tex: gl.TEXTURE_2D },
+														]);
+
+			// PHOTON CAUSTIC REFRACTIONS 
+			textures['photon_exit_pos_flux']		= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['photon_exit_dir']				= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			render_targets['photon_exit']			= new Render_Target(gl, gl.viewport_width, gl.viewport_height,
+													[
+														{texture: textures['photon_exit_pos_flux'],			att: gl.COLOR_ATTACHMENT0, 	tex: gl.TEXTURE_2D },
+														{texture: textures['photon_exit_dir'],				att: gl.COLOR_ATTACHMENT1, 	tex: gl.TEXTURE_2D },
+													]);
+
+			// PHOTON IMPACT
+			textures['photon_impact_pos_flux']		= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			textures['photon_impact_dir']			= generate_2d_RGBA_HFLOAT_texture(gl, gl.viewport_width, gl.viewport_height);
+			render_targets['photon_impact'] 		= new Render_Target(gl, gl.viewport_width, gl.viewport_height,
+													[
+														{texture: textures['photon_impact_pos_flux'],  		att: gl.COLOR_ATTACHMENT0,	tex: gl.TEXTURE_2D },
+														{texture: textures['photon_impact_dir'],			att: gl.COLOR_ATTACHMENT1,	tex: gl.TEXTURE_2D },
+													]);
+
+			// COMPOSITED RENDER
+			textures['render_composite'] 		= generate_2d_RGBA_UINT_texture(gl, gl.viewport_width, gl.viewport_height);
+			render_targets['render_composite']	= new Render_Target(gl, gl.viewport_width, gl.viewport_height,
+												[
+													{texture: textures['render_composite'], att: gl.COLOR_ATTACHMENT0, tex: gl.TEXTURE_2D },
+												]);
+
+            gl.enable(gl.DEPTH_TEST);
+            gl.enable(gl.CULL_FACE);
+
+			window.requestAnimationFrame(draw_scene);
+        }
+
+		function render_caustic_trace_through(render_target,
+											  the_camera,
+											  subject_geometry,
+											  subject_pos,
+											  subject_ior,
+											  subj_env_cubemap_pos_texture)
+		{
+			gl.bindFramebuffer(gl.FRAMEBUFFER, render_target.framebuffer());
+			// gl.viewport(0, 0, render_target.width(), render_target.height());
+			gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
+			gl.clearColor(0.0, 0.0, 0.0, 0.0);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+			gl.useProgram(re.shader('caustic_trace_through').program);
+
+			var inv_subject = subject_geometry.property('model').inverse();
+			var world_to_model_to_sdfv_mat = subject_geometry.property('sdfv_world_to_vol').mult(inv_subject);
+
+			var caustic_trace_through_params = {
+				'proj'							:	the_camera.proj_mat().data,
+				'view'							:	the_camera.view_mat().data,
+				'model'							:	subject_geometry.property('model').data,
+				'photon_source'					:	the_camera.pos(),
+
+				'sdfv'							:	subject_geometry.property('sdfv'),
+				'world_to_sdfv_mat'				:	world_to_model_to_sdfv_mat.data,
+				'eta'							:	1.0 / subject_ior,
+				'sdfv_voxel_size'				:	1.0 / subject_geometry.property('sdfv_dim'),
+				
+				'shah_max_steps'				:	12.0,
+				'subject_world_pos'				:	subject_pos,
+				'subj_env_pos_cubemap'			:	subj_env_cubemap_pos_texture,
+			};
+
+			gl.bindVertexArray( re.vao('caustic_trace_through', subject_geometry.id()) );
+			map_uniforms(gl, re.shader('caustic_trace_through'), caustic_trace_through_params);
+			gl.drawElementsInstanced(subject_geometry.primitive_type(), subject_geometry.vertex_count(), gl.UNSIGNED_INT, 0, 1);
+		}
+
+
+		function render_splat_photons_mcguire_luebke(render_target,
+													 subject_cubemap_camera,
+													 subject_pos,
+													 trace_through_width,
+													 trace_through_height,
+													 world_leave_pos_texture,
+													 world_impact_pos_flux_texture,
+													 subject_env_normal_cubemap_texture)
+		{
+			var caustic_g_framebuffers = render_target.framebuffers();
+			
+			var cubemap_views = [
+				'px', 'py', 'pz', 'nx', 'ny', 'nz'
+			];
+
+			
+			gl.useProgram(re.shader('splat_mcguire_luebke').program);
+
+			w = trace_through_width;
+			h = trace_through_height;
+			num_instances = w * h;
+			num_instances = 1;
+
+			gl.disable(gl.CULL_FACE);
+			gl.disable(gl.DEPTH_TEST);
+			gl.enable(gl.BLEND);
+			gl.blendFunc(gl.SRC_COLOR, gl.DST_COLOR);
+			for (var i = 0; i < cubemap_views.length; i++)
+			{
+				gl.bindFramebuffer(gl.FRAMEBUFFER, caustic_g_framebuffers[ cubemap_views[i] ]);
+				gl.viewport(0, 0, render_target.width(), render_target.height());
+
+				gl.drawBuffers([gl.NONE, 
+								gl.NONE, 
+								gl.NONE,
+								gl.NONE,
+								gl.COLOR_ATTACHMENT4]);
+
+
+				var camera_view = subject_cubemap_camera.view_mat( cubemap_views[i] );
+				splat_mcguire_luebke_params = {
+					'proj'							:	subject_cubemap_camera.proj_mat().data,
+					'view'							: 	camera_view.data,
+					'num_wide'						: 	w,
+					'num_tall'						: 	h,
+					'splat_color'					: 	new Float32Array([0.0, 1.0, 1.0]),
+					'subject_pos'					: 	subject_pos,
+					'subject_env_normal'			:	subject_env_normal_cubemap_texture,
+					'photon_leave_pos_flux'			: 	world_leave_pos_texture,
+					'photon_impact_pos_flux' 		: 	world_impact_pos_flux_texture,
+				};
+
+				gl.bindVertexArray( re.vao('splat_mcguire_luebke', geometry['splat'].id()) );
+				map_uniforms(gl, re.shader('splat_mcguire_luebke'), splat_mcguire_luebke_params);
+				gl.drawElementsInstanced(geometry['splat'].primitive_type(), geometry['splat'].vertex_count(), gl.UNSIGNED_INT, 0, num_instances);
+			}
+
+			gl.enable(gl.DEPTH_TEST);
+			gl.disable(gl.BLEND);
+			gl.enable(gl.CULL_FACE);
+		}
+
+
+
+		function render_forward(render_target,
+								camera,
+								geometry_list,
+
+								shadow_cubemap_camera,
+								shadow_cubemap_depth_texture,
+
+								irradiance_cubemap_camera,
+								irradiance_cubemap_depth_texture,
+								irradiance_cubemap_texture)
+		{
+			gl.bindFramebuffer(gl.FRAMEBUFFER, render_target.framebuffer());
+			gl.viewport(0, 0, render_target.width(), render_target.height());
+			gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+
+			gl.clearColor(0.0, 0.0, 0.0, 1.0);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+			
+			gl.useProgram(re.shader('forward_brdf').program);
+
+			// DRAW EACH OBJECT
+			for (var i = 0; i < geometry_list.length; i++)
+			{
+				var the_geometry = geometry_list[i];
+
+				var forward_brdf_params = {
+					'world_eye_pos'				:	camera.pos(),
+					'proj'						:	camera.proj_mat().data,
+					'view'						:	camera.view_mat().data,
+					'model'						:	the_geometry.property('model').data,
+					'albedo_map'				:	the_geometry.property('albedo'),
+					'metal_map'					:	the_geometry.property('metal'),
+					'rough_map'					:	the_geometry.property('rough'),
+					'ao_map'					:	the_geometry.property('ao'),
+					
+					'shadow_map'				:	shadow_cubemap_depth_texture,
+					'shadow_light_pos'			: 	shadow_cubemap_camera.pos(),
+					'shadow_proj_scale'			:	shadow_cubemap_camera.proj_mat().get(2,2), 
+					'shadow_proj_trans'			:	shadow_cubemap_camera.proj_mat().get(2,3),
+					'irradiance_depth_map'		:	irradiance_cubemap_depth_texture,
+					'irradiance_map'			:	irradiance_cubemap_texture,
+					'irradiance_light_pos'		:	irradiance_cubemap_camera.pos(),
+					'irradiance_proj_scale'		:	irradiance_cubemap_camera.proj_mat().get(2,2),
+					'irradiance_proj_trans'		:	irradiance_cubemap_camera.proj_mat().get(2,3),
+				};
+
+				gl.bindVertexArray( re.vao('forward_brdf', the_geometry.id()) );
+				map_uniforms(gl, re.shader('forward_brdf'), forward_brdf_params);
+				gl.drawElementsInstanced(the_geometry.primitive_type(), the_geometry.vertex_count(), gl.UNSIGNED_INT, 0, 1);
+			}	
+		}
+
+		function render_caustic_surface(render_target,
+										user_camera,
+										subject_geometry,
+										subject_pos,
+										shadow_env_cubemap_camera,
+										shadow_env_cubemap_depth_texture,
+										subject_env_cubemap_camera,
+										subject_env_cubemap_pos_texture,
+										subject_env_cubemap_normal_texture,
+										subject_env_cubemap_albedo_texture,
+										subject_env_cubemap_metal_rough_ao_texture,
+										subject_env_cubemap_depth_texture,
+										subject_env_cubemap_irradiance_texture,
+										is_debug
+									)
+		{
+			gl.bindFramebuffer(gl.FRAMEBUFFER, render_target.framebuffer());
+			gl.viewport(0, 0, render_target.width(), render_target.height());
+			gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+
+			if (is_debug == true)
+			{
+				gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+			}
+
+			gl.useProgram(re.shader('caustic_surface').program);
+
+			var inv_subject = subject_geometry.property('model').inverse();
+			var world_to_model_to_sdfv_mat = subject_geometry.property('sdfv_world_to_vol').mult(inv_subject);
+
+			var caustic_surface_params = {
+				'proj'							:	user_camera.proj_mat().data,
+				'view'							:	user_camera.view_mat().data,
+				'model'							:	subject_geometry.property('model').data,
+				'photon_source'					:	user_camera.pos(),
+
+				'sdfv'							:	subject_geometry.property('sdfv'),
+				'world_to_sdfv_mat'				:	world_to_model_to_sdfv_mat.data,
+				'eta'							:	1.0 / subject_geometry.property('IOR'),
+				'sdfv_voxel_size'				:	1.0 / subject_geometry.property('sdfv_dim'),
+				
+				'shah_max_steps'				:	12.0,
+				'subject_world_pos'				:	subject_pos,
+				'subj_env_pos_cubemap'			:	subject_env_cubemap_pos_texture,
+
+				'subject_env_normal'			:	subject_env_cubemap_normal_texture,
+				'subject_env_albedo'			:	subject_env_cubemap_albedo_texture,
+				'subject_env_metal_rough_ao'	:	subject_env_cubemap_metal_rough_ao_texture,
+				'shadow_map'					:	shadow_env_cubemap_depth_texture,
+				'shadow_light_pos'				:	shadow_env_cubemap_camera.pos(),
+				'shadow_proj_scale'				:	shadow_env_cubemap_camera.proj_mat().get(2,2),
+				'shadow_proj_trans'				:	shadow_env_cubemap_camera.proj_mat().get(2,3),
+				'irradiance_depth_map'			:	subject_env_cubemap_depth_texture,
+				'irradiance_map'				:	subject_env_cubemap_irradiance_texture,
+				'irradiance_light_pos'			:	subject_env_cubemap_camera.pos(),
+				'irradiance_proj_scale'			:	subject_env_cubemap_camera.proj_mat().get(2,2),
+				'irradiance_proj_trans'			:	subject_env_cubemap_camera.proj_mat().get(2,3),
+			};
+			gl.bindVertexArray( re.vao('caustic_surface', subject_geometry.id()) );
+			map_uniforms(gl, re.shader('caustic_surface'), caustic_surface_params);
+			gl.drawElementsInstanced(subject_geometry.primitive_type(), subject_geometry.vertex_count(), gl.UNSIGNED_INT, 0, 1);
+		}
+
+
+		function render_g_buffer(render_target,
+								 camera,
+								 opaque_geometry_list,
+								 transmissive_geometry_list)
+		{
+			// SETUP FB + PROGRAM
+			gl.bindFramebuffer(gl.FRAMEBUFFER, render_target.framebuffer());
+			gl.viewport(0, 0, render_target.width(), render_target.height());
+			gl.drawBuffers([gl.COLOR_ATTACHMENT0, 
+							gl.COLOR_ATTACHMENT1, 
+							gl.COLOR_ATTACHMENT2, 
+							gl.COLOR_ATTACHMENT3]);
+			gl.clearColor(0.0, 0.0, 0.0, 1.0);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+			gl.useProgram(re.shader('geometry_opaque').program);
+
+			// DRAW EACH OPAQUE OBJECT
+			for (var i = 0; i < opaque_geometry_list.length; i++)
+			{	
+				var the_geometry = opaque_geometry_list[i];
+
+				var geometry_opaque_params = {
+					'proj'			:	camera.proj_mat().data,
+					'view'			:	camera.view_mat().data,
+					'model'			:	the_geometry.property('model').data,
+					'albedo_map'	:	the_geometry.property('albedo'),
+					'metal_map'		:	the_geometry.property('metal'),
+					'rough_map'		:	the_geometry.property('rough'),
+					'ao_map'		:	the_geometry.property('ao'),	
+					'specular_only' : 	0.0,	// 'TRUE'
+				};
+
+				gl.bindVertexArray( re.vao('geometry_opaque', the_geometry.id()) );
+				map_uniforms(gl, re.shader('geometry_opaque'), geometry_opaque_params);
+				gl.drawElementsInstanced(the_geometry.primitive_type(), the_geometry.vertex_count(), gl.UNSIGNED_INT, 0, 1);
+			}
+
+			// DRAW EACH TRANSMISSIVE OBJECT
+			for (var i = 0; i < transmissive_geometry_list.length; i++)
+			{
+				var the_geometry = transmissive_geometry_list[i];
+
+				var geometry_transmissive_params = {
+					'proj'			:	camera.proj_mat().data,
+					'view'			:	camera.view_mat().data,
+					'model'			:	the_geometry.property('model').data,
+					'albedo_map'	:	the_geometry.property('albedo'),
+					'metal_map'		:	the_geometry.property('metal'),
+					'rough_map'		:	the_geometry.property('rough'),
+					'ao_map'		:	the_geometry.property('ao'),	
+					'specular_only' : 	1.0,	// 'TRUE'
+				};			
+
+				gl.bindVertexArray( re.vao('geometry_opaque', the_geometry.id()) );
+				map_uniforms(gl, re.shader('geometry_opaque'), geometry_transmissive_params);
+				gl.drawElementsInstanced(the_geometry.primitive_type(), the_geometry.vertex_count(), gl.UNSIGNED_INT, 0, 1);
+			}
+		}
+
+		function render_shadow_cubemap( render_target, 
+										cubemap_camera,
+									    geometry_list)
+		{
+			var shadow_framebuffers = render_target.framebuffers();
+
+			var cubemap_views = [
+				'px', 'py', 'pz', 'nx', 'ny', 'nz'
+			];
+			
+			gl.cullFace(gl.FRONT);
+			for (var i = 0; i < cubemap_views.length; i++)
+			{
+				gl.bindFramebuffer(gl.FRAMEBUFFER, shadow_framebuffers[ cubemap_views[i] ]);
+				gl.viewport(0, 0, render_target.width(), render_target.height());
+				gl.drawBuffers([gl.NONE]);
+				gl.clear(gl.DEPTH_BUFFER_BIT);
+
+				gl.useProgram(re.shader('shadow_map').program);
+
+				var camera_view = cubemap_camera.view_mat( cubemap_views[i] );
+				for (var j = 0; j < geometry_list.length; j++)
+				{
+					var the_geometry = geometry_list[j];
+					var shadow_map_params = {
+						'proj'		: 	cubemap_camera.proj_mat().data,
+						'view'		: 	camera_view.data,
+						'model'		: 	the_geometry.property('model').data,
+					};
+
+					gl.bindVertexArray( re.vao('shadow_map', the_geometry.id()) );
+					map_uniforms(gl, re.shader('shadow_map'), shadow_map_params);
+					gl.drawElementsInstanced(the_geometry.primitive_type(), the_geometry.vertex_count(), gl.UNSIGNED_INT, 0, 1);
+				}
+			}
+			gl.cullFace(gl.BACK);
+		}
+
+		function render_g_buffer_cubemap(	render_target, 
+											cubemap_camera,
+											opqaue_geometry_list)
+		{
+			var caustic_g_framebuffers = render_target.framebuffers();
+			
+			var cubemap_views = [
+				'px', 'py', 'pz', 'nx', 'ny', 'nz'
+			];
+
+			gl.cullFace(gl.FRONT);
+			for (var i = 0; i < cubemap_views.length; i++)
+			{
+				gl.bindFramebuffer(gl.FRAMEBUFFER, caustic_g_framebuffers[ cubemap_views[i] ]);
+				gl.viewport(0, 0, gl.viewport_width, gl.viewport_height);
+				gl.drawBuffers([gl.COLOR_ATTACHMENT0, 
+								gl.COLOR_ATTACHMENT1, 
+								gl.COLOR_ATTACHMENT2, 
+								gl.COLOR_ATTACHMENT3,
+								gl.NONE]);
+				gl.clearColor(0.0, 0.0, 0.0, 0.0);
+				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+				gl.useProgram(re.shader('geometry_opaque').program);
+
+				var camera_view = cubemap_camera.view_mat( cubemap_views[i] );
+				for (var j = 0; j < opqaue_geometry_list.length; j++)
+				{
+					var the_geometry = opqaue_geometry_list[j];
+
+					var geometry_opaque_params = {
+						'proj' 			: 	cubemap_camera.proj_mat().data,
+						'view' 			: 	camera_view.data,
+						'model'			:	the_geometry.property('model').data,
+						'albedo_map'	: 	the_geometry.property('albedo'),
+						'metal_map'		:	the_geometry.property('metal'),
+						'rough_map'		:	the_geometry.property('roughness'),
+						'ao_map'		:	the_geometry.property('ao'),
+						'specular_only'	:	0.0,	// 'FALSE'
+					};
+
+					gl.bindVertexArray( re.vao('geometry_opaque', the_geometry.id()) );
+					map_uniforms(gl, re.shader('geometry_opaque'), geometry_opaque_params);
+					gl.drawElementsInstanced(the_geometry.primitive_type(), the_geometry.vertex_count(), gl.UNSIGNED_INT, 0, 1);
+				}
+			}
+			gl.cullFace(gl.BACK);
+		}
+
+		function render_g_buffer_photon_transmission(	render_target,
+														the_camera,
+														the_geometry)
+		{
+			// 2. With caustics
+			gl.bindFramebuffer(gl.FRAMEBUFFER, render_target.framebuffer());
+			gl.viewport(0.0, 0.0, render_target.width(), render_target.height());
+			gl.clearColor(0.0, 0.0, 0.0, 0.0);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+			gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+			gl.useProgram(re.shader('geometry_transmissive').program);
+
+			var geometry_transparent_params = {
+				'proj' 			: 	the_camera.proj_mat().data,
+				'view' 			: 	the_camera.view_mat().data,
+				'model'			:	the_geometry.property('model').data,
+				'photon_source'	:	the_camera.pos(),
+			};
+
+			gl.bindVertexArray( re.vao('geometry_transmissive', the_geometry.id()) );
+			map_uniforms(gl, re.shader('geometry_transmissive'), geometry_transparent_params);
+			gl.drawElementsInstanced(the_geometry.primitive_type(), the_geometry.vertex_count(), gl.UNSIGNED_INT, 0, 1);
+		}
+
+		function render_trace_photon_refractions(	render_target, 
+													the_geometry,
+													photon_pos_flux_texture,
+													photon_dir_texture)
+		{
+			gl.bindFramebuffer(gl.FRAMEBUFFER, render_target.framebuffer());
+			gl.viewport(0, 0, render_target.width(), render_target.height());
+			gl.clearColor(0.0, 0.0, 0.0, 0.0);
+			gl.clear(gl.COLOR_BUFFER_BIT);
+
+			gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+			gl.useProgram(re.shader('refractive_sdfv_march').program);
+
+
+			var inv_subject = the_geometry.property('model').inverse();
+			var world_to_model_to_sdfv_mat = the_geometry.property('sdfv_world_to_vol').mult(inv_subject);
+
+			var refractive_sdfv_march_params = {
+				'sdfv'				:	the_geometry.property('sdfv'),
+				'photon_pos_flux'	:	photon_pos_flux_texture,
+				'photon_dir'		:	photon_dir_texture,
+				'world_to_sdfv_mat'	:	world_to_model_to_sdfv_mat.data,
+				'eta'				:	1.0 / the_geometry.property('IOR'),
+				'sdfv_voxel_size'	:	1.0 / the_geometry.property('sdfv_dim'),
+			};
+			gl.bindVertexArray( re.vao('refractive_sdfv_march', geometry['screen_quad'].id()) );
+			map_uniforms(gl, re.shader('refractive_sdfv_march'), refractive_sdfv_march_params);
+			gl.drawElementsInstanced(geometry['screen_quad'].primitive_type(), geometry['screen_quad'].vertex_count(), gl.UNSIGNED_INT, 0, 1);
+		}
+
+		function render_trace_photon_impact(render_target,
+											subject_pos,
+											cubemap_camera,
+											photon_exit_pos_flux_texture,
+											photon_exit_dir_texture,
+											subj_env_pos_cubemap)
+		{
+			gl.bindFramebuffer(gl.FRAMEBUFFER, render_target.framebuffer());
+			gl.viewport(0, 0, render_target.width(), render_target.height());
+			gl.clearColor(0.0, 0.0, 0.0, 0.0);
+			gl.clear(gl.COLOR_BUFFER_BIT);
+
+			gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+			gl.useProgram(re.shader('photon_impact').program);
+
+			var photon_impact_params = {
+				'shah_max_steps'		:	12,
+				'subject_world_pos'		:	subject_pos,
+				'photon_exit_pos_flux'	:	photon_exit_pos_flux_texture,
+				'photon_exit_dir'		:	photon_exit_dir_texture,
+				'subj_env_pos_cubemap'	:	subj_env_pos_cubemap,
+			};
+
+			gl.bindVertexArray( re.vao('photon_impact', geometry['screen_quad'].id()) );
+			map_uniforms(gl, re.shader('photon_impact'), photon_impact_params);
+			gl.drawElementsInstanced(geometry['screen_quad'].primitive_type(), geometry['screen_quad'].vertex_count(), gl.UNSIGNED_INT, 0, 1);
+		}
+
+
+		function render_shade_refracted_rays(render_target,
+											 photon_exit_pos_flux_texture,
+											 photon_impact_pos_texture,
+											 subj_env_normal_texture,
+											 subj_env_albedo_texture,
+											 subj_env_metal_rough_ao_texture,
+											 shadow_map_texture,
+											 shadow_camera,
+											 subj_env_depth_texture,
+											 subj_env_irradiance_texture,
+											 subj_env_camera)			
+		{
+			gl.bindFramebuffer(gl.FRAMEBUFFER, render_target.framebuffer());
+			gl.viewport(0, 0, render_target.width(), render_target.height());
+			gl.clearColor(0.0, 0.0, 0.0, 0.0);
+			gl.clear(gl.COLOR_BUFFER_BIT);
+
+			gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+			gl.useProgram(re.shader('shade_refracted_rays').program);			
+			gl.disable(gl.DEPTH_TEST);
+
+			var shade_refracted_rays_params = {
+				'photon_exit_pos'				:	photon_exit_pos_flux_texture,
+				'photon_impact_pos_flux'		:	photon_impact_pos_texture,
+				'subject_env_normal'			:	subj_env_normal_texture,
+				'subject_env_albedo'			:	subj_env_albedo_texture,
+				'subject_env_metal_rough_ao'	:	subj_env_metal_rough_ao_texture,
+				'shadow_map'					:	shadow_map_texture,
+				'shadow_light_pos'				:	shadow_camera.pos(),
+				'shadow_proj_scale'				:	shadow_camera.proj_mat().get(2,2),
+				'shadow_proj_trans'				:	shadow_camera.proj_mat().get(2,3),
+				'irradiance_depth_map'			:	subj_env_depth_texture,
+				'irradiance_map'				:	subj_env_irradiance_texture,
+				'irradiance_light_pos'			:	subj_env_camera.pos(),
+				'irradiance_proj_scale'			:	subj_env_camera.proj_mat().get(2,2),
+				'irradiance_proj_trans'			:	subj_env_camera.proj_mat().get(2,3)					
+			};
+
+			gl.bindVertexArray( re.vao('shade_refracted_rays', geometry['screen_quad'].id()) );
+			map_uniforms(gl, re.shader('shade_refracted_rays'), shade_refracted_rays_params);
+			gl.drawElementsInstanced(geometry['screen_quad'].primitive_type(), geometry['screen_quad'].vertex_count(), gl.UNSIGNED_INT, 0, 1);
+
+			gl.enable(gl.DEPTH_TEST);
+		}
+
+		function render_splat_photons(	render_target,
+									  	cubemap_camera, 
+										source_width,
+										source_height,
+										color,
+										photon_enter_pos_flux_texture,
+										photon_impact_pos_flux_texture)
+		{
+			var caustic_g_framebuffers = render_target.framebuffers();
+			
+			var cubemap_views = [
+				'px', 'py', 'pz', 'nx', 'ny', 'nz'
+			];
+			var w = source_width;
+			var h = source_height;
+
+			w = w;
+			h = w;
+
+			var num_instances = 2 * (w - 1) * (h - 1);
+			gl.disable(gl.CULL_FACE);
+			gl.disable(gl.DEPTH_TEST);
+			gl.enable(gl.BLEND);
+			gl.blendFunc(gl.SRC_COLOR, gl.DST_COLOR);
+			for (var i = 0; i < cubemap_views.length; i++)
+			{
+				gl.bindFramebuffer(gl.FRAMEBUFFER, caustic_g_framebuffers[ cubemap_views[i] ]);
+				gl.viewport(0, 0, gl.viewport_width, gl.viewport_height);
+				gl.drawBuffers([gl.NONE, 
+								gl.NONE, 
+								gl.NONE,
+								gl.NONE,
+								gl.COLOR_ATTACHMENT4]);
+
+				var camera_view = cubemap_camera.view_mat( cubemap_views[i] );
+				gl.useProgram(re.shader('splat').program);
+				var splat_params = {
+					'proj'						:	cubemap_camera.proj_mat().data,
+					'view'						:	camera_view.data,
+					'num_instances'				: 	num_instances,
+					'source_width'				:	w,
+					'source_height'				:	h,
+					'color'						: 	color,
+					'photon_enter_pos_flux'		:	photon_enter_pos_flux_texture,
+					'photon_impact_pos_flux'	:	photon_impact_pos_flux_texture,
+				};
+
+				gl.bindVertexArray( re.vao('splat', geometry['screen_tri'].id()) );
+				map_uniforms(gl, re.shader('splat'), splat_params);
+				gl.drawElementsInstanced(geometry['screen_tri'].primitive_type(), geometry['screen_tri'].vertex_count(), gl.UNSIGNED_INT, 0, num_instances);
+			}
+
+			gl.enable(gl.CULL_FACE);
+			gl.enable(gl.DEPTH_TEST);
+			gl.disable(gl.BLEND);
+		}
+
+
+
+		function render_composite_scene(render_target,
+										the_camera,
+										g_buffer,
+										shadow_cubmap_camera,
+										shadow_map,
+										irradiance_cubemap_camera,
+										irradiance_depth_map,
+										irradiance_map,
+										subject_pos,
+										transmissive_render_texture)
+		{
+			gl.bindFramebuffer(gl.FRAMEBUFFER, render_target.framebuffer());
+			gl.viewport(0, 0, render_target.width(), render_target.height());
+			gl.clearColor(0.0, 0.0, 0.0, 1.0);
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+			
+			gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+
+			gl.disable(gl.DEPTH_TEST);
+			gl.enable(gl.BLEND);
+			gl.blendFunc(gl.ONE, gl.ONE);
+
+			// 1. Render OPAQUE
+			gl.useProgram(re.shader('g_buffer_render').program);
+			var g_buffer_render_params = {
+				'world_eye_pos'					: 	the_camera.pos(),
+				'g_buffer_pos'					:	g_buffer['pos'],
+				'g_buffer_normal'				:	g_buffer['normal'],
+				'g_buffer_albedo'				:	g_buffer['albedo'],
+				'g_buffer_metal_rough_ao_so'	:	g_buffer['metal_rough_ao_so'],
+				'shadow_map'					:	shadow_map,
+				'shadow_light_pos'				: 	shadow_cubmap_camera.pos(),
+				'shadow_proj_scale'				:	shadow_cubmap_camera.proj_mat().get(2,2), 
+				'shadow_proj_trans'				:	shadow_cubmap_camera.proj_mat().get(2,3),
+				'irradiance_depth_map'			:	irradiance_depth_map,
+				'irradiance_map'				:	irradiance_map,
+				'irradiance_light_pos'			:	irradiance_cubemap_camera.pos(),
+				'irradiance_proj_scale'			:	irradiance_cubemap_camera.proj_mat().get(2,2),
+				'irradiance_proj_trans'			:	irradiance_cubemap_camera.proj_mat().get(2,3),
+			};
+
+			gl.bindVertexArray( re.vao('g_buffer_render', geometry['screen_quad'].id()) );
+			map_uniforms(gl, re.shader('g_buffer_render'), g_buffer_render_params);
+			gl.drawElementsInstanced(geometry['screen_quad'].primitive_type(), geometry['screen_quad'].vertex_count(), gl.UNSIGNED_INT, 0, 1);
+
+			// 2. Render CAUSTIC object(s)
+			gl.useProgram(re.shader('texture_quad').program);
+			var texture_quad_params = {
+				'the_texture'	:	transmissive_render_texture,
+			};
+			gl.bindVertexArray( re.vao('texture_quad', geometry['screen_quad'].id()) );
+			map_uniforms(gl, re.shader('texture_quad'), texture_quad_params);
+			gl.drawElementsInstanced(geometry['screen_quad'].primitive_type(), geometry['screen_quad'].vertex_count(), gl.UNSIGNED_INT, 0, 1);
+
+
+
+			gl.enable(gl.DEPTH_TEST);
+			gl.disable(gl.BLEND);
+		}
+
+
+		function render_texture(render_target, the_texture, view_x, view_y)
+		{
+			// DEBUGGING setup
+			gl.bindFramebuffer(gl.FRAMEBUFFER, render_target.framebuffer());
+			gl.viewport(render_target.width()-view_x, 0.0, view_x, view_y);
+			gl.scissor(render_target.width()-view_x, 0.0, view_x, view_y);
+			gl.enable(gl.SCISSOR_TEST);
+			gl.clearColor(0.0, 0.0, 0.0, 1.0);	
+			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+			gl.disable(gl.SCISSOR_TEST);
+
+
+			gl.useProgram(re.shader('texture_quad').program);
+			var texture_quad_params = {
+				'the_texture'	:	the_texture,
+			};
+			gl.bindVertexArray( re.vao('texture_quad', geometry['screen_quad'].id()) );
+			map_uniforms(gl, re.shader('texture_quad'), texture_quad_params);
+			gl.drawElementsInstanced(geometry['screen_quad'].primitive_type(), geometry['screen_quad'].vertex_count(), gl.UNSIGNED_INT, 0, 1);
+		}
+
+
+		function generate_camera_at_A_looking_at_B(pos_a, pos_b, matrix_b, radius_b)
+		{
+			var vec3_pos = structuredClone(pos_a);
+			var vec3_dir = new Float32Array([
+												pos_b[0]-pos_a[0], 
+									 			pos_b[1]-pos_a[1], 
+									 			pos_b[2]-pos_a[2]	]);
+			var vec3_up = _arbitrary_up_vec3_from_look_vec3(vec3_dir);
+
+
+			// Calculate FOV given 'matrix_b', 'radius'b
+			// NOTE: For simplicity, the matrix_b is assumed to have uniform scaling properties 
+			// in R3, not affected by homogeneous scaling. Safe for this demo but not general Ms
+			var dist_between_a_b = _length_r3(vec3_dir);
+			var unit_r = radius_b / Math.sqrt(3.0);
+			var vec_radius = new Float32Array([ unit_r, unit_r, unit_r ]);
+			var vec_radius_prime = new Float32Array([
+														matrix_b.get(0, 0) * vec_radius[0] + matrix_b.get(0, 1) * vec_radius[1] + matrix_b.get(0, 2) * vec_radius[2],
+														matrix_b.get(1, 0) * vec_radius[0] + matrix_b.get(1, 1) * vec_radius[1] + matrix_b.get(1, 2) * vec_radius[2],
+														matrix_b.get(2, 0) * vec_radius[0] + matrix_b.get(2, 1) * vec_radius[1] + matrix_b.get(2, 2) * vec_radius[2],
+													]);
+			var radius_prime = _length_r3(vec_radius_prime);
+			var half_fov_rad = Math.asin(radius_prime / dist_between_a_b);
+			var fov_deg = half_fov_rad * 2 * 180.0 / Math.PI;
+
+			// TODO: Tightly bound FOV around subject BBOX
+			return new Camera(fov_deg, fov_deg, 0.01, 100.0, vec3_pos, vec3_dir, vec3_up);			
+		}
+		
+		function update_state()
+		{
+			var the_subject = geometry[ reel_selection ];
+
+			// Track time between frames
+			time_delta = Date.now() - time_start;			
+
+			ms = time_delta;
+			span = 10000;
+			ms = ms % span;
+			rot_off = 0.0;
+			range_rot = -180.0; //-0.5; // 
+			range_trans = 0.25;
+
+			if (ms < span)
+			{
+				rot_off   = 0.0 + range_rot   * ( (ms - 0.0*span) / (0.5*span) );
+			}
+
+			var scale;
+			var y;
+			var around_x;
+			var around_y;
+			var around_z;
+			if (reel_selection == 'sphere')
+			{
+				y = 0.0
+				scale = 0.5;
+				around_x = 0.0;
+				around_y = 0.0;
+				around_z = 0.0;
+			}
+			else if (reel_selection == 'glass')
+			{
+				y = -0.25;
+				scale = 0.25;
+				around_x = 45.0;
+				around_y = 0.0;
+				around_z = -45.0;
+			}
+			else if (reel_selection == 'bunny')
+			{
+				y = -0.5;
+				scale = 2.5;
+				around_x = 0.0;
+				around_y = 0.0;
+				around_z = 0.0;
+			}
+			else
+			{
+				alert('Error! Unsupported demo reel entry: ' + reel_selection);
+			}
+
+			around_y = rot_off;
+
+			subject_pos[0] = -0.0;
+			subject_pos[1] = y;
+			subject_pos[2] =  0.0;
+
+			// Update subject
+			the_subject.property('model').set_scale(scale, scale, scale);
+
+			var rot_z = new Matrix4x4();
+			rot_z.set_rotate('z', around_z);
+			var rot_x = new Matrix4x4();
+			rot_x.set_rotate('x', around_x);
+			var rot_y = new Matrix4x4();
+			rot_y.set_rotate('y', around_y);
+
+			var combined_rot = rot_y.mult( rot_x.mult(rot_z) ); 
+			var res = combined_rot.mult( 	the_subject.property('model')	);
+			the_subject.set_property('model', res);
+			the_subject.property('model').set(0, 3, subject_pos[0])
+			the_subject.property('model').set(1, 3, subject_pos[1])
+			the_subject.property('model').set(2, 3, subject_pos[2])
+		}
+
+		function sleep(ms)
+		{
+			return new Promise(resolve => setTimeout(resolve, ms));
+		}
+
+		function render_splats()
+		{
+			var the_subject = geometry[ reel_selection ];
+
+			// CLEAR ENV MAP BUFFER
+			var subject_model_m = the_subject.property('model');
+			var subject_max_radius = the_subject.property('max_radius');
+			var light_cam = generate_camera_at_A_looking_at_B(light_pos, subject_pos, subject_model_m, subject_max_radius);
+			var cubemap_views = ['px', 'py', 'pz', 'nx', 'ny', 'nz'];
+			for (var i = 0; i < cubemap_views.length; i++)
+			{
+				gl.bindFramebuffer(gl.FRAMEBUFFER, render_targets['subject_env_g_buffer_cubemap'].framebuffers()[ cubemap_views[i] ]);
+				gl.viewport(0, 0, gl.viewport_width, gl.viewport_height);
+				gl.drawBuffers([gl.NONE, gl.NONE, gl.NONE, gl.NONE, gl.COLOR_ATTACHMENT4]);
+				gl.clearColor(0.0, 0.0, 0.0, 0.0);
+				gl.clear(gl.COLOR_BUFFER_BIT);				
+			}
+
+			if (reel_selection != 'sphere')
+			{
+				return;
+			}
+
+			// SPLAT SPECTRUM OF COLORS
+			for (var i = 0; i < splat_colors.length; i++)
+			{
+				var splat_IOR = splat_colors[i].ior;
+				var splat_color = splat_colors[i].color;
+
+				// var query = gl.createQuery();
+				// gl.beginQuery(ext.TIME_ELAPSED_EXT, query);
+				render_caustic_trace_through(render_targets['photon_trace_through'],
+											light_cam,
+											the_subject,
+											subject_pos,
+											splat_IOR,
+											textures['subject_env_pos_cubemap']);
+				// gl.endQuery(ext.TIME_ELAPSED_EXT);
+
+				// while (gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE) == false && gl.getParameter(ext.GPU_DISJOINT_EXT) == true)
+				// {
+				// 	console.log('STALL');
+				// 	; // STALL
+				// }
+				// var elapsed = gl.getQueryParameter(query, gl.QUERY_RESULT);
+				// var el_ms = elapsed * 1000000;
+				// alert(elapsed);
+
+
+				// performances.push(t1-t0);
+				// console.log(performances.length);
+				// if (performances.length == 10000)
+				// {
+				// 	var avg = 0.0;
+				// 	for (var i = 0; i < performances.length; i++)
+				// 	{
+				// 		avg += performances[i];
+				// 	}
+				// 	avg /= performances.length;
+				// 	alert('DONE!' + avg);
+				// }
+				// render_splat_photons_mcguire_luebke(render_targets['subject_env_g_buffer_cubemap'],
+				// 									subject_cubemap_camera,
+				// 									subject_pos,
+				// 									render_targets['photon_trace_through'].width(),
+				// 									render_targets['photon_trace_through'].height(),
+				// 									splat_color,
+				// 									textures['world_leave_pos'],
+				// 									textures['world_impact_pos_flux'],
+				// 									textures['subject_env_normal_cubemap']);					
+
+				render_splat_photons(render_targets['subject_env_g_buffer_cubemap'],
+									subject_cubemap_camera,
+									render_targets['photon_trace_through'].width(),
+									render_targets['photon_trace_through'].height(),
+									splat_color,
+									textures['world_enter_pos'], 		
+									textures['world_impact_pos_flux']);
+			}
+		}
+
+        function draw_scene()
+        {
+			update_state();
+
+            if (gl != null)
+            {
+				var geometry_subject = geometry[ reel_selection ];
+
+				// 0. PREP SHADOWS, SUBJECT & VIEW G-BUFFERs
+				render_shadow_cubemap(render_targets['light_shadow_cubemap'],
+									 shadow_cubemap_camera,
+								     [geometry['scene'], geometry_subject]);
+	
+				render_g_buffer_cubemap(render_targets['subject_env_g_buffer_cubemap'],
+										subject_cubemap_camera,
+										[geometry['scene']]);
+
+				render_splats();
+
+				// 2. FORWARD RENDERING FOR MSAA 
+				render_forward(render_targets['msaa'],
+							   user_camera,
+							   [geometry['scene']],
+							   shadow_cubemap_camera,
+							   textures['light_shadow_cubemap'],
+							   subject_cubemap_camera,
+							   textures['subject_env_depth_cubemap'],
+							   textures['subject_env_irradiance_cubemap']);
+				
+				// 3. RENDER CAUSTIC SURFACE
+				render_caustic_surface(render_targets['DEBUG'],
+									   user_camera,
+									   geometry_subject,
+									   subject_pos,
+									   shadow_cubemap_camera,
+									   textures['light_shadow_cubemap'],
+									   subject_cubemap_camera,
+									   textures['subject_env_pos_cubemap'],
+									   textures['subject_env_normal_cubemap'],
+									   textures['subject_env_albedo_cubemap'],
+									   textures['subject_env_metal_rough_ao'],
+									   textures['subject_env_depth_cubemap'],
+									   textures['subject_env_irradiance_cubemap'],
+									   true
+									);
+
+				// 3. RENDER CAUSTIC SURFACE
+				render_caustic_surface(render_targets['msaa'],
+									   user_camera,
+									   geometry_subject,
+									   subject_pos,
+									   shadow_cubemap_camera,
+									   textures['light_shadow_cubemap'],
+									   subject_cubemap_camera,
+									   textures['subject_env_pos_cubemap'],
+									   textures['subject_env_normal_cubemap'],
+									   textures['subject_env_albedo_cubemap'],
+									   textures['subject_env_metal_rough_ao'],
+									   textures['subject_env_depth_cubemap'],
+									   textures['subject_env_irradiance_cubemap'],
+									   false
+									);
+
+
+				// BLIT to final texture
+				gl.bindFramebuffer(gl.READ_FRAMEBUFFER, render_targets['msaa'].framebuffer());
+				gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, render_targets['null'].framebuffer());
+				gl.clearBufferfv(gl.COLOR, 0, [0.0, 0.0, 0.0, 0.0]);
+				gl.blitFramebuffer(0, 0, render_targets['msaa'].width(), render_targets['msaa'].height(),
+								   0, 0, render_targets['msaa'].width(), render_targets['msaa'].height(),
+								   gl.COLOR_BUFFER_BIT, gl.LINEAR);
+
+				// FINAL OUTPUT & DEBUGGING				// photon_exit_pos_flux // photon_exit_dir // photon_transmit_pos_flux
+				// render_texture(render_targets['null'], textures['DEBUG'], 1024, 1024); 
+            }
+            window.requestAnimationFrame(draw_scene);
+        }		
+				
+		function demo_resources_loaded(resource_sets)
+		{
+			resources = resource_sets['demo'];
+			initialize_demo();
+		}
+
+		function load_resources()
+		{
+			// 1. Load the Engine resources
+			var demo_resource_list = [
+				["scene_albedo",					"/assets/textures/cornell_albedo.png",					"img" ],
+				["scene_metal",						"/assets/textures/cornell_metal.png",					"img" ],
+				["scene_roughness",					"/assets/textures/cornell_roughness.png",				"img" ],
+				["scene_ao",						"/assets/textures/cornell_ao.png",						"img" ],
+				["subject_albedo",					"/assets/textures/subject_albedo.png",					"img" ],
+				["subject_metal",					"/assets/textures/subject_metal.png",					"img" ],
+				["subject_roughness",				"/assets/textures/subject_roughness.png",				"img" ],
+				["subject_ao",						"/assets/textures/subject_ao.png",						"img" ],
+
+
+				["caustic_trace_through.vs",		"/shaders/caustics/caustic_trace_through.vs",			"text"],
+				["caustic_trace_through.fs",		"/shaders/caustics/caustic_trace_through.fs",			"text"],
+				["forward_brdf.vs",					"/shaders/caustics/forward_brdf.vs",					"text"],
+				["forward_brdf.fs",					"/shaders/caustics/forward_brdf.fs",					"text"],
+				["caustic_surface.vs",				"/shaders/caustics/caustic_surface.vs",					"text"],
+				["caustic_surface.fs",				"/shaders/caustics/caustic_surface.fs",					"text"],
+				["splat_mcguire_luebke.vs",			"/shaders/caustics/splat_mcguire_luebke.vs",			"text"],
+				["splat_mcguire_luebke.fs",			"/shaders/caustics/splat_mcguire_luebke.fs",			"text"],
+
+				["shadow_map.vs",					"/shaders/caustics/shadow_map.vs",						"text"],
+				["shadow_map.fs",					"/shaders/caustics/shadow_map.fs",						"text"],
+				["geometry_opaque.vs",				"/shaders/caustics/geometry_opaque.vs",					"text"],
+				["geometry_opaque.fs",				"/shaders/caustics/geometry_opaque.fs",					"text"],
+				["geometry_transmissive.vs",		"/shaders/caustics/geometry_transmissive.vs",			"text"],
+				["geometry_transmissive.fs",		"/shaders/caustics/geometry_transmissive.fs",			"text"],
+				["refractive_sdfv_march.vs",		"/shaders/caustics/refractive_sdfv_march.vs",			"text"],
+				["refractive_sdfv_march.fs",		"/shaders/caustics/refractive_sdfv_march.fs",			"text"],
+				["photon_impact.vs",				"/shaders/caustics/photon_impact.vs",					"text"],
+				["photon_impact.fs",				"/shaders/caustics/photon_impact.fs",					"text"],
+				["splat.vs",						"/shaders/caustics/splat.vs",							"text"],
+				["splat.fs",						"/shaders/caustics/splat.fs",							"text"],
+				["shade_refracted_rays.vs",			"/shaders/caustics/shade_refracted_rays.vs",			"text"],
+				["shade_refracted_rays.fs",			"/shaders/caustics/shade_refracted_rays.fs",			"text"],
+				["g_buffer_render.vs",				"/shaders/caustics/g_buffer_render.vs",					"text"],
+				["g_buffer_render.fs",				"/shaders/caustics/g_buffer_render.fs",					"text"],				
+				["texture_quad.vs",					"/shaders/caustics/texture_quad.vs",					"text"],
+				["texture_quad.fs",					"/shaders/caustics/texture_quad.fs",					"text"],				
+
+				["icosphere_obj",					"/assets/objs/ico64.json",								"json"],
+			
+
+				["sphere_binary",					"/assets/sdfvs/hisphere64.sdfv",							"bin"],
+				["sphere_obj",						"/assets/objs/hisphere64.json",							"json"],
+				["glass_binary",					"/assets/sdfvs/cup128.sdfv",							"bin"],
+				["glass_obj",						"/assets/objs/cup64.json",								"json"],
+				["bunny_binary",					"/assets/sdfvs/bunny64.sdfv",							"bin"],
+				["bunny_obj",						"/assets/objs/bunny64.json",							"json"],
+			];
+			
+
+			var all_resources_dict = {
+				demo:		demo_resource_list,
+			};
+
+			load_external_resources(all_resources_dict, demo_resources_loaded);
+		}
+
+		load_resources();		
+    </script>
+
+</body></html>

@@ -27,7 +27,8 @@
 		<li>Rasteriztion Pipeline Overview</li>
 		</ul>
 
-		<h3>1. Lines &amp Lerps</h3>
+
+		<h3>1. Lines, Lerps, &amp Logos</h3>
 		<ul>
 		<li>Vector vs Pixel Displays, Farnsworth, Ivan Sutherlan &amp Sketchpad, Vectrex Quake
 		<li>Fundamental representations of color, discrete vs continuous representations of shapes and light. Basic color theory</li>
@@ -41,26 +42,11 @@
 		<br/>
 		<li/>DEMO: Digital Differential Analyzer</li>
 		<br/>
-		<li>PROJECT: <a href="project_0.html">SVG Trace</a></li>
+		<li>PROJECT: <a href="project_1_lines_lerps_and_logos.html">SVG Trace</a></li>
 		</ul>
 
-		<h3>2. Signals &amp Sampling</h3>
-		<ul>
-		<li>Blitting Images onto the screen</li>
-		<li>Nyquist Theorem, Sampling Techniques for Triangles and Images</li>
-		<li>2D Textures, Texture Arrays, 3D Textures, Cubemaps, Skyboxes (IBR)</li>
-		<li>SSAA, MSAA, Bilinear, Trilinear (MIP-MAPPED) Anisotropic Filtering</li>
-		<li>Sum area tables</li>
-		<li>Procedurally generated textures</li>
-		<br/>
-		<li/>ACTIVITY: Signal Reproduction</li>
-		<br/>
-		<li/>DEMO: TBD</li>
-		<br/>
-		<li>PROJECT: NA
-		</ul>
-		
-		<h3>3. Transformations &amp Triangles</h3>
+
+		<h3>2. Triangles, Transformations, &amp Teapots</h3>
 		<ul>
 		<li>Vertex Shaders</li>
 		<li>Dot Products, Determinants, Barycentric Coordinates</li>
@@ -77,10 +63,11 @@
 		<br/>
 		<li/>DEMO: Barnsley Fern Fractal</li>
 		<br/>
-		<li>PROJECT: <a href="project_1.html">Gouraud Shading</a></li>
+		<li>PROJECT: <a href="project_2_triangles_transformations_teapots.html">Teapot CAD</a></li>
 		</ul>
 
-		<h3>4. Projections &amp Pipelines</h3>
+		
+		<h3>3. Projections, Perspective, &amp Pipelines</h3>
 		<ul>
 		<li>OpenGL API and shading model
 		<li>Normal Transformations</li>
@@ -90,20 +77,56 @@
 		<li>Object Hierarchy &amp Scene Graph</li>
 		<li>Perspective (Similar Triangles), Orthographic Matrices</li>
 		<li>Pipeline stages and elements: Z-Buffer, Stencil Buffer, Logical Operations</li>
-		<li>Rendering API evolutions, extensions, multiple passes: Early Z Test, &amp multiple render targets (Framebuffers, RenderBuffers, Textures)</li>
+		<li>Rendering API evolutions, extensions, multiple passes: Early Z Test, Stencil Buffers, Logic Ops, &amp multiple render targets (Framebuffers, RenderBuffers, Textures)</li>
 		<li>Clipping algorithms, Back Face Culling</li>
 		<li>Perspective Correct interpolation</li>
-		<li>Transform Feedback, Geometry, Tesselation, and Compute Shaders</li>
-		<li>Multi Pass Rendering; G-Buffer, Visibility-Buffer, A &amp K Buffers</li>
 		<br/>
 		<li/>ACTIVITY: Race Track &amp Oil Measuring</li>
 		<br/>
-		<li/>DEMO: Points at Infinity in WebGL</li>
+		<li/>DEMO: Points at Infinity in WebGL &amp RenderDoc Demonstration</li>
 		<br/>
-		<li>PROJECT: <a href="project_3.html">Level Viewer</a></li>
+		<li>PROJECT: <a href="project_3_projections_perspective_pipelines.html">Spot Renderer</a></li>
 		</ul>
+
 	
-		<h3>5. Rays &amp Radiosity</h3>
+		<h3>4. Passes, Phong, &amp Post Processing</h3>
+		<ul>
+		<li>OpenGL/WebGL APIs and shading models
+		<li>Phong, Blinn-Phong Rendering wiht Ambient, Diffuse, &amp Specular components, Ambient Occlusion
+		<li>Reflection, Refraction forms
+		<li>Transform Feedback, Geometry, Tesselation, and Compute Shaders</li>
+		<li>Multi Pass Rendering; G-Buffer, Visibility-Buffer, A &amp K Buffers</li>
+		<li>Gamma Correction, HDR, Color LUTs, &amp color spaces (sRGB)</li>
+		<li>Shadow Maps, Cascaded Shadow Maps, &amp Stencil Shadows (DOOM 3)</li>
+		<br/>
+		<li/>ACTIVITY: TBD</li>
+		<br/>
+		<li/>DEMO: Cell Shading</li>
+		<br/>
+		<li>PROJECT: <a href="project_4_passes_phong_post_processing.html">Shadow Mapping</a></li>
+		</ul>
+
+
+		<h3>5. Signals, Sampling, &amp Skyboxes</h3>
+		<ul>
+		<li>Blitting Images onto the screen</li>
+		<li>Nyquist Theorem, Sampling Techniques for Triangles and Images</li>
+		<li>MIP Mapping</li>
+		<li>2D Textures, Texture Arrays, 3D Textures, Cubemaps, Skyboxes (IBR)</li>
+		<li>SSAA, MSAA, Bilinear, Trilinear (MIP-MAPPED) Anisotropic Filtering</li>
+		<li>Sum area tables</li>
+		<li>Procedurally generated textures</li>
+		<li>Blitting between surfaces, &amp resolving samples</li>
+		<br/>
+		<li/>ACTIVITY: Texture Sampling (TBD)</li>
+		<br/>
+		<li/>DEMO: Procedural Textures &amp Landscapes</li>
+		<br/>
+		<li>PROJECT: NA 
+		</ul>		
+
+		
+		<h3>6. Rays, Radiosity, &amp Reflections</h3>
 		<ul>
 		<li>Fragment Shaders</li>
 		<li>Glyph Based SDFs</li>
@@ -117,24 +140,25 @@
 		<br/>
 		<li/>ACTIVITY: TBD</li>
 		<br/>
-		<li/>DEMO: Cell Shading in WebGL</li>
+		<li/>DEMO: Ray Marching in WebGL, ShaderToy</li>
 		<br/>
-		<li>PROJECT: <a href="project_4.html">Cornell Box Shadow Mapping</a></li>
+		<li>PROJECT: <a href="project_5.html">Cloud Rendering</a></li>
 		</ul>
 				
-		<h3>6. Projects &amp Presentations</h3>
+		<h3>7. Projects, Presentations, &amp Perlin Noise</h3>
 		<ul>
 		<li>SIGGRAPH</li>
 		<li>Writing a Paper</li>
 		<li>State of the art evolution over the past 20 years</li>
 		<li>Presentations and Final Submissions</li>
 		<br/>
-		<li/>ACTIVITY: TBD</li>
+		<li/>ACTIVITY: TBD </li>
 		<br/>
-		<li/>DEMO: Mixed Rendering With Ray Marched Clouds</li>
+		<li/>DEMO: Noise functions and how to use them</li>
 		<br/>
 		<li>PROJECT: <a href="project_final.html">Final Project</a></li>
 		</ul>
+
 	
 		<h2>Class Project</h2>
 		<p>
