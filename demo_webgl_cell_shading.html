@@ -4,16 +4,99 @@
 		<style>
 			table {border: 0px solid;}
 		</style>
-		<script>
+		
+		
+		<script id="full_screen_quad_vs" type="glsl">
+			#version 300 es
+			precision highp float;
+			layout(location=0) in vec2 pos;
+			layout(location=1) in vec2 uv;
+
+			out vec2 uv_interp;
+			
+			void main()
+			{
+				uv_interp = uv;
+				gl_Position = vec4(pos, 0.5, 1.0);								
+			}
+		</script>	
+		<script id="full_screen_quad_fs" type="glsl">
+			#version 300 es
+			precision highp float;
+
+			layout(std140) uniform full_screen_quad_uniforms
+			{
+				sampler2D source_texture;
+			};
+
+			in vec2 uv_interp;
+			
+			out vec4 out_color;
+			
+			void main() {
+
+				out_color = vec4(texture(source_texture).rgb, 1.0);
+
+			}
+		</script>		
+		
+		
+		<script type>
 			var rasterizer = null;
 			var gl = null;
 			
-			class webgl_rasterizer
+			
+			function _make_gl_shader(name, type)
 			{
+				var el = document.getElementById(name);
+				var shader_text = el.innerHTML;
+				
+				var shader = gl.createShader(type);
+				gl.shaderSource(shader, shader_text);
+				gl.compileShader(shader);
+				
+				if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
+				{
+					alert('Failed to compile shader:' name + ' of type: ' + type + ': ' + gl.getShaderInfoLog(shader));
+					return null;
+				}								
+									
+				return shader;
+			}
+
+
+			function _make_gl_program(vert_shader, frag_shader)
+			{
+				var program = gl.createProgram();
+				gl.attachShader(program, vert_shader);
+				gl.attachShader(program, frag_shader);
+				gl.linkProgram(program);
+				
+				if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+				{
+					alert('Failed to link shader program:' + gl.getProgramInfoLog(program));
+					return null;
+				}
+				
+				return shader;
+			}
+
+			
+			class webgl_rasterizer
+			{			
 				constructor(canvas)
 				{
 					this.ctx_width = canvas.width;
 					this.ctx_height = canvas.height;
+				
+					this.full_screen_quad = 
+					{
+						vbo_verts: null,
+						vbo_uvs: null,
+						vao: null,
+						ubo: null,
+						program: null,	
+					};			
 				
 					this.vbo1 	 = null;
 					this.vbo2 	 = null;
@@ -24,10 +107,132 @@
 					this._init();
 				}
 				
+				_init_full_screen()
+				{						
+					// vbo_verts
+					var verts = new Float32Array([
+						-1.0, -1.0,
+						 1.0, -1.0,
+						 1.0,  1.0,
+						 
+						 1.0,  1.0,
+						-1.0,  1.0,
+						-1.0, -1.0,
+					]);
+
+					this.full_screen_quad.vbo_verts = gl.createBuffer();
+					
+					gl.bindBuffer(
+						gl.ARRAY_BUFFER,
+						this.full_screen_quad.vbo_verts
+					);
+									
+					gl.bufferData(
+						gl.ARRAY_BUFFER,
+						verts,
+						gl.STATIC_DRAW
+					);
+					
+					
+					// vbo_uvs
+					var uvs = new Float32Array([
+						 0.0,  1.0,
+						 1.0,  1.0,
+						 1.0,  0.0,
+						 
+						 1.0,  0.0,
+						 0.0,  0.0,
+						 0.0,  1.0,
+					]);
+
+					this.full_screen_quad.vbo_uvs = gl.createBuffer();
+					
+					gl.bindBuffer(
+						gl.ARRAY_BUFFER,
+						this.full_screen_quad.vbo_uvs
+					);
+					
+					gl.bufferData(
+						gl.ARRAY_BUFFER, 
+						uvs, 
+						gl.STATIC_DRAW
+					);
+					
+					
+					// vao
+					this.full_screen_quad.vao = gl.createVertexArray();
+					gl.bindVertexArray(this.full_screen_quad.vao);
+					
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.full_screen_quad.vbo_verts);
+					gl.enableVertexAttribArray(0);
+					gl.vertexAttribPointer(
+						0,
+						2,
+						gl.FLOAT,
+						false,
+						0,
+						0				
+					);
+					
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.full_screen_quad.vbo_uvs);
+					gl.enableVertexAttribArray(1);
+					gl.vertexAttribPointer(
+						1,
+						2,
+						gl.FLOAT,
+						false,
+						0,
+						0					
+					);
+					
+					gl.bindVertexArray(null);					
+
+					
+					// Program
+					var vs = _make_gl_shader('full_screen_quad_vs', gl.VERTEX_SHADER);
+					var fs = _make_gl_shader('full_screen_quad_fs', gl.FRAGMENT_SHADER);
+					this.full_screen_quad.program = _make_gl_shader(vs, fs);					
+
+
+					// UBO
+					this.full_screen_quad.ubo = gl.createBuffer();
+					gl.bindBuffer(gl.UNIFORM_BUFFER, this.full_screen_quad.ubo);
+					
+					var block_index = gl.getUniformBlockIndex(this.full_screen_quad.program, 
+															  "full_screen_quad_uniforms", 
+															  gl.UNIFORM_BLOCK_DATA_SIZE);
+					var block_size = gl.getActiveUniformBlockParameter(this.full_screen_quad.program, 
+																	   block_index);
+										
+					gl.bufferData(gl.UNIFORM_BUFFER, block_size, gl.DYNAMIC_DRAW);
+				
+					gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this.full_screen_quad.ubo);
+					
+					var ubo_names = ["source_texture"];
+					var ubo_indices = gl.getUniformIndices(this.full_screen_quad.program, 
+														   ubo_names);
+					var ubo_offsets = gl.getActiveUniforms(this.full_screen_quad.program,
+														   ubo_indices,
+													       gl.UNIFORM_OFFSET);
+					
+					// Join indices/Offsets somehow... TODO...
+					
+					// Guidance taken from example code at: https://gist.github.com/jialiang/2880d4cc3364df117320e8cb324c2880#file-ubo-tutorial-html
+				
+					gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+					
+					
+				}
+				
+				
+				
 				_init()
 				{
-					//gl.enable(gl.CULL_FACE);
-					//gl.enable(gl.DEPTH_TEST);
+					this._init_full_screen();
+				
+				
+					gl.enable(gl.CULL_FACE);
+					gl.enable(gl.DEPTH_TEST);
 				
 					var positions = new Float32Array([
 						-0.75, -0.0, 0.0, 1.0,
