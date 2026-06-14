@@ -5,6 +5,53 @@
 			table {border: 0px solid;}
 		</style>
 		
+
+		<script id="basic_shade_vs" type="glsl">
+			#version 300 es
+			precision highp float;
+			layout(location=0) in vec3 pos;
+			layout(location=1) in vec2 uv;
+
+			layout(std140) uniform full_screen_quad_uniforms
+			{
+				mat4 model;
+				mat4 view;
+				mat4 proj;
+			};
+
+			out vec2 uv_interp;
+			
+			void main()
+			{
+				uv_interp = uv;
+				gl_Position = proj * view * model * vec4(pos, 1.0);								
+			}
+		</script>	
+		<script id="basic_shade_fs" type="glsl">
+			#version 300 es
+			precision highp float;
+
+			uniform sampler2D source_texture;
+
+			in vec2 uv_interp;
+			
+			layout (location=0) out vec4 out_color;
+
+			const vec3 light_source = vec3(0.0, 100.0, 0.0);
+
+			void main() {
+
+				
+				// Surface shading...
+				
+				
+				out_color = vec4(texture(source_texture, uv_interp).rgb;
+
+			}
+		</script>		
+	
+		
+		
 		
 		<script id="full_screen_quad_vs" type="glsl">
 			#version 300 es
@@ -251,7 +298,23 @@
 					this.test_texture = _make_2d_RGBA_UINT_texture_from_img(document.getElementById("spot_texture"));
 					
 					
-					this.full_screen_quad = 
+					this.basic_pass = 
+					{
+						obj_verts_vbo: null,
+						obj_uvs_vbo: null,
+						obj_vao: null,
+						obj_tex: null,
+						
+						floor_verts_vbo: null,
+						floor_uvs_vbo: null,
+						floor_vao: null,
+						floor_tex: null,
+						
+						progam: null,						
+					};
+					
+					
+					this.full_screen_pass = 
 					{
 						vbo_verts: null,
 						vbo_uvs: null,
@@ -263,8 +326,15 @@
 					this._init();
 				}
 				
+				
+				_init_basic_pass()
+				{
+					// TODO...
+					
+				}
+				
 							
-				_init_full_screen()
+				_init_full_screen_pass()
 				{						
 					// vbo_verts
 					var verts = new Float32Array([
@@ -277,11 +347,11 @@
 						-1.0, -1.0,
 					]);
 
-					this.full_screen_quad.vbo_verts = gl.createBuffer();
+					this.full_screen_pass.vbo_verts = gl.createBuffer();
 					
 					gl.bindBuffer(
 						gl.ARRAY_BUFFER,
-						this.full_screen_quad.vbo_verts
+						this.full_screen_pass.vbo_verts
 					);
 									
 					gl.bufferData(
@@ -302,11 +372,11 @@
 						 0.0,  1.0,
 					]);
 
-					this.full_screen_quad.vbo_uvs = gl.createBuffer();
+					this.full_screen_pass.vbo_uvs = gl.createBuffer();
 					
 					gl.bindBuffer(
 						gl.ARRAY_BUFFER,
-						this.full_screen_quad.vbo_uvs
+						this.full_screen_pass.vbo_uvs
 					);
 					
 					gl.bufferData(
@@ -317,10 +387,10 @@
 					
 					
 					// vao
-					this.full_screen_quad.vao = gl.createVertexArray();
-					gl.bindVertexArray(this.full_screen_quad.vao);
+					this.full_screen_pass.vao = gl.createVertexArray();
+					gl.bindVertexArray(this.full_screen_pass.vao);
 					
-					gl.bindBuffer(gl.ARRAY_BUFFER, this.full_screen_quad.vbo_verts);
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.full_screen_pass.vbo_verts);
 					gl.enableVertexAttribArray(0);
 					gl.vertexAttribPointer(
 						0,
@@ -331,7 +401,7 @@
 						0				
 					);
 					
-					gl.bindBuffer(gl.ARRAY_BUFFER, this.full_screen_quad.vbo_uvs);
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.full_screen_pass.vbo_uvs);
 					gl.enableVertexAttribArray(1);
 					gl.vertexAttribPointer(
 						1,
@@ -348,11 +418,11 @@
 					// Program
 					var vs = _make_gl_shader('full_screen_quad_vs', gl.VERTEX_SHADER);
 					var fs = _make_gl_shader('full_screen_quad_fs', gl.FRAGMENT_SHADER);
-					this.full_screen_quad.program = _make_gl_program(vs, fs);					
+					this.full_screen_pass.program = _make_gl_program(vs, fs);					
 
 
 					// source_texture 
-					this.full_screen_quad.source_texture_location = gl.getUniformLocation(this.full_screen_quad.program,
+					this.full_screen_pass.source_texture_location = gl.getUniformLocation(this.full_screen_pass.program,
 																						  "source_texture");
 						
 					
@@ -424,10 +494,10 @@
 				}
 				
 				
-				
 				_init()
 				{
-					this._init_full_screen();
+					this._init_basic_pass();
+					this._init_full_screen_pass();
 				}
 				
 
@@ -444,14 +514,14 @@
 					
 
 					// Setup program and uniform resources
-					gl.useProgram(this.full_screen_quad.program);
+					gl.useProgram(this.full_screen_pass.program);
 					gl.activeTexture(gl.TEXTURE0 + 0);
 					gl.bindTexture(gl.TEXTURE_2D, this.test_texture);
-					gl.uniform1i(this.full_screen_quad.source_texture_location, 0);
+					gl.uniform1i(this.full_screen_pass.source_texture_location, 0);
 					
 					
 					// Draw triangles with their attributes
-					gl.bindVertexArray(this.full_screen_quad.vao);
+					gl.bindVertexArray(this.full_screen_pass.vao);
 					gl.drawArrays(
 						gl.TRIANGLES,
 						0,
