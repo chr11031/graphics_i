@@ -6,34 +6,40 @@
 		</style>
 		
 
-		<script id="basic_shade_vs" type="glsl">
+		<script id="basic_shader_vs" type="glsl">
 			#version 300 es
 			precision highp float;
 			layout(location=0) in vec3 pos;
 			layout(location=1) in vec2 uv;
+			layout(location=2) in vec3 normal;
 
-			layout(std140) uniform full_screen_quad_uniforms
+
+			layout(std140) uniform matrix_data
 			{
 				mat4 model;
 				mat4 view;
 				mat4 proj;
 			};
 
-			out vec2 uv_interp;
+
+			smooth out vec2 interp_uv;
+			smooth out vec3 interp_normal;
 			
 			void main()
 			{
-				uv_interp = uv;
+				interp_uv = uv;
+				interp_normal = normal; 
 				gl_Position = proj * view * model * vec4(pos, 1.0);								
 			}
 		</script>	
-		<script id="basic_shade_fs" type="glsl">
+		<script id="basic_shader_fs" type="glsl">
 			#version 300 es
 			precision highp float;
 
-			uniform sampler2D source_texture;
+			uniform sampler2D texture;
 
-			in vec2 uv_interp;
+			smooth in vec2 interp_uv;		
+			smooth in vec3 interp_normal;	
 			
 			layout (location=0) out vec4 out_color;
 
@@ -45,7 +51,7 @@
 				// Surface shading...
 				
 				
-				out_color = vec4(texture(source_texture, uv_interp).rgb;
+				out_color = vec4(texture(texture, interp_uv).rgb;
 
 			}
 		</script>		
@@ -59,11 +65,11 @@
 			layout(location=0) in vec2 pos;
 			layout(location=1) in vec2 uv;
 
-			out vec2 uv_interp;
+			smooth out vec2 interp_uv;
 			
 			void main()
 			{
-				uv_interp = uv;
+				interp_uv = uv;
 				gl_Position = vec4(pos, 0.5, 1.0);								
 			}
 		</script>	
@@ -73,14 +79,7 @@
 
 			uniform sampler2D source_texture;
 
-			/*
-			layout(std140) uniform full_screen_quad_uniforms
-			{
-				vec4 source_texture;
-			};
-			*/
-
-			in vec2 uv_interp;
+			smooth in vec2 interp_uv;
 			
 			layout (location=0) out vec4 out_color;
 
@@ -90,11 +89,10 @@
 			
 			void main() {
 				
-
-				vec3 off_l = texture(source_texture, uv_interp + vec2(-uv_offset,  0.00)).rgb;
-				vec3 off_r = texture(source_texture, uv_interp + vec2(+uv_offset,  0.00)).rgb;
-				vec3 off_t = texture(source_texture, uv_interp + vec2( 0.00, +uv_offset)).rgb;
-				vec3 off_d = texture(source_texture, uv_interp + vec2( 0.00, -uv_offset)).rgb;
+				vec3 off_l = texture(source_texture, interp_uv + vec2(-uv_offset,  0.00)).rgb;
+				vec3 off_r = texture(source_texture, interp_uv + vec2(+uv_offset,  0.00)).rgb;
+				vec3 off_t = texture(source_texture, interp_uv + vec2( 0.00, +uv_offset)).rgb;
+				vec3 off_d = texture(source_texture, interp_uv + vec2( 0.00, -uv_offset)).rgb;
 
 
 				// Make borders black
@@ -105,7 +103,7 @@
 				// Clamp color shades to fixed number of tones
 				else
 				{
-					vec3 tex_color = texture(source_texture, uv_interp).rgb;
+					vec3 tex_color = texture(source_texture, interp_uv).rgb;
 					tex_color.r = tex_color.r - mod(tex_color.r, shade_interval);
 					tex_color.g = tex_color.g - mod(tex_color.g, shade_interval);
 					tex_color.b = tex_color.b - mod(tex_color.b, shade_interval);
@@ -125,6 +123,369 @@
 			var canvas_framebuffer = null;	
 			var gl = null;
 			var cell_effect = null;
+
+
+			class Matrix4x4
+			{
+				constructor()
+				{
+					this.data = new Float32Array(16);
+					this.set_identity();
+				}
+				
+				copy()
+				{
+					var rv = new Matrix4x4();
+					
+					for (var r = 0; r < 4; r++)
+					{
+						for (var c = 0; c < 4; c++)
+						{
+							rv.set(r, c, this.get(r, c));
+						}
+					}
+					
+					return rv;
+				}
+
+				set(r, c, value)
+				{
+					this.data[(c * 4) + r] = value;
+				}
+
+				get(r, c)
+				{
+					return this.data[(c * 4) + r];
+				}
+
+				zero()
+				{
+					for (var r = 0; r < 4; r++)
+					{
+						for (var c = 0; c < 4; c++)
+						{
+							this.set(r, c, 0);
+						}
+					}
+				}
+
+				_swap(r_a, c_a, r_b, c_b)
+				{
+					var tmp = this.get(r_a, c_a);
+					this.set(r_a, c_a, this.get(r_b, c_b));
+					this.set(r_b, c_b, tmp);
+				}
+
+				transpose()
+				{
+					var rv = this.copy();
+					rv._swap(0, 1, 1, 0);
+					rv._swap(0, 2, 2, 0);
+					rv._swap(0, 3, 3, 0);
+
+					rv._swap(1, 2, 2, 1);
+					rv._swap(1, 3, 3, 1);
+
+					rv._swap(2, 3, 3, 2);
+					
+					return rv;
+				}
+
+				set_identity()
+				{
+					this.zero();
+					for (var i = 0; i < 4; i++)
+					{
+						this.set(i, i, 1.0);
+					}
+				}
+
+				set_scale(x, y, z)
+				{
+					this.set_identity();
+					this.set(0, 0, x);
+					this.set(1, 1, y);
+					this.set(2, 2, z);
+				}
+
+				set_translate(x, y, z)
+				{
+					this.set_identity();
+					this.set(0, 3, x);
+					this.set(1, 3, y);
+					this.set(2, 3, z);
+				}
+
+				set_rotate(axis='x', rot_deg)
+				{
+					if (axis != 'x' && axis != 'y' && axis != 'z')
+					{
+						alert('Bad rotation matrix around axis ' + axis );
+						return;
+					}
+
+					var rad = Math.PI * rot_deg / 180.0;
+					var cos_t = Math.cos(rad);
+					var sin_t = Math.sin(rad);
+
+					if (axis == 'x')
+					{
+						this.set(0, 0, 1.0);
+						this.set(0, 1, 0.0);
+						this.set(0, 2, 0.0);
+						this.set(0, 3, 0.0);
+
+						this.set(1, 0, 0.0);
+						this.set(1, 1, cos_t);
+						this.set(1, 2, sin_t);
+						this.set(1, 3, 0.0);
+
+						this.set(2, 0, 0.0);
+						this.set(2, 1, -sin_t);
+						this.set(2, 2, cos_t);
+						this.set(2, 3, 0.0);
+
+						this.set(3, 0, 0.0);
+						this.set(3, 1, 0.0);
+						this.set(3, 2, 0.0);
+						this.set(3, 3, 1.0);
+					}
+					else if (axis == 'y')
+					{
+						this.set(0, 0, cos_t);
+						this.set(0, 1, 0.0);
+						this.set(0, 2, -sin_t);
+						this.set(0, 3, 0.0);
+
+						this.set(1, 0, 0.0);
+						this.set(1, 1, 1.0);
+						this.set(1, 2, 0.0);
+						this.set(1, 3, 0.0);
+
+						this.set(2, 0, sin_t);
+						this.set(2, 1, 0.0);
+						this.set(2, 2, cos_t);
+						this.set(2, 3, 0.0);
+
+						this.set(3, 0, 0.0);
+						this.set(3, 1, 0.0);
+						this.set(3, 2, 0.0);
+						this.set(3, 3, 1.0);
+
+					}
+					else if (axis == 'z')
+					{
+						this.set(0, 0, cos_t);
+						this.set(0, 1, -sin_t);
+						this.set(0, 2, 0.0);
+						this.set(0, 3, 0.0);
+
+						this.set(1, 0, sin_t);
+						this.set(1, 1, cos_t);
+						this.set(1, 2, 0.0);
+						this.set(1, 3, 0.0);
+
+						this.set(2, 0, 0.0);
+						this.set(2, 1, 0.0);
+						this.set(2, 2, 1.0);
+						this.set(2, 3, 0.0);
+
+						this.set(3, 0, 0.0);
+						this.set(3, 1, 0.0);
+						this.set(3, 2, 0.0);
+						this.set(3, 3, 1.0);
+					}
+				}
+
+				set_perspective(fov_lr_deg, fov_td_deg, near, far)
+				{
+					var fov_lr_rad = fov_lr_deg * Math.PI / 180.0;
+					var fov_td_rad = fov_td_deg * Math.PI / 180.0;
+
+					var top = near * Math.tan(fov_td_rad / 2.0);
+					var bot = -top;
+					var right = near * Math.tan(fov_lr_rad / 2.0);
+					var left = -right;
+
+					this.set(0, 0, 2.0 * near / (right - left));
+					this.set(0, 1, 0.0);
+					this.set(0, 2, (-near * (right + left)) / (right - left));
+					this.set(0, 3, 0.0);
+
+					this.set(1, 0, 0.0);
+					this.set(1, 1, 2.0 * near / (top - bot));
+					this.set(1, 2, (-near * (top + bot)) / (top - bot));
+					this.set(1, 3, 0.0);
+
+					// Below values map Z from 0 to 1 with more precision afforded to nearer objects
+					this.set(2, 0, 0.0);
+					this.set(2, 1, 0.0);
+					this.set(2, 2, (far + near) / (far - near));
+					this.set(2, 3, (-2.0 * far * near) / (far - near));
+					// this.set(2, 2, -(1.0/near) / ( (1.0 / far) - (1.0 / near) ));
+					// this.set(2, 3,  (1.0     ) / ( (1.0 / far) - (1.0 / near) ));
+
+					this.set(3, 0, 0.0);
+					this.set(3, 1, 0.0);
+					this.set(3, 2, 1.0);
+					this.set(3, 3, 0.0);
+				}
+
+				set_columns_basis_r3(col_right, col_up, col_forward)
+				{
+					this.set_identity();
+
+					this.set(0, 0, col_right[0]);
+					this.set(1, 0, col_right[1]);
+					this.set(2, 0, col_right[2]);
+
+					this.set(0, 1, col_up[0]);
+					this.set(1, 1, col_up[1]);
+					this.set(2, 1, col_up[2]);
+
+					this.set(0, 2, col_forward[0]);
+					this.set(1, 2, col_forward[1]);
+					this.set(2, 2, col_forward[2]);
+				}
+
+				mult(other_mat)
+				{
+					var rv = new Matrix4x4();
+
+					for (var r = 0; r < 4; r++)
+					{
+						for (var c = 0; c < 4; c++) 
+						{
+							var sum = 0;                      
+							for (var i = 0; i < 4; i++)
+							{
+								sum = sum + (this.get(r, i) * other_mat.get(i, c));
+							}
+
+							rv.set(r, c, sum);
+						}
+					}
+
+					return rv;              
+				}
+				
+				mult_vec4(vec4)
+				{
+					if (vec4.length != 4)
+					{
+						alert('Invalid vec4');
+						console.log('Invalid vec4');
+						return null;
+					}
+					
+					var rv = [
+								this.get(0,0)*vec4[0] + this.get(0,1)*vec4[1] + this.get(0,2)*vec4[2] + this.get(0,3)*vec4[3],
+								this.get(1,0)*vec4[0] + this.get(1,1)*vec4[1] + this.get(1,2)*vec4[2] + this.get(1,3)*vec4[3],
+								this.get(2,0)*vec4[0] + this.get(2,1)*vec4[1] + this.get(2,2)*vec4[2] + this.get(2,3)*vec4[3],
+								this.get(3,0)*vec4[0] + this.get(3,1)*vec4[1] + this.get(3,2)*vec4[2] + this.get(3,3)*vec4[3]					
+							];
+					
+					return rv;		
+				}
+				
+				add(other_mat)
+				{
+					var rv = this.copy();
+					
+					for (var r = 0; r < 4; r++)
+					{
+						for (var c = 0; c < 4; c++)
+						{
+							rv.set(r, c, rv.get(r,c) + other_mat.get(r,c));
+						}
+					}
+					
+					return rv;
+				}
+
+				sub(other_mat)
+				{
+					var rv = this.copy();
+					
+					for (var r = 0; r < 4; r++)
+					{
+						for (var c = 0; c < 4; c++)
+						{
+							rv.set(r, c, rv.get(r,c) - other_mat.get(r,c));
+						}
+					}
+					
+					return rv;
+				}
+				
+				_det(r, c)
+				{
+					if (r.length < 2)
+					{
+						alert('Invalid call to _det');
+						console.log('Invalid call to _det');
+						return null;
+					}
+					else if (r.length == 2)
+					{
+						return this.get(r[0],c[0])*this.get(r[1],c[1]) - this.get(r[0],c[1])*this.get(r[1],c[0]);
+					}
+					
+					var sum = 0;
+					for (var i = 0; i < r.length; i++)
+					{
+						var tmp_r = structuredClone(r);
+						tmp_r.splice(0,1);
+						var tmp_c = structuredClone(c);
+						tmp_c.splice(i,1);
+									
+						var sign = (0 + i) % 2 == 0 ? 1.0 : -1.0;
+						sum = sum + ( sign * this.get(r[0],c[i]) * this._det(tmp_r, tmp_c) );
+					}
+						
+					return sum;
+				}
+				
+				det()
+				{
+					var r = [0,1,2,3];
+					var c = [0,1,2,3];
+					var det = this._det(r, c);
+					return det;
+				}
+				
+				inverse()
+				{
+					var r = [0,1,2,3];
+					var c = [0,1,2,3];
+					var det = this._det(r, c);
+					if (det == 0.0)
+					{
+						alert('Invalid Matrix4x4 inversion: matrix cannot be inverted!');
+						console.log('Invalid Matrix4x4 inversion: matrix cannot be inverted!');
+						return null;
+					}
+					var coef = 1.0 / det;
+						
+					var adj = new Matrix4x4();
+					for (var r_i = 0; r_i < 4; r_i++)
+					{
+						for (var c_i = 0; c_i < 4; c_i++)
+						{
+							var tmp_r = structuredClone(r);
+							tmp_r.splice(r_i,1);
+							var tmp_c = structuredClone(c);
+							tmp_c.splice(c_i,1);
+										
+							var sign = (r_i + c_i) % 2 == 0 ? 1.0 : -1.0;
+							adj.set(c_i, r_i, sign * coef * this._det(tmp_r, tmp_c)); 
+						}
+					}
+					
+					return adj;	
+				}
+			}
+
 
 			
 			function _init_gl(canvas)
@@ -303,21 +664,35 @@
 					
 					this.basic_pass = 
 					{
+						model_mat: null,
+						view_mat: null,
+						proj_mat: null,
+						
 						obj_verts_vbo: null,
 						obj_uvs_vbo: null,
+						obj_norms_vbo: null,
 						obj_indices_vbo: null,
 						obj_vao: null,
 						obj_vert_count: null,
-						obj_tex: null,
 						
 						floor_verts_vbo: null,
 						floor_uvs_vbo: null,
+						floor_norms_vbo: null,
 						floor_indices_vbo: null,
 						floor_vao: null,
 						floor_vert_count: null,
-						floor_tex: null,
-						
+
 						progam: null,						
+						
+						ubo: null,
+						ubo_offsets: 
+						{
+							proj: null,
+							view: null,
+							model: null,						
+						};						
+						
+						texture_location: null,
 					};
 					
 					
@@ -326,8 +701,11 @@
 						vbo_verts: null,
 						vbo_uvs: null,
 						vao: null,
-						source_texture_location: null,
+						vert_count: null,
+						
 						program: null,	
+
+						source_texture_location: null,
 					};			
 				
 					this._init();
@@ -336,48 +714,234 @@
 				
 				_init_basic_pass()
 				{
+					this.basic_pass.model_mat = new Matrix4x4();
+					this.basic_pass.view_mat  = new Matrix4x4();
+					this.basic_pass.proj_mat  = new Matrix4x4();
+				
+				
 					var obj_verts = new Float32Array();
 					var obj_uvs = new Float32Array();
+					var obj_norms = new Float32Array();
 					var obj_indices = new Uint32Array();
 					
 					var i = 0;
-					while (...)
+					while (i < spot_obj.length)
 					{
-						...
-						...
-						...
-					}
-					
-					
-					
-					
-					
+						// XYZs
+						obj_verts.push(spot_obj[i].v0.x);
+						obj_verts.push(spot_obj[i].v0.y);
+						obj_verts.push(spot_obj[i].v0.z);
 						
+						obj_verts.push(spot_obj[i].v1.x);
+						obj_verts.push(spot_obj[i].v1.y);
+						obj_verts.push(spot_obj[i].v1.z);
+
+						obj_verts.push(spot_obj[i].v2.x);
+						obj_verts.push(spot_obj[i].v2.y);
+						obj_verts.push(spot_obj[i].v2.z);
+						
+						
+						// UVs
+						obj_uvs.push(spot_obj[i].v0.u);
+						obj_uvs.push(spot_obj[i].v0.v);
+
+						obj_uvs.push(spot_obj[i].v1.u);
+						obj_uvs.push(spot_obj[i].v1.v);
+
+						obj_uvs.push(spot_obj[i].v2.u);
+						obj_uvs.push(spot_obj[i].v2.v);
+						
+						
+						// NORMs
+						obj_norms.push(spot_obj[i].v0.nx);
+						obj_norms.push(spot_obj[i].v0.ny);
+						obj_norms.push(spot_obj[i].v0.nz);
+						
+						obj_norms.push(spot_obj[i].v1.nx);
+						obj_norms.push(spot_obj[i].v1.ny);
+						obj_norms.push(spot_obj[i].v1.nz);
+						
+						obj_norms.push(spot_obj[i].v2.nx);
+						obj_norms.push(spot_obj[i].v2.ny);
+						obj_norms.push(spot_obj[i].v2.nz);
+						
+						
+						// INDEXes
+						obj_indices.push(i+0);
+						obj_indices.push(i+1);
+						obj_indices.push(i+2);
+
+						
+						i += 3;
+					}
+
+
+					// OBJ Verts
 					this.basic_pass.obj_verts_vbo = gl.createBuffer();
 					
 					gl.bindBuffer(
 						gl.ARRAY_BUFFER,
 						this.basic_pass.obj_verts_vbo
 					);
-						
+											
+					gl.bufferData(
+						gl.ARRAY_BUFFER,
+						obj_verts,
+						gl.STATIC_DRAW
+					);
+					
+					// OBJ UVs 
+					this.basic_pass.obj_uvs_vbo = gl.createBuffer();
+					
+					gl.bindBuffer(
+						gl.ARRAY_BUFFER,
+						this.basic_pass.obj_uvs_vbo
+					);
 					
 					gl.bufferData(
 						gl.ARRAY_BUFFER,
-						verts,
+						obj_uvs,
 						gl.STATIC_DRAW
 					);
+					
+					// OBJ NORMs 
+					this.basic_pass.obj_norms_vbo = gl.createBuffer();
+					
+					gl.bindBuffer(
+						gl.ARRAY_BUFFER,
+						this.basic_pass.obj_norms_vbo
+					);
+					
+					gl.bufferData(
+						gl.ARRAY_BUFFER,
+						obj_norms,
+						gl.STATIC_DRAW
+					);
+					
+					// OBJ INDEXes
+					this.basic_pass.obj_indices_vbo = gl.createBuffer();
 						
+					gl.bindBuffer(
+						gl.ELEMENT_ARRAY_BUFFER,
+						this.basic_pass.obj_indices_vbo
+					);
+					
+					gl.bufferData(
+						gl.ELEMENT_ARRAY_BUFFER,
+						obj_indices,
+						gl.STATIC_DRAW
+					);
+
+					// OBJ VAO
+					this.basic_pass.obj_vao = gl.createVertexArray();
+					gl.bindVertexArray(this.basic_pass.obj_vao);
+
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.basic_pass.obj_verts_vbo);
+					gl.enableVertexAttribArray(0);
+					gl.vertexAttribPointer(
+						0,
+						3,
+						gl.FLOAT,
+						false,
+						0,
+						0				
+					);
+					
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.basic_pass.obj_uvs_vbo);
+					gl.enableVertexAttribArray(1);
+					gl.vertexAttribPointer(
+						1,
+						2,
+						gl.FLOAT,
+						false,
+						0,
+						0				
+					);
+
+					gl.bindBuffer(gl.ARRAY_BUFFER, this.basic_pass.obj_norms_vbo);
+					gl.enableVertexAttribArray(2);
+					gl.vertexAttribPointer(
+						2,
+						3,
+						gl.FLOAT,
+						false,
+						0,
+						0				
+					);
+					
+					gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.basic_pass.obj_indices_vbo);
+					
+					// Unbind VAO attachment
+					gl.bindVertexArray(null);
+					
+
+					// Keep track of vertex count (total)
+					this.basic_pass.obj_vert_count = obj_indices.length;
+
+
+
+
+
+
+
+
+
+					// TODO: Floor geometry...
 					
 					
 					
-					/*
-						obj_verts_vbo: null,
-						obj_uvs_vbo: null,
-						obj_indices_vbo: null,
-						obj_vao: null,
-						obj_vert_count: null,
-						obj_tex: null,
-					*/
+					
+					
+
+
+
+
+					// Program
+					var vs = _make_gl_shader('basic_shader_vs', gl.VERTEX_SHADER);
+					var fs = _make_gl_shader('basic_shader_fs', gl.FRAGMENT_SHADER);
+					this.basic_pass.program = _make_gl_program(vs, fs);					
+					
+					
+
+
+					// UBO todos....
+					this.basic_pass.ubo = gl.createBuffer();
+					gl.bindBuffer(gl.UNIFORM_BUFFER, this.basic_pass.ubo);
+
+					var block_index = gl.getUniformBlockIndex(this.basic_pass.program, 
+															  "matrix_data",
+															  gl.UNIFORM_BLOCK_DATA_SIZE);
+															  
+					
+					var block_size = gl.getActiveUniformBlockParameter(this.basic_pass.program,
+																	   block_index);
+
+					gl.bufferData(gl.UNIFORM_DATA, block_size, gl.DYNAMIC_DRAW);
+
+					gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this.basic_pass.ubo);
+					gl.uniformBlockBinding(this.basic_pass.program, block_index, 0);
+
+					
+					
+					var ubo_names = ["proj", "view", "model"];
+					var ubo_indices = gl.getUniformIndices(this.basic_pass.program,
+														   ubo_names);
+					var ubo_offsets = gl.getActiveUniforms(this.basic_pass.program,
+														   ubo_indices,
+														   gl.UNIFORM_OFFSET);
+
+
+
+					this.basic_program.ubo_offsets.proj  = ubo_offsets[0];
+					this.basic_program.ubo_offsets.view  = ubo_offsets[1];
+					this.basic_program.ubo_offsets.model = ubo_offsets[2];
+					
+					// Guidance taken from example code at: https://webgl2fundamentals.org/webgl/lessons/webgl-2-textures.html
+					// Guidance taken from example code at: https://gist.github.com/jialiang/2880d4cc3364df117320e8cb324c2880#file-ubo-tutorial-html
+
+
+					// Texture location
+					this.basic_pass.texture_location = gl.getUniformLocation(this.basic_pass.program, "texture");						
 				}
 				
 							
@@ -461,6 +1025,10 @@
 					
 					gl.bindVertexArray(null);					
 
+					
+					// Vert Count 
+					this.full_screen_pass.vao.vert_count = 6;
+
 
 					// Program
 					var vs = _make_gl_shader('full_screen_quad_vs', gl.VERTEX_SHADER);
@@ -471,73 +1039,6 @@
 					// source_texture 
 					this.full_screen_pass.source_texture_location = gl.getUniformLocation(this.full_screen_pass.program,
 																						  "source_texture");
-						
-					
-					
-
-					
-					
-					
-
-
-
-
-
-					/*
-					// Guidance taken from example code at: https://webgl2fundamentals.org/webgl/lessons/webgl-2-textures.html
-					// gl.uniform1i( this.full_screen_quad.source_texture_location, 0 );
-					// gl.activeTexture(gl.TEXTURE0);
-					//gl.bindTexture(gl.TEXTURE_2D, texture_resource);
-
-					*/
-
-					/*
-
-					// UBO
-					this.full_screen_quad.ubo = gl.createBuffer();
-					gl.bindBuffer(gl.UNIFORM_BUFFER, this.full_screen_quad.ubo);
-					
-					var block_index = gl.getUniformBlockIndex(this.full_screen_quad.program, 
-															  "full_screen_quad_uniforms", 
-															  gl.UNIFORM_BLOCK_DATA_SIZE);
-					var block_size = gl.getActiveUniformBlockParameter(this.full_screen_quad.program, 
-																	   block_index);
-										
-					gl.bufferData(gl.UNIFORM_BUFFER, block_size, gl.DYNAMIC_DRAW);
-				
-					gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this.full_screen_quad.ubo);
-					
-					var ubo_names = ["source_texture"];
-					var ubo_indices = gl.getUniformIndices(this.full_screen_quad.program, 
-														   ubo_names);
-					var ubo_offsets = gl.getActiveUniforms(this.full_screen_quad.program,
-														   ubo_indices,
-													       gl.UNIFORM_OFFSET);
-					
-					
-					
-					// Join indices/Offsets somehow... TODO...
-					
-					// Guidance taken from example code at: https://gist.github.com/jialiang/2880d4cc3364df117320e8cb324c2880#file-ubo-tutorial-html
-				
-					gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-					
-					
-					
-					
-					// 2nd annoying part 
-					var ubo_index = gl.getUniformBlockIndex(this.full_screen_quad.program,
-															"full_screen_quad_uniforms");
-					gl.uniformBlockBinding(this.full_screen_quad.program, ubo_index, 0);
-					
-					
-					// Show time...
-					gl.bindBuffer(gl.UNIFORM_BUFFER, this.full_screen_quad.ubo);
-					gl.bufferSubData(gl.UNIFORM_BUFFER, ubo_offsets[0], new Float32Array([1.0, 0.0, 0.0, 1.0]) );
-
-					*/
-					
-					
 				}
 				
 				
@@ -547,19 +1048,44 @@
 					this._init_full_screen_pass();
 				}
 				
-
-				draw(framebuffer_target, off_x, off_y, width_x, width_y)
-				{
-					// Output target/frame buffer
-					gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer_target);
-					gl.viewport(off_x, off_y, width_x, width_y);
 				
-					// Clear the whole screen
-					gl.clearColor(0.2, 0.2, 0.2, 1);				
-					gl.clear(gl.COLOR_BUFFER_BIT);
-					gl.clear(gl.DEPTH_BUFFER_BIT);
+				_draw_basic_pass()
+				{
+					// Setup program and uniform resources 
+					gl.bindBuffer(gl.UNIFORM_BUFFER, this.basic_pass.ubo);
+					gl.bufferSubData(gl.UNIFORM_BUFFER, this.basic_pass.ubo_offsets.proj,  this.basic_pass.proj_mat.data,  0);
+					gl.bufferSubData(gl.UNIFORM_BUFFER, this.basic_pass.ubo_offsets.view,  this.basic_pass.view_mat.data,  0);
+					gl.bufferSubData(gl.UNIFORM_BUFFER, this.basic_pass.ubo_offsets.model, this.basic_pass.model_mat.data, 0);
+					gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+										
+					gl.useProgram(this.basic_pass.program);
+					
+					gl.activeTexture(gl.TEXTURE0 + 0);
+					gl.bindTexture(gl.TEXTURE_2D, this.test_texture);
+					gl.uniform1i(this.basic_pass.texture_location, 0);
+					
+					
+					// Draw Spot with attributes 
+					gl.bindVertexArray(this.basic_program.obj_vao);
+					gl.drawArrays(
+						gl.TRIANGLES,
+						0,
+						this.basic_pass.obj_vert_count
+					);
+					
+					
+					// Draw Ground with attributes (TODO)
+					
+					
 					
 
+					// Unbind VAO 
+					gl.bindVertexArray(null);
+				}
+				
+				
+				_draw_full_screen_pass()
+				{
 					// Setup program and uniform resources
 					gl.useProgram(this.full_screen_pass.program);
 					gl.activeTexture(gl.TEXTURE0 + 0);
@@ -572,23 +1098,28 @@
 					gl.drawArrays(
 						gl.TRIANGLES,
 						0,
-						6
-					);
+						this.full_screen_pass.vert_count
+					);				
+				}
+				
 
+				draw(framebuffer_target, width, height)
+				{
+					// Output target/frame buffer
+					gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer_target);
+				
+					// Clear the whole screen
+					gl.clearColor(0.2, 0.2, 0.2, 1);				
+					gl.clear(gl.COLOR_BUFFER_BIT);
+					gl.clear(gl.DEPTH_BUFFER_BIT);
+					
+					// 1st part (LEFT)
+					gl.viewport(0, 0, width/2, height);
+					this._draw_basic_pass();
 
-					return;
-
-					// To-Do FRAME-BUFFERS, MATRICES, ALL THE OTHER STUFF...
-
-
-					// Draw left half of canvas only
-					gl.viewport(0, 0, this.ctx_width/2, this.ctx_height);
-
-					gl.drawArrays(
-						gl.TRIANGLES,
-						0,
-						3
-					);
+					// 2nd part (RIGHT)
+					gl.viewport(width/2, 0, width/2, height);
+					this._draw_full_screen_pass();
 				}
 				
 			}
@@ -597,11 +1128,7 @@
 			
 			function draw_scene()
 			{
-				cell_effect.draw(this.canvas_framebuffer, 
-								 canvas_width / 2, 
-								 0, 
-								 canvas_width - canvas_width / 2, 
-								 canvas_height);
+				cell_effect.draw(this.canvas_framebuffer, canvas_width, canvas_height);
 			
 				window.requestAnimationFrame(draw_scene);				
 			}
