@@ -1059,7 +1059,7 @@
 					
 					
 					// Draw Spot with attributes 
-					gl.bindVertexArray(this.basic_program.obj_vao);
+					gl.bindVertexArray(this.basic_pass.obj_vao);
 					gl.drawArrays(
 						gl.TRIANGLES,
 						0,
@@ -1108,7 +1108,7 @@
 					
 					// 1st part (LEFT)
 					gl.viewport(0, 0, width/2, height);
-					//this._draw_basic_pass();
+					this._draw_basic_pass();
 
 					// 2nd part (RIGHT)
 					gl.viewport(width/2, 0, width/2, height);
