@@ -1,3 +1,10 @@
+import sys
+
+if len(sys.argv) < 2:
+    exit(1)
+
+parse_target = sys.argv[1]
+print('Parsing file: ' + sys.argv[1] + '...')
 
 class vec2:
     def __init__(self, u, v):
@@ -39,7 +46,7 @@ faces = []
 
 # MAIN
 all_lines = []
-with open('utah_teapot.obj') as file_in:
+with open(parse_target) as file_in:
     for line in file_in:
         all_lines.append(line)
 
@@ -69,14 +76,15 @@ for line in all_lines:
             face_data = parts[i+1].split('/')
             if len(face_data) != 3:
                 raise ('Bad face data')
-            ps[idx+0] = float(face_data[0])
-            ps[idx+1] = float(face_data[1])
-            ps[idx+2] = float(face_data[2])
-            idx += 1;
-                                        
+            ps[idx+0] = int(face_data[0]) - 1
+            ps[idx+1] = int(face_data[1]) - 1
+            ps[idx+2] = int(face_data[2]) - 1
+            idx += 3
+
         faces.append( face3(ps[0], ps[1], ps[2],
                             ps[3], ps[4], ps[5],
                             ps[6], ps[7], ps[8]) )
+                            
 
 
 print('Num verts: ', len(verts))
@@ -107,13 +115,66 @@ print('MODEL Extents:')
 print(min_x, '<--->', max_x, '\n', min_y, '<--->', max_y, '\n', min_z, '<--->', max_z)
 
 
+
 print('[', end = ' ')
-for i in range(1, len(faces)):
-    face_str = '\t['
-    face_str += str(faces[i].v0) + ', ' + str(faces[i].v1) + ', ' + str(faces[i].v2) + ', '
-    face_str += str(faces[i].t0) + ', ' + str(faces[i].t1) + ', ' + str(faces[i].t2) + ', ' 
-    face_str += str(faces[i].n0) + ', ' + str(faces[i].n1) + ', ' + str(faces[i].n2)
-    face_str += '],'
+for i in range(0, len(faces)):
+
+    # Face Start
+    face_str  = '\t{'
+
+    
+    # Vert 'A'
+    face_str += 'v0: {'
+    face_str += 'x:  ' + str( verts[  faces[i].v0 ].x ) + ', '
+    face_str += 'y:  ' + str( verts[  faces[i].v0 ].y ) + ', '
+    face_str += 'z:  ' + str( verts[  faces[i].v0 ].z ) + ', '
+
+    face_str += 'u:  ' + str( texs[   faces[i].t0 ].u ) + ', '
+    face_str += 'v:  ' + str( texs[   faces[i].t0 ].v ) + ', '
+    
+    face_str += 'nx: ' + str( norms[  faces[i].n0 ].x ) + ', '
+    face_str += 'ny: ' + str( norms[  faces[i].n0 ].y ) + ', '
+    face_str += 'nz: ' + str( norms[  faces[i].n0 ].z ) + ', '
+
+    face_str += '}, '
+
+    
+    # Vert 'B'
+    face_str += 'v1: {'
+    
+    face_str += 'x:  ' + str( verts[  faces[i].v1 ].x ) + ', '
+    face_str += 'y:  ' + str( verts[  faces[i].v1 ].y ) + ', '
+    face_str += 'z:  ' + str( verts[  faces[i].v1 ].z ) + ', '
+
+    face_str += 'u:  ' + str( texs[   faces[i].t1 ].u ) + ', '
+    face_str += 'v:  ' + str( texs[   faces[i].t1 ].v ) + ', '
+    
+    face_str += 'nx: ' + str( norms[  faces[i].n1 ].x ) + ', '
+    face_str += 'ny: ' + str( norms[  faces[i].n1 ].y ) + ', '
+    face_str += 'nz: ' + str( norms[  faces[i].n1 ].z ) + ', '
+
+    face_str += '}, '
+
+    
+    # Vert 'C'
+    face_str += 'v2: {'
+    
+    face_str += 'x:  ' + str( verts[  faces[i].v2 ].x ) + ', '
+    face_str += 'y:  ' + str( verts[  faces[i].v2 ].y ) + ', '
+    face_str += 'z:  ' + str( verts[  faces[i].v2 ].z ) + ', '
+
+    face_str += 'u:  ' + str( texs[   faces[i].t2 ].u ) + ', '
+    face_str += 'v:  ' + str( texs[   faces[i].t2 ].v ) + ', '
+    
+    face_str += 'nx: ' + str( norms[  faces[i].n2 ].x ) + ', '
+    face_str += 'ny: ' + str( norms[  faces[i].n2 ].y ) + ', '
+    face_str += 'nz: ' + str( norms[  faces[i].n2 ].z ) + ', '
+
+    face_str += '}, '
+
+    
+    # Face End
+    face_str += '}, '    
     print(face_str, end=' ')
 print(']\n')
 
