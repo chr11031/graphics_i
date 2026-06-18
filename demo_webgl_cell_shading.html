@@ -318,8 +318,8 @@
 					// Below values map Z from 0 to 1 with more precision afforded to nearer objects
 					this.set(2, 0, 0.0);
 					this.set(2, 1, 0.0);
-					this.set(2, 2, (far + near) / (far - near));
-					this.set(2, 3, (-2.0 * far * near) / (far - near));
+					this.set(2, 2, -(near + far) / (near - far));
+					this.set(2, 3, (2.0 * far * near) / (near - far));
 					// this.set(2, 2, -(1.0/near) / ( (1.0 / far) - (1.0 / near) ));
 					// this.set(2, 3,  (1.0     ) / ( (1.0 / far) - (1.0 / near) ));
 
@@ -489,7 +489,7 @@
 			function _init_gl(canvas)
 			{
 				gl = canvas.getContext("webgl2", {preserveDrawingBuffer: true});					
-				gl.enable(gl.CULL_FACE);
+				//gl.enable(gl.CULL_FACE);
 				gl.enable(gl.DEPTH_TEST);							
 			}
 
@@ -571,6 +571,7 @@
 
 			function _make_2d_RGBA_UINT_texture_from_img(img)
 			{
+				gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 				var texture = gl.createTexture();
 				gl.bindTexture(gl.TEXTURE_2D, texture);
 				
@@ -762,12 +763,10 @@
 						
 						
 						// INDEXes
-						obj_indices.push(i+0);
-						obj_indices.push(i+1);
-						obj_indices.push(i+2);
-
-						
-						i += 3;
+						obj_indices.push(i*3+0);
+						obj_indices.push(i*3+1);
+						obj_indices.push(i*3+2);
+						i += 1;
 					}
 
 
@@ -1041,11 +1040,32 @@
 					this._init_full_screen_pass();
 				}
 				
-				
+
+								
 				_draw_basic_pass()
 				{
 					// Setup program and uniform resources 
 					gl.bindBuffer(gl.UNIFORM_BUFFER, this.basic_pass.ubo);
+					
+
+					//this.basic_pass.model_mat.set_rotate(axis='x', rot_deg)
+					//this.basic_pass.view_mat.set_translate(x, y, z);
+					//this.basic_pass.proj_mat.set_perspective(fov_lr_deg, fov_td_deg, near, far);
+
+
+					this.basic_pass.model_mat.set_identity();
+					var tmp_mat = new Matrix4x4();
+					tmp_mat.set_rotate('x', 15.0);					
+					this.basic_pass.model_mat.set_rotate('y', 30.0)
+					this.basic_pass.model_mat = tmp_mat.mult(this.basic_pass.model_mat);
+					
+					this.basic_pass.view_mat.set_translate(0.0, 0.0, 1.75);
+					this.basic_pass.proj_mat.set_perspective(90.0, 90.0, 0.1, 100.0);
+
+
+
+					
+					
 					gl.bufferSubData(gl.UNIFORM_BUFFER, this.basic_pass.proj_ubo_offset,  this.basic_pass.proj_mat.data,  0);
 					gl.bufferSubData(gl.UNIFORM_BUFFER, this.basic_pass.view_ubo_offset,  this.basic_pass.view_mat.data,  0);
 					gl.bufferSubData(gl.UNIFORM_BUFFER, this.basic_pass.model_ubo_offset, this.basic_pass.model_mat.data, 0);
@@ -1060,11 +1080,14 @@
 					
 					// Draw Spot with attributes 
 					gl.bindVertexArray(this.basic_pass.obj_vao);
-					gl.drawArrays(
-						gl.TRIANGLES,
+					gl.drawElementsInstanced(
+						gl.TRIANGLES, 
+						this.basic_pass.obj_vert_count,
+						gl.UNSIGNED_INT,
 						0,
-						this.basic_pass.obj_vert_count
+						1
 					);
+
 					
 					
 					// Draw Ground with attributes (TODO)
@@ -1102,7 +1125,7 @@
 					gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer_target);
 				
 					// Clear the whole screen
-					gl.clearColor(0.2, 0.2, 0.2, 1);				
+					gl.clearColor(0.2, 0.5, 0.2, 1);				
 					gl.clear(gl.COLOR_BUFFER_BIT);
 					gl.clear(gl.DEPTH_BUFFER_BIT);
 					
