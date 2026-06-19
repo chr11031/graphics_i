@@ -1,4 +1,4 @@
-<html>
+<html>g
 	<head>
 		<title>Cell Shading</title>
 		<style>
@@ -567,17 +567,17 @@
 			}
 
 
-			function _make_2d_RGBA_UINT_texture_from_img(img)
+			function _make_2d_RGBA_UINT_texture_from_img(img, nice_filter, clamp_edge)
 			{
 				gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 				var texture = gl.createTexture();
 				gl.bindTexture(gl.TEXTURE_2D, texture);
 				
 				gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, nice_filter == true ? gl.LINEAR : gl.NEAREST);
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, nice_filter == true ? gl.LINEAR : gl.NEAREST);
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, clamp_edge == true ? gl.CLAMP_TO_EDGE : gl.REPEAT);
+				gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, clamp_edge == true ? gl.CLAMP_TO_EDGE : gl.REPEAT);
 
 				return texture;
 			}
@@ -656,7 +656,7 @@
 																 ] );					
 					
 					
-					this.test_texture = _make_2d_RGBA_UINT_texture_from_img(document.getElementById("spot_texture"));
+					this.test_texture = _make_2d_RGBA_UINT_texture_from_img(document.getElementById("spot_texture"), true, true);
 
 
 					this.view_mat = new Matrix4x4();
@@ -873,7 +873,7 @@
 
 
 					// Load OBJ texture resource
-					this.basic_pass.obj_texture = _make_2d_RGBA_UINT_texture_from_img(document.getElementById("spot_texture"));
+					this.basic_pass.obj_texture = _make_2d_RGBA_UINT_texture_from_img(document.getElementById("spot_texture"), true, true);
 
 
 					// Per-Model 'Model' matrix
@@ -1020,7 +1020,7 @@
 					this.basic_pass.floor_vert_count = floor_indices.length;
 				
 					// Load OBJ texture resource
-					this.basic_pass.floor_texture = _make_2d_RGBA_UINT_texture_from_img(document.getElementById("grass_texture"));
+					this.basic_pass.floor_texture = _make_2d_RGBA_UINT_texture_from_img(document.getElementById("grass_texture"), true, false);
 
 					// Per-Model 'Model' matrix
 					this.basic_pass.floor_model_mat = new Matrix4x4();
