@@ -1,0 +1,35 @@
+// Name: Grass Stripes Texture
+// Date: 6/19/2026
+// Author: Dane Christensen
+// Random function taken from: https://thebookofshaders.com/10/
+float random (vec2 st) {
+    return fract(sin(dot(st.xy,
+                         vec2(12.9898,78.233)))*
+                            43758.5453123);
+}
+
+
+const float lane_width = 64.0;
+const float edge_coef  = 1.0/8.0 * lane_width;
+
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 uv = fragCoord/iResolution.xy;
+    float rand = random(uv);
+    rand = rand * 2.0 - 1.0; // Range [-1,+1]
+
+
+    int x = int(fragCoord.x);
+    int lane = int(lane_width);
+    int border_off = int(edge_coef * rand);
+
+    if ((x+border_off) % (2*lane) < lane)
+        fragColor = vec4(0.0, 0.9, 0.0, 1.0);
+    else
+        fragColor = vec4(0.0, 0.95, 0.0, 1.0);
+        
+
+    fragColor.g += 0.035 * rand;
+        
+}
