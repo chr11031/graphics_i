@@ -300,33 +300,33 @@
 					var fov_lr_rad = fov_lr_deg * Math.PI / 180.0;
 					var fov_td_rad = fov_td_deg * Math.PI / 180.0;
 
-					var top = near * Math.tan(fov_td_rad / 2.0);
+					var top = -near * Math.tan(fov_td_rad / 2.0);
 					var bot = -top;
-					var right = near * Math.tan(fov_lr_rad / 2.0);
+					var right = -near * Math.tan(fov_lr_rad / 2.0);
 					var left = -right;
 
-					this.set(0, 0, 2.0 * near / (right - left));
+					this.set(0, 0, -2.0 * near / (right - left));
 					this.set(0, 1, 0.0);
-					this.set(0, 2, (-near * (right + left)) / (right - left));
+					this.set(0, 2, (right + left) / (right - left));
 					this.set(0, 3, 0.0);
 
 					this.set(1, 0, 0.0);
-					this.set(1, 1, 2.0 * near / (top - bot));
-					this.set(1, 2, (-near * (top + bot)) / (top - bot));
+					this.set(1, 1, -2.0 * near / (top - bot));
+					this.set(1, 2, (top + bot) / (top - bot));
 					this.set(1, 3, 0.0);
 
 					// Below values map Z from 0 to 1 with more precision afforded to nearer objects
 					this.set(2, 0, 0.0);
 					this.set(2, 1, 0.0);
-					this.set(2, 2, -(near + far) / (near - far));
-					this.set(2, 3, (2.0 * far * near) / (near - far));
+					this.set(2, 2, -(far + near) / (far - near));
+					this.set(2, 3, (-2.0 * far * near) / (far - near));
 					// this.set(2, 2, -(1.0/near) / ( (1.0 / far) - (1.0 / near) ));
 					// this.set(2, 3,  (1.0     ) / ( (1.0 / far) - (1.0 / near) ));
 
-					this.set(3, 0, 0.0);
-					this.set(3, 1, 0.0);
-					this.set(3, 2, 1.0);
-					this.set(3, 3, 0.0);
+					this.set(3, 0,  0.0);
+					this.set(3, 1,  0.0);
+					this.set(3, 2, -1.0);
+					this.set(3, 3,  0.0);
 				}
 
 				set_columns_basis_r3(col_right, col_up, col_forward)
@@ -1055,12 +1055,12 @@
 
 					this.basic_pass.model_mat.set_identity();
 					var tmp_mat = new Matrix4x4();
-					tmp_mat.set_rotate('x', 15.0);					
-					this.basic_pass.model_mat.set_rotate('y', 30.0)
+					tmp_mat.set_rotate('x', -25.0);					
+					this.basic_pass.model_mat.set_rotate('y', -215.0)
 					this.basic_pass.model_mat = tmp_mat.mult(this.basic_pass.model_mat);
 					
-					this.basic_pass.view_mat.set_translate(0.0, 0.0, 1.75);
-					this.basic_pass.proj_mat.set_perspective(90.0, 90.0, 0.1, 100.0);
+					this.basic_pass.view_mat.set_translate(0.0, 0.0, -2.5);
+					this.basic_pass.proj_mat.set_perspective(60.0, 60.0, 0.1, 100.0);
 
 
 
