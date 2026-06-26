@@ -116,65 +116,68 @@ print(min_x, '<--->', max_x, '\n', min_y, '<--->', max_y, '\n', min_z, '<--->', 
 
 
 
-print('[', end = ' ')
+print('[\n', end = ' ')
 for i in range(0, len(faces)):
 
-    # Face Start
-    face_str  = '\t{'
+    # Face Start 
+    face_str  = '\t{\n'
 
     
     # Vert 'A'
-    face_str += 'v0: {'
-    face_str += 'x:  ' + str( verts[  faces[i].v0 ].x ) + ', '
-    face_str += 'y:  ' + str( verts[  faces[i].v0 ].y ) + ', '
-    face_str += 'z:  ' + str( verts[  faces[i].v0 ].z ) + ', '
+    face_str += '\t\t\"v0\": {\n'
+    face_str += '\t\t\t\"x\":  ' + str( verts[  faces[i].v0 ].x ) + ', \n'
+    face_str += '\t\t\t\"y\":  ' + str( verts[  faces[i].v0 ].y ) + ', \n'
+    face_str += '\t\t\t\"z\":  ' + str( verts[  faces[i].v0 ].z ) + ', \n\n'
 
-    face_str += 'u:  ' + str( texs[   faces[i].t0 ].u ) + ', '
-    face_str += 'v:  ' + str( texs[   faces[i].t0 ].v ) + ', '
+    face_str += '\t\t\t\"u\":  ' + str( texs[   faces[i].t0 ].u ) + ', \n'
+    face_str += '\t\t\t\"v\":  ' + str( texs[   faces[i].t0 ].v ) + ', \n\n'
     
-    face_str += 'nx: ' + str( norms[  faces[i].n0 ].x ) + ', '
-    face_str += 'ny: ' + str( norms[  faces[i].n0 ].y ) + ', '
-    face_str += 'nz: ' + str( norms[  faces[i].n0 ].z ) + ', '
+    face_str += '\t\t\t\"nx\": ' + str( norms[  faces[i].n0 ].x ) + ', \n'
+    face_str += '\t\t\t\"ny\": ' + str( norms[  faces[i].n0 ].y ) + ', \n'
+    face_str += '\t\t\t\"nz\": ' + str( norms[  faces[i].n0 ].z ) + '  \n'
 
-    face_str += '}, '
+    face_str += '\t\t}, \n'
 
     
     # Vert 'B'
-    face_str += 'v1: {'
+    face_str += '\t\t\"v1\": {\n'
     
-    face_str += 'x:  ' + str( verts[  faces[i].v1 ].x ) + ', '
-    face_str += 'y:  ' + str( verts[  faces[i].v1 ].y ) + ', '
-    face_str += 'z:  ' + str( verts[  faces[i].v1 ].z ) + ', '
+    face_str += '\t\t\t\"x\":  ' + str( verts[  faces[i].v1 ].x ) + ', \n'
+    face_str += '\t\t\t\"y\":  ' + str( verts[  faces[i].v1 ].y ) + ', \n'
+    face_str += '\t\t\t\"z\":  ' + str( verts[  faces[i].v1 ].z ) + ', \n\n'
 
-    face_str += 'u:  ' + str( texs[   faces[i].t1 ].u ) + ', '
-    face_str += 'v:  ' + str( texs[   faces[i].t1 ].v ) + ', '
+    face_str += '\t\t\t\"u\":  ' + str( texs[   faces[i].t1 ].u ) + ', \n'
+    face_str += '\t\t\t\"v\":  ' + str( texs[   faces[i].t1 ].v ) + ', \n\n'
     
-    face_str += 'nx: ' + str( norms[  faces[i].n1 ].x ) + ', '
-    face_str += 'ny: ' + str( norms[  faces[i].n1 ].y ) + ', '
-    face_str += 'nz: ' + str( norms[  faces[i].n1 ].z ) + ', '
+    face_str += '\t\t\t\"nx\": ' + str( norms[  faces[i].n1 ].x ) + ', \n'
+    face_str += '\t\t\t\"ny\": ' + str( norms[  faces[i].n1 ].y ) + ', \n'
+    face_str += '\t\t\t\"nz\": ' + str( norms[  faces[i].n1 ].z ) + '  \n'
 
-    face_str += '}, '
+    face_str += '\t\t}, \n'
 
     
     # Vert 'C'
-    face_str += 'v2: {'
+    face_str += '\t\t\"v2\": {\n'
     
-    face_str += 'x:  ' + str( verts[  faces[i].v2 ].x ) + ', '
-    face_str += 'y:  ' + str( verts[  faces[i].v2 ].y ) + ', '
-    face_str += 'z:  ' + str( verts[  faces[i].v2 ].z ) + ', '
+    face_str += '\t\t\t\"x\":  ' + str( verts[  faces[i].v2 ].x ) + ', \n'
+    face_str += '\t\t\t\"y\":  ' + str( verts[  faces[i].v2 ].y ) + ', \n'
+    face_str += '\t\t\t\"z\":  ' + str( verts[  faces[i].v2 ].z ) + ', \n\n'
 
-    face_str += 'u:  ' + str( texs[   faces[i].t2 ].u ) + ', '
-    face_str += 'v:  ' + str( texs[   faces[i].t2 ].v ) + ', '
+    face_str += '\t\t\t\"u\":  ' + str( texs[   faces[i].t2 ].u ) + ', \n'
+    face_str += '\t\t\t\"v\":  ' + str( texs[   faces[i].t2 ].v ) + ', \n\n'
     
-    face_str += 'nx: ' + str( norms[  faces[i].n2 ].x ) + ', '
-    face_str += 'ny: ' + str( norms[  faces[i].n2 ].y ) + ', '
-    face_str += 'nz: ' + str( norms[  faces[i].n2 ].z ) + ', '
+    face_str += '\t\t\t\"nx\": ' + str( norms[  faces[i].n2 ].x ) + ', \n'
+    face_str += '\t\t\t\"ny\": ' + str( norms[  faces[i].n2 ].y ) + ', \n'
+    face_str += '\t\t\t\"nz\": ' + str( norms[  faces[i].n2 ].z ) + '  \n'
 
-    face_str += '}, '
+    face_str += '\t\t}  \n'
 
     
     # Face End
-    face_str += '}, '    
-    print(face_str, end=' ')
+    if i < len(faces)-1:    
+        face_str += '\t},\n '
+    else:
+        face_str += '\t}\n '
+    print(face_str, end='')
 print(']\n')
 
