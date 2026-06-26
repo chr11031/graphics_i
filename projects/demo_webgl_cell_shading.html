@@ -5,9 +5,11 @@
 			table {border: 0px solid;}
 		</style>
 		
-		<script type="text/javascript" src="/js/Loaders/Resource_Loader.js"></script>
 		<script type="text/javascript" src="/js/Types/RGBA.js"></script>
 		<script type="text/javascript" src="/js/Types/Matrix4x4.js"></script>
+		
+		<script type="text/javascript" src="/js/Loaders/Resource_Loader.js"></script>
+		<script type="text/javascript" src="/js/Cameras/Orbit_Camera.js"></script>
 		<script type="text/javascript" src="/js/Data_Structures/Drawable.js"></script>
 		<script type="text/javascript" src="/js/Effects/Cell_Shading.js"></script>
 		
@@ -18,43 +20,16 @@
 			var gl = null;
 
 
+			// LOCAL state (View)
+			var mouse_last_x = null;
+			var camera = null;
+
+
 			// LOCAL state (GL)
 			var cell_effect = null;
 			var spot_drawable = null;
 			var grass_drawable = null;
-			var view_mat = null;
-			var proj_mat = null;
 
-
-			// LOCAL state (View)
-			var mouse_last_x = null;
-			var camera_state = null;
-			
-
-			class Camera_State
-			{
-				constructor()
-				{
-					this.yaw_deg = 0.0;
-				}
-				
-				set_yaw(deg)
-				{
-					this.yaw_deg = deg;
-				}
-				
-				increment(offset)
-				{
-					this.yaw_deg += offset;
-				}
-				
-				yaw()
-				{
-					return this.yaw_deg;
-				}
-			}
-			
-			
 
 			function mouse_start(e)
 			{
@@ -68,7 +43,7 @@
 				{
 					var delta_x = e.offsetX - mouse_last_x; 
 					
-					camera_state.increment(-delta_x / 10);
+					camera.increment_yaw(-delta_x / 10);
 					
 					mouse_last_x = e.offsetX;
 				}
@@ -140,18 +115,17 @@
 			{
 				var framebuffer = gl.createFramebuffer();
 				gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-				
-				
+								
 				var num_attachments = attachments.length;
-				if (num_attachments > 16)
+				if (num_attachments > 8)
 				{
-					alert('That may be too many attachments for WebGL (' + num_attachments + '), bailing out');
-					return null;
+					// If there are 8 color attachments and 1 depth/stencil then 
+					console.log('Warning: This may be too many attachments for WebGL: (' + num_attachments + ') total. Proceed with caution');
 				}
 
 				var used_attachments = [];
 				
-				for (var i = 0; i < attachments.length; i++)
+				for (var i = 0; i < num_attachments; i++)
 				{
 					var attachment_keys = Object.keys(attachments[i]);
 					if (attachment_keys.length == 3 && attachment_keys.includes('texture') && attachment_keys.includes('att') && attachment_keys.includes('tex'))
@@ -551,25 +525,12 @@
 			
 			function draw_scene()
 			{
-				// PROJ matrix
-				proj_mat.set_perspective(60.0, 60.0, 0.1, 100.0);
-
-
-				// View Matrix
-				var A = new Matrix4x4();
-				var B = new Matrix4x4();
-				var C = new Matrix4x4();
-				A.set_rotate('y', camera_state.yaw());					
-				B.set_rotate('x', -20.0);
-				C.set_translate(0.0, 0.0, -2.5);
-				view_mat = C.mult( B.mult( A ) );
-			
 				// Choose a background color
 				var background_color = new RGBA(0.45, 0.98, 0.99, 1);
 			
-				cell_effect.draw(null, // <-- 'null' references the default Framebuffer in WebGL
-								 proj_mat, 
-								 view_mat, 
+				cell_effect.draw(null, 		// <-- 'null' references the default Framebuffer in WebGL
+								 camera.proj_matrix(), 
+								 camera.view_matrix(), 
 								 [spot_drawable, grass_drawable], 
 								 background_color);
 
@@ -588,22 +549,17 @@
 				frame_canvas.addEventListener("mouseup", mouse_end);
 
 
-				view_mat = new Matrix4x4();
-				proj_mat = new Matrix4x4();
-
-
 				// LOCAL state (View)
 				mouse_last_x = null;
-				camera_state = null;
+				camera = new Orbit_Camera(60.0, 60.0, 0.1, 100.0, // fov_lr, fov_td, near, far
+									 	  2.5, -30.0, -20.0);	  // orbit_distance, yaw, roll
 
 
-				_init_gl(frame_canvas);
-				
+				// LOCAL state (GL)
+				_init_gl(frame_canvas);				
 				_create_spot_drawable();
 				_create_grass_drawable();
 							
-				camera_state = new Camera_State();
-				camera_state.set_yaw(-30.0);
 				
 				// Effect is half the screen size so it can be used on the right half of the screen only
 				cell_effect = new Cell_Shading(frame_canvas.width, frame_canvas.height);
@@ -613,12 +569,6 @@
 			}
 			
 				
-			function resources_ready(resource_sets)
-			{
-				resources = resource_sets['demo'];
-				initialize_demo();
-			}
-
 			function load_resources()
 			{	
 				// Load the Engine resources
@@ -639,8 +589,13 @@
 				var all_resources_dict = {
 					demo:		demo_resource_list,
 				};
+				
 
-				load_external_resources(all_resources_dict, resources_ready);
+				load_external_resources(all_resources_dict, function (resource_sets)
+				{
+					resources = resource_sets['demo'];
+					initialize_demo();
+				});
 			}
 			
 		</script>
@@ -684,8 +639,5 @@
 				<li>JS tells the window to redraw the scene when appropriate: see "window.requestAnimationFrame(draw_scene);".</li>
 			</ol>
 		</p>
-		
-		
-		</br>
 	</body>
 </html>
