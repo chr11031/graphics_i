@@ -49,14 +49,15 @@ class Cell_Shading
 			source_texture_location: null,
 		};			
 	
+	
 		this._init();
 	}
 	
 	
 	_init_framebuffer()
 	{
-		this.first_pass_texture = _make_2d_RGBA_UINT_texture(this.ctx_width/2, this.ctx_height);
-		this.first_pass_depth   = _make_2d_depth_texture(this.ctx_width/2, this.ctx_height);
+		this.first_pass_texture = _make_2d_RGBA_UINT_texture(this.ctx_width/2, this.ctx_height, gl.LINEAR, gl.CLAMP_TO_EDGE);
+		this.first_pass_depth   = _make_2d_depth_texture(this.ctx_width/2, this.ctx_height, gl.LINEAR, gl.CLAMP_TO_EDGE);
 		this.first_pass_fbo     = _make_framebuffer( [
 														{ texture: this.first_pass_texture, att: gl.COLOR_ATTACHMENT0, tex: gl.TEXTURE_2D },
 														{ texture: this.first_pass_depth, 	att: gl.DEPTH_ATTACHMENT,  tex: gl.TEXTURE_2D },
@@ -64,24 +65,8 @@ class Cell_Shading
 	}
 
 	
-	_init_albedo_pass_obj()
-	{
-
-	}
-	
-	
-	_init_albedo_pass_floor()
-	{				
-
-	}
-	
-	
 	_init_albedo_pass()
 	{
-		this._init_albedo_pass_obj();
-	
-		this._init_albedo_pass_floor();
-
 		// Program
 		var vs = _make_gl_shader(resources["albedo.vs"], gl.VERTEX_SHADER);
 		var fs = _make_gl_shader(resources["albedo.fs"], gl.FRAGMENT_SHADER);
@@ -305,6 +290,10 @@ class Cell_Shading
 		 drawables, 
 		 clear_color)
 	{
+		
+		
+		
+		
 		// #1. BIND to offscreen Framebuffer, Clear it 
 		gl.bindFramebuffer(gl.FRAMEBUFFER, this.first_pass_fbo);
 		gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
