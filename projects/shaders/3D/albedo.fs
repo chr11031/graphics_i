@@ -8,8 +8,6 @@ smooth in vec3 interp_normal;
 
 layout (location=0) out vec4 out_color;
 
-const vec3 light_source = vec3(0.0, 100.0, 0.0);
-
 void main() {
 
 	// Surface shading...				

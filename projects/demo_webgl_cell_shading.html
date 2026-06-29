@@ -478,6 +478,7 @@
 							width=1024 
 							height=512>
 					</canvas>	
+				</td>
 			</tr>
 		</table>
 
@@ -491,12 +492,12 @@
 				<li>One UBO (Uniform Buffer Object) for uploading MVP matrices for the off screen render pass. Offsets and locations for each matrix, "Uniform" texture inputs for shaders are also loaded for reference on each drawn frame.</li>					
 				<li>Four textures: Two color albedo textures are loaded for Spot the cow and the grassy ground beneath them. A third color texture is created with no initial data. Finally, a fourth, depth texture is created as well.</li>					
 				<li>One Framebuffer for off-screen rendering. The third, color texture and the fourth, depth texture are attached to this Framebuffer so they will be updated/drawn to rather than the default Framebuffer. Said default Framebuffer is provided by default and does not require any initialization.</li>					
-				<li>Two Shader Programs, each including a Vertex Shader and Fragment Shader. Each pair of VS/FS are linked into a WebGL program, each of which is bound when completing the albedo and cell shading passes respectively.
+				<li>Two Shader Programs, each including a Vertex Shader and Fragment Shader. Each pair of VS/FS are linked into a WebGL program, each of which is bound when completing the albedo and cell shading passes respectively.</li>
 			</ol>
 			Procedurally:
 			<ol>
-				<li>JS initializes WebGL and enables the DEPTH, SCISSOR, &amp back-face CULLing tests. Then the rendering loop begins.</li>
-				<li>A collection of "Drawable"s (containing per-object Uniforms, VAO, type, vertex count, &amp indexed/non-indexed data are passed to the "Cell_Shading" effect. 
+				<li>JS initializes WebGL and enables the DEPTH, SCISSOR, &amp back-face CULLing tests.</li>
+				<li>A collection of "Drawable"s (containing per-object Uniforms, VAO, type, vertex count, &amp indexed/non-indexed) data are created so they can be passed to the "Cell_Shading" effect. Then the rendering loop begins.</li>
 				<li>WebGL binds to an off-screen Framebuffer with one texture attached as the first color output attachment and one depth attachment. A WebGL "Clear" operation gives the sky its light blue color. With this off-screen Framebuffer targeted by WebGL, two draw calls render the scene with the albedo details only (Spot the cow &amp the Grass plane under them). At this point, no visible change to the screen is seen.</li>
 				<li>A "Blit" operation is performed, copying rendering data from the off screen Framebuffer to regions in the default (visible) Framebuffer for the left half of the viewing screen.</li>				
 				<li>Limiting the viewport to the right half of the screen, with the default Framebuffer bound, a second pass draws a single viewport-filling square (two triangles). In this draw call, the fragment shader uses the texture, previously attached to the off screen Framebuffer.</li>

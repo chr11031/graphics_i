@@ -49,6 +49,10 @@ function _make_framebuffer(attachments)
 		}
 	}
 	
+	
+	// Unbind currently bound framebuffer
+	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+	
 	return framebuffer;
 }	
 	

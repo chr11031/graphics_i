@@ -1,0 +1,440 @@
+<html style="font-family: 'Roboto', sans-serif;">
+	<head>
+		<title>Project 2: Teapots</title>
+		<style>
+			table {border: 0px solid;}
+		</style>
+		
+		<script type="text/javascript" src="/js/Types/RGBA.js"></script>
+		<script type="text/javascript" src="/js/Types/Matrix4x4.js"></script>		
+		<script type="text/javascript" src="/js/Helpers/Shader.js"></script>
+		<script type="text/javascript" src="/js/javascriptGL/javascriptGL.js"></script>
+
+		<script type="text/javascript" src="/js/Loaders/Resource_Loader.js"></script>
+		<script type="text/javascript" src="/js/Cameras/Orbit_Camera.js"></script>
+		
+		
+		<script>
+
+			// App state
+			var resources = null;
+			
+			var webGL = null;
+			var webGL_client_data = null;
+			var webGL_program_handle = null;
+
+			var jsGL = null;			
+			var jsGL_client_data = null;
+			var jsGL_program_handle = null;
+
+			var ctx_width = null;
+			var ctx_height = null;
+
+
+			// LOCAL state (View)
+			var camera = null;
+
+			
+			function _init_gl(gl)
+			{
+				gl.enable(gl.CULL_FACE);
+				gl.enable(gl.DEPTH_TEST);							
+				gl.enable(gl.SCISSOR_TEST);
+			}
+			
+
+			function _build_client_teapot_data(gl, gl_shader_program)
+			{
+				var gl_client_data = {
+					vertices_vbo: null,
+					normals_vbo: null,
+					gouraud_vao: null,
+					
+					gouraud_ubo: null,
+					view_mat_loc: null,
+					proj_mat_loc: null,
+					light_pos_loc: null,				
+				};
+			
+				var obj_verts =   [];
+				var obj_norms =   [];
+			
+				var teapot_obj = resources["teapot_obj"];
+			
+				var i = 0;
+				while (i < teapot_obj.length)
+				{
+					// XYZs
+					obj_verts.push(teapot_obj[i].v0.x);
+					obj_verts.push(teapot_obj[i].v0.y);
+					obj_verts.push(teapot_obj[i].v0.z);
+					
+					obj_verts.push(teapot_obj[i].v1.x);
+					obj_verts.push(teapot_obj[i].v1.y);
+					obj_verts.push(teapot_obj[i].v1.z);
+
+					obj_verts.push(teapot_obj[i].v2.x);
+					obj_verts.push(teapot_obj[i].v2.y);
+					obj_verts.push(teapot_obj[i].v2.z);
+					
+					
+					// NORMs
+					obj_norms.push(teapot_obj[i].v0.nx);
+					obj_norms.push(teapot_obj[i].v0.ny);
+					obj_norms.push(teapot_obj[i].v0.nz);
+					
+					obj_norms.push(teapot_obj[i].v1.nx);
+					obj_norms.push(teapot_obj[i].v1.ny);
+					obj_norms.push(teapot_obj[i].v1.nz);
+					
+					obj_norms.push(teapot_obj[i].v2.nx);
+					obj_norms.push(teapot_obj[i].v2.ny);
+					obj_norms.push(teapot_obj[i].v2.nz);
+				}
+
+
+				// OBJ Verts
+				gl_client_data.vertices_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					gl_client_data.vertices_vbo
+				);
+
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(obj_verts),
+					gl.STATIC_DRAW
+				);
+				
+				// OBJ NORMs 
+				gl_client_data.normals_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					gl_client_data.normals_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(obj_norms),
+					gl.STATIC_DRAW
+				);
+				
+				// OBJ VAO
+				gl_client_data.teapot_vao = gl.createVertexArray();
+				gl.bindVertexArray(gl_client_data.teapot_vao);
+
+				gl.bindBuffer(gl.ARRAY_BUFFER, gl_client_data.vertices_vbo);
+				gl.enableVertexAttribArray(0);
+				gl.vertexAttribPointer(
+					0,
+					3,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, gl_client_data.normals_vbo);
+				gl.enableVertexAttribArray(1);
+				gl.vertexAttribPointer(
+					1,
+					3,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				// Unbind VAO attachment
+				gl.bindVertexArray(null);
+
+
+
+				// Shader specific UBO allocation and internal member offsets
+				gl_client_data.gouraud_ubo = gl.createBuffer();
+				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.gouraud_ubo);
+				
+				var block_index = gl.getUniformBlockIndex(gl_shader_program, "gouraud");
+												  
+		
+				var block_size = gl.getActiveUniformBlockParameter(this.albedo_pass.program,
+																   block_index,
+																   gl.UNIFORM_BLOCK_DATA_SIZE);
+
+				gl.bufferData(gl.UNIFORM_BUFFER, block_size, gl.DYNAMIC_DRAW);
+
+				gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this.albedo_pass.ubo);
+				gl.uniformBlockBinding(this.albedo_pass.program, block_index, 0);
+
+				
+				var ubo_names = ["proj", "view", "light_pos"];
+				var ubo_indices = gl.getUniformIndices(this.albedo_pass.program,
+													   ubo_names);
+				var ubo_offsets = gl.getActiveUniforms(this.albedo_pass.program,
+													   ubo_indices,
+													   gl.UNIFORM_OFFSET);
+
+				gl_client_data.proj_mat_loc  = ubo_offsets[0];
+				gl_client_data.view_mat_loc  = ubo_offsets[1];
+				gl_client_data.light_pos_loc = ubo_offsets[2];
+
+
+				return gl_client_data;
+			}
+						
+					
+			function _build_program_webGL(gl)
+			{
+				var vs = _make_gl_shader(resources["gouraud.vs"], gl.VERTEX_SHADER);				
+				var fs = _make_gl_shader(resources["gouraud.fs"], gl.FRAGMENT_SHADER);
+				var program = _make_gl_program(vs, fs);
+					
+				return program;
+			}
+			
+			
+			function _build_program_jsGL(gl)
+			{	
+				var shader_program = {
+	
+					vertex: {
+						uniform_blocks:		[	
+												{
+													block_index: 0,
+													block_binding: null,
+													members: [
+														{ type: jsGL.JSGL_MAT4, name: "proj"      },
+														{ type: jsGL.JSGL_MAT4, name: "view"      },
+														{ type: jsGL.JSGL_VEC3, name: "light_pos" },
+													]						
+												}
+											],
+						shader: 			jsGL_gouraud_vertex_shader,					
+					},
+								
+					varyings: 				[
+												{ type: jsGL.JSGL_VEC3, name: "interp_color" }				
+											],
+					
+					fragment: {
+						uniform_blocks:		[],
+						shader:				jsGL_gouraud_fragment_shader,
+					},
+					
+				};
+			
+				return shader_program;
+			}
+			
+						
+			function jsGL_gouraud_vertex_shader(input_vertex_uniforms,
+												input_vertex_data,
+												output_varyings)
+			{
+				// Per-Vertex Data
+				var pos          = input_vertex_data.pos;
+				var normal       = input_vertex_data.normal;
+
+				// Uniforms (Draw Call Globals)
+				var proj         = input_vertex_uniforms_arr.proj;
+				var view         = input_vertex_uniforms_arr.view;
+				var light_pos    = input_vertex_uniforms_arr.light_pos;
+
+				// Data to interpolate between vertices
+				output_varyings.interp_color.r = 1.0;
+				output_varyings.interp_color.g = 0.0;
+				output_varyings.interp_color.b = 0.0;
+				
+				// Returns gl_Position;
+				return ???;
+			}
+			
+			
+			function jsGL_gouraud_fragment_shader(input_fragment_uniforms,
+												  input_varyings,
+												  output_attachments)
+			{				
+				// Interpolated data
+				var interp_color = input_varyings.interp_color;
+			
+				// Writes to output_attachments
+				output_attachments[0] = new RGBA(interp_color.r, 
+												 interp_color.g,
+												 interp_color.b,
+												 1.0);
+			}
+			
+			
+			function _clear_backgrounds(gl)
+			{
+				var W = 0.92;
+
+				// Draw the top-left section 
+				gl.scissor(0, ctx_height/2, ctx_width/2, ctx_height/2);
+				gl.clearColor(1.0, W, W, 1.0);
+				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+			
+								
+				// Draw the top-right section 
+				gl.scissor(ctx_width/2, ctx_height/2, ctx_width/2, ctx_height/2);
+				gl.clearColor(W, W, W, 1.0);
+				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+
+
+				// Draw the bottom-left section		
+				gl.scissor(0, 0, ctx_width/2, ctx_height/2);
+				gl.clearColor(W, 1.0, W, 1.0);			
+				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+			
+				// Draw the bottom-right section 
+				gl.scissor(ctx_width/2, 0, ctx_width/2, ctx_height/2);
+				gl.clearColor(W, W, 1.0, 1.0);
+				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	
+			}
+			
+			function _draw_scene(gl)
+			{
+				this._clear_backgrounds(gl);
+
+				
+				
+				
+				
+			}
+
+
+
+
+			
+			function draw_scene()
+			{
+				// Part #4 - Rendering with the pipeline
+				this._draw_scene(webGL, webGL_client_data);
+				this._draw_scene(jsGL,  jsGL_client_data );
+				
+				
+				// Redraw the screen
+				window.requestAnimationFrame(draw_scene);				
+			}
+			
+			
+			function initialize_demo()
+			{
+				// LOCAL state (View)
+				camera = new Orbit_Camera(60.0, 60.0, 0.1, 100.0, // fov_lr, fov_td, near, far
+									 	  2.5, -30.0, -20.0);	  // orbit_distance, yaw, roll
+
+
+
+
+				// Part #1 - Initialization 
+				var webGL_canvas = document.getElementById("webGL_canvas");
+				webGL = webGL_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});					
+				_init_gl(webGL);
+				
+				var jsGL_canvas = document.getElementById("jsGL_canvas");
+				jsGL = new javascriptGL(jsGL_canvas);
+				_init_gl(jsGL);
+
+
+				if ((webGL_canvas.width  != jsGL_canvas.width ) ||
+					(webGL_canvas.height != jsGL_canvas.height))
+				{
+					alert("Error: webGL & jsGL canvases are of mismatched sizes");
+					return;
+				}
+				ctx_width = webGL_canvas.width;
+				ctx_height = webgl_canvas.height;
+
+
+				// Part #2 - Vertex Shader, Fragment Shader, Shader Program (completed for you)
+				webGL_program_handle = _build_program_webGL(webGL);
+				jsGL_program_handle  = _build_program_jsGL(jsGL);
+
+
+				// Part #3 - VBO, VAO, UBO dependencies
+				webGL_client_data = _build_client_teapot_data(webGL, webGL_program_handle);
+				jsGL_client_data  = _build_client_teapot_data(jsGL,  jsGL_program_handle);
+
+								
+				// window.requestAnimationFrame(draw_scene);
+			}
+			
+				
+			function load_resources()
+			{	
+				// Load the Engine resources
+				var demo_resource_list = [
+					["teapot_obj",		"/assets/objs/teapot.json",		"json"],
+					["gouraud.vs",		"/shaders/gouraud.vs",			"text" ],
+					["gouraud.fs",		"/shaders/gouraud.fs",			"text" ],
+				];
+				
+				var all_resources_dict = {
+					demo:		demo_resource_list,
+				};
+				
+				load_external_resources(all_resources_dict, function (resource_sets)
+				{
+					resources = resource_sets['demo'];
+					initialize_demo();
+				});
+			}
+			
+		</script>
+		
+	</head>	
+
+	<body onload="load_resources()">
+		<h1>Project 2: Teapots</h1>	
+		<p>
+			Name: Dane Christensen</br>
+			Date: 6/16/2026
+		</p>
+		<table>
+			<tr>
+				<td style="border-color:green; border-style: solid;">
+					<canvas	id="webGL_canvas"
+							style="background-color: #FFFFFF;" 
+							width=512 
+							height=512>
+					</canvas>	
+				</td>
+				<td style="border-color:gray; border-style: solid;">
+					<canvas	id="jsGL_canvas"
+							style="background-color: #FFFFFF;" 
+							width=512 
+							height=512>
+					</canvas>	
+				</td>
+			</tr>
+		</table>
+
+		<p>	This page demonstrates how a multiple pass effect for cell shading can be realized. Click to drag the camera around the cow subject.
+			<br/>
+			<br/>
+			From an API point of view, several WebGL related objects are created / loaded. These include:
+			<ol type="A">
+				<li>Ten VBOs (Vertex Buffer Objects). Spot the cow and the grass plane each have one vertex VBO, one UV VBO, one normal vector VBO, and one index  buffer VBO. By contrast, the full screen quad drawn in the second pass only makes use of a vertex VBO and a UV VBO.</li>					
+				<li>Three VAOs (Vertex Array Objects). Spot the cow and the grassy plane beneath Spot are each drawn using "DrawElements" WebGL calls, which use indexed VBO data for vertex assembly and are organized as dictated by their respective VAOs. The cell shading pass does not use index vertex data and by contrast uses the "DrawArrays" WebGL call, still requiring a VAO but not a vertex index buffer.</li>					
+				<li>One UBO (Uniform Buffer Object) for uploading MVP matrices for the off screen render pass. Offsets and locations for each matrix, "Uniform" texture inputs for shaders are also loaded for reference on each drawn frame.</li>					
+				<li>Four textures: Two color albedo textures are loaded for Spot the cow and the grassy ground beneath them. A third color texture is created with no initial data. Finally, a fourth, depth texture is created as well.</li>					
+				<li>One Framebuffer for off-screen rendering. The third, color texture and the fourth, depth texture are attached to this Framebuffer so they will be updated/drawn to rather than the default Framebuffer. Said default Framebuffer is provided by default and does not require any initialization.</li>					
+				<li>Two Shader Programs, each including a Vertex Shader and Fragment Shader. Each pair of VS/FS are linked into a WebGL program, each of which is bound when completing the albedo and cell shading passes respectively.
+			</ol>
+			Procedurally:
+			<ol>
+				<li>JS initializes WebGL and enables the DEPTH, SCISSOR, &amp back-face CULLing tests. Then the rendering loop begins.</li>
+				<li>A collection of "Drawable"s (containing per-object Uniforms, VAO, type, vertex count, &amp indexed/non-indexed data are passed to the "Cell_Shading" effect. 
+				<li>WebGL binds to an off-screen Framebuffer with one texture attached as the first color output attachment and one depth attachment. A WebGL "Clear" operation gives the sky its light blue color. With this off-screen Framebuffer targeted by WebGL, two draw calls render the scene with the albedo details only (Spot the cow &amp the Grass plane under them). At this point, no visible change to the screen is seen.</li>
+				<li>A "Blit" operation is performed, copying rendering data from the off screen Framebuffer to regions in the default (visible) Framebuffer for the left half of the viewing screen.</li>				
+				<li>Limiting the viewport to the right half of the screen, with the default Framebuffer bound, a second pass draws a single viewport-filling square (two triangles). In this draw call, the fragment shader uses the texture, previously attached to the off screen Framebuffer.</li>
+				<li>The Fragment Shader in said draw call, (see "cell_shade_fs" script in the HTML source code) samples from the texture used in the off-screen Framebuffer are used to calculate a new output color. When the color values differ enough, a black line is drawn. For all samples, a desaturated color value is calculated as well. </li>
+				<li>"Scissor" and "Clear" operations are used to draw a vertical bar between the two halves of the default Framebuffer. Note that the scissor region must be reset or future draw calls will not allow drawing to occur anywhere outside the last specified region.</li>
+				<li>JS tells the window to redraw the scene when appropriate: see "window.requestAnimationFrame(draw_scene);".</li>
+			</ol>						
+		</p>
+	</body>
+</html>
