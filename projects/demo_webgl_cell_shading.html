@@ -481,7 +481,7 @@
 			</tr>
 		</table>
 
-		<p>	Click to drag the camera around the cow subject.
+		<p>	This page demonstrates how a multiple pass effect for cell shading can be realized. Click to drag the camera around the cow subject.
 			<br/>
 			<br/>
 			From an API point of view, several WebGL related objects are created / loaded. These include:
@@ -493,7 +493,7 @@
 				<li>One Framebuffer for off-screen rendering. The third, color texture and the fourth, depth texture are attached to this Framebuffer so they will be updated/drawn to rather than the default Framebuffer. Said default Framebuffer is provided by default and does not require any initialization.</li>					
 				<li>Two Shader Programs, each including a Vertex Shader and Fragment Shader. Each pair of VS/FS are linked into a WebGL program, each of which is bound when completing the albedo and cell shading passes respectively.
 			</ol>
-			This page demonstrates how a multiple pass effect for cell shading can be realized. Procedurally:
+			Procedurally:
 			<ol>
 				<li>JS initializes WebGL and enables the DEPTH, SCISSOR, &amp back-face CULLing tests. Then the rendering loop begins.</li>
 				<li>A collection of "Drawable"s (containing per-object Uniforms, VAO, type, vertex count, &amp indexed/non-indexed data are passed to the "Cell_Shading" effect. 
