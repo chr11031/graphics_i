@@ -481,25 +481,29 @@
 			</tr>
 		</table>
 
-		<p>	Click to drag the camera around the cow subject. This page demonstrates how a multiple pass effect for cell shading can be realized. Steps include:
+		<p>	Click to drag the camera around the cow subject.
+			<br/>
+			<br/>
+			From an API point of view, several WebGL related objects are created / loaded. These include:
+			<ol type="A">
+				<li>Ten VBOs (Vertex Buffer Objects). Spot the cow and the grass plane each have one vertex VBO, one UV VBO, one normal vector VBO, and one index  buffer VBO. By contrast, the full screen quad drawn in the second pass only makes use of a vertex VBO and a UV VBO.</li>					
+				<li>Three VAOs (Vertex Array Objects). Spot the cow and the grassy plane beneath Spot are each drawn using "DrawElements" WebGL calls, which use indexed VBO data for vertex assembly and are organized as dictated by their respective VAOs. The cell shading pass does not use index vertex data and by contrast uses the "DrawArrays" WebGL call, still requiring a VAO but not a vertex index buffer.</li>					
+				<li>One UBO (Uniform Buffer Object) for uploading MVP matrices for the off screen render pass. Offsets and locations for each matrix, "Uniform" texture inputs for shaders are also loaded for reference on each drawn frame.</li>					
+				<li>Four textures: Two color albedo textures are loaded for Spot the cow and the grassy ground beneath them. A third color texture is created with no initial data. Finally, a fourth, depth texture is created as well.</li>					
+				<li>One Framebuffer for off-screen rendering. The third, color texture and the fourth, depth texture are attached to this Framebuffer so they will be updated/drawn to rather than the default Framebuffer. Said default Framebuffer is provided by default and does not require any initialization.</li>					
+				<li>Two Shader Programs, each including a Vertex Shader and Fragment Shader. Each pair of VS/FS are linked into a WebGL program, each of which is bound when completing the albedo and cell shading passes respectively.
+			</ol>
+			This page demonstrates how a multiple pass effect for cell shading can be realized. Procedurally:
 			<ol>
-				<li>Initialization. Several WebGL related objects are created / loaded. These include:
-					<ol type="A">
-						<li>Four textures: Two color albedo textures are loaded for Spot the cow and the grassy ground beneath them. A third color texture is created with no initial data. Finally, a fourth, depth texture is created as well.</li>					
-						<li>One Framebuffer for off-screen rendering. The third color texture and the fourth depth texture are attached to this Framebuffer so they will be updated/drawn to rather than the default Framebuffer. Said default Framebuffer is provided by default and does not require any initialization.</li>					
-						<li>Two Shader Programs, each including a Vertex Shader and Fragment Shader. Each pair of VS/FS are linked into a WebGL program, each of which is bound when completing the albedo and cell shading passes respectively.
-						<li>Ten VBOs (Vertex Buffer Objects). Spot the cow and the grass plane each have one vertex VBO, one UV VBO, one normal vector VBO, and one index  buffer VBO. By contrast, the full screen quad drawn in the second pass only makes use of a vertex VBO and a UV VBO.</li>					
-						<li>Three VAOs (Vertex Array Objects). Spot the cow and the grassy plane beneath Spot are each drawn using "DrawElements" WebGL calls, which use indexed VBO data for vertex assembly and are organized as dictated by their respective VAOs. The cell shading pass does not use index vertex data and by contrast uses the "DrawArrays" WebGL call, still requiring a VAO but not a vertex index buffer.</li>					
-						<li>One UBO (Uniform Buffer Object) for uploading MVP matrices for the off screen render pass. Offsets and locations for each matrix, 'Uniform' texture inputs for shaders are also loaded for reference on each drawn frame.</li>					
-					</ol>
 				<li>JS initializes WebGL and enables the DEPTH, SCISSOR, &amp back-face CULLing tests. Then the rendering loop begins.</li>
+				<li>A collection of "Drawable"s (containing per-object Uniforms, VAO, type, vertex count, &amp indexed/non-indexed data are passed to the "Cell_Shading" effect. 
 				<li>WebGL binds to an off-screen Framebuffer with one texture attached as the first color output attachment and one depth attachment. A WebGL "Clear" operation gives the sky its light blue color. With this off-screen Framebuffer targeted by WebGL, two draw calls render the scene with the albedo details only (Spot the cow &amp the Grass plane under them). At this point, no visible change to the screen is seen.</li>
 				<li>A "Blit" operation is performed, copying rendering data from the off screen Framebuffer to regions in the default (visible) Framebuffer for the left half of the viewing screen.</li>				
 				<li>Limiting the viewport to the right half of the screen, with the default Framebuffer bound, a second pass draws a single viewport-filling square (two triangles). In this draw call, the fragment shader uses the texture, previously attached to the off screen Framebuffer.</li>
 				<li>The Fragment Shader in said draw call, (see "cell_shade_fs" script in the HTML source code) samples from the texture used in the off-screen Framebuffer are used to calculate a new output color. When the color values differ enough, a black line is drawn. For all samples, a desaturated color value is calculated as well. </li>
 				<li>"Scissor" and "Clear" operations are used to draw a vertical bar between the two halves of the default Framebuffer. Note that the scissor region must be reset or future draw calls will not allow drawing to occur anywhere outside the last specified region.</li>
 				<li>JS tells the window to redraw the scene when appropriate: see "window.requestAnimationFrame(draw_scene);".</li>
-			</ol>
+			</ol>						
 		</p>
 	</body>
 </html>
