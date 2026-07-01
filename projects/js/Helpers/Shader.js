@@ -1,4 +1,4 @@
-function _make_gl_shader(shader_text, type)
+function _make_gl_shader(gl, shader_text, type)
 {
 	var i = 0;
 	while (shader_text[i] == ' ' || shader_text[i] == '\t' || shader_text[i] == '\r' || shader_text[i] == '\n')
@@ -22,7 +22,7 @@ function _make_gl_shader(shader_text, type)
 }
 
 
-function _make_gl_program(vert_shader, frag_shader)
+function _make_gl_program(gl, vert_shader, frag_shader)
 {
 	var program = gl.createProgram();
 	gl.attachShader(program, vert_shader);

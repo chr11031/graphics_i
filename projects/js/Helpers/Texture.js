@@ -1,4 +1,4 @@
-function _make_2d_depth_texture(width, height, filter_type, edge_rule)
+function _make_2d_depth_texture(gl, width, height, filter_type, edge_rule)
 {
 	var texture = gl.createTexture();
 	gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -13,7 +13,7 @@ function _make_2d_depth_texture(width, height, filter_type, edge_rule)
 }
 
 
-function _make_2d_RGBA_UINT_texture(width, height, filter_type, edge_rule)
+function _make_2d_RGBA_UINT_texture(gl, width, height, filter_type, edge_rule)
 {
 	var texture = gl.createTexture();
 	gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -28,7 +28,7 @@ function _make_2d_RGBA_UINT_texture(width, height, filter_type, edge_rule)
 }
 
 
-function _make_2d_RGBA_UINT_texture_from_img(img, filter_type, edge_rule)
+function _make_2d_RGBA_UINT_texture_from_img(gl, img, filter_type, edge_rule)
 {
 	gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 	var texture = gl.createTexture();

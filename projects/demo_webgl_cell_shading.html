@@ -229,7 +229,7 @@
 
 				var spot_uniforms = {
 					model: new Matrix4x4(),
-					albedo: _make_2d_RGBA_UINT_texture_from_img(resources["spot_albedo"], gl.LINEAR, gl.CLAMP_TO_EDGE)
+					albedo: _make_2d_RGBA_UINT_texture_from_img(gl, resources["spot_albedo"], gl.LINEAR, gl.CLAMP_TO_EDGE)
 				};
 				spot_uniforms.model.set_rotate('y', -180.0); 
 				
@@ -372,7 +372,7 @@
 
 				var grass_uniforms = {
 					model: 	new Matrix4x4(),
-					albedo:  _make_2d_RGBA_UINT_texture_from_img(resources["grass_albedo"], gl.LINEAR, gl.REPEAT)
+					albedo:  _make_2d_RGBA_UINT_texture_from_img(gl, resources["grass_albedo"], gl.LINEAR, gl.REPEAT)
 				};
 				
 				grass_uniforms.model.set_scale(200.0, 200.0, 200.0);
@@ -424,7 +424,7 @@
 							
 				
 				// Effect is half the screen size so it can be used on the right half of the screen only
-				cell_effect = new Cell_Shading(frame_canvas.width, frame_canvas.height);
+				cell_effect = new Cell_Shading(gl, frame_canvas.width, frame_canvas.height);
 
 								
 				window.requestAnimationFrame(draw_scene);

@@ -15,8 +15,10 @@ class Cell_Shading
 	}
 	
 	
-	constructor(width, height)
+	constructor(gl, width, height)
 	{	
+		this.gl = gl;
+	
 		this.ctx_width  = width;
 		this.ctx_height = height;
 							
@@ -56,21 +58,23 @@ class Cell_Shading
 	
 	_init_framebuffer()
 	{
-		this.first_pass_texture = _make_2d_RGBA_UINT_texture(this.ctx_width/2, this.ctx_height, gl.LINEAR, gl.CLAMP_TO_EDGE);
-		this.first_pass_depth   = _make_2d_depth_texture(this.ctx_width/2, this.ctx_height, gl.LINEAR, gl.CLAMP_TO_EDGE);
-		this.first_pass_fbo     = _make_framebuffer( [
-														{ texture: this.first_pass_texture, att: gl.COLOR_ATTACHMENT0, tex: gl.TEXTURE_2D },
-														{ texture: this.first_pass_depth, 	att: gl.DEPTH_ATTACHMENT,  tex: gl.TEXTURE_2D },
-													 ] );					
+		this.first_pass_texture = _make_2d_RGBA_UINT_texture(gl, this.ctx_width/2, this.ctx_height, gl.LINEAR, gl.CLAMP_TO_EDGE);
+		this.first_pass_depth   = _make_2d_depth_texture(gl, this.ctx_width/2, this.ctx_height, gl.LINEAR, gl.CLAMP_TO_EDGE);
+		this.first_pass_fbo     = _make_framebuffer(gl, [
+															{ texture: this.first_pass_texture, att: gl.COLOR_ATTACHMENT0, tex: gl.TEXTURE_2D },
+															{ texture: this.first_pass_depth, 	att: gl.DEPTH_ATTACHMENT,  tex: gl.TEXTURE_2D },
+														] );					
 	}
 
 	
 	_init_albedo_pass()
 	{
+		var gl = this.gl; // (Alias for brevity)
+		
 		// Program
-		var vs = _make_gl_shader(resources["albedo.vs"], gl.VERTEX_SHADER);
-		var fs = _make_gl_shader(resources["albedo.fs"], gl.FRAGMENT_SHADER);
-		this.albedo_pass.program = _make_gl_program(vs, fs);					
+		var vs = _make_gl_shader(gl, resources["albedo.vs"], gl.VERTEX_SHADER);
+		var fs = _make_gl_shader(gl, resources["albedo.fs"], gl.FRAGMENT_SHADER);
+		this.albedo_pass.program = _make_gl_program(gl, vs, fs);					
 		
 
 		// UBO todos....
@@ -112,8 +116,10 @@ class Cell_Shading
 	}
 	
 				
-	_init_cell_pass()
-	{						
+	_init_cell_pass(gl)
+	{					
+		var gl = this.gl; // (Alias for brevity)
+	
 		// VERTs
 		var verts = new Float32Array([
 			-1.0, -1.0,
@@ -198,9 +204,9 @@ class Cell_Shading
 
 
 		// Program
-		var vs = _make_gl_shader(resources["cell.vs"], gl.VERTEX_SHADER);
-		var fs = _make_gl_shader(resources["cell.fs"], gl.FRAGMENT_SHADER);
-		this.cell_pass.program = _make_gl_program(vs, fs);					
+		var vs = _make_gl_shader(gl, resources["cell.vs"], gl.VERTEX_SHADER);
+		var fs = _make_gl_shader(gl, resources["cell.fs"], gl.FRAGMENT_SHADER);
+		this.cell_pass.program = _make_gl_program(gl, vs, fs);					
 
 
 		// source_texture 
@@ -220,6 +226,8 @@ class Cell_Shading
 
 	_draw_albedo_pass(proj_mat, view_mat, drawables)
 	{
+		var gl = this.gl; // (Alias for brevity)
+
 		// Progam & Uniforms common to both objects
 		gl.useProgram(this.albedo_pass.program);
 		gl.bindBuffer(gl.UNIFORM_BUFFER, this.albedo_pass.ubo);					
@@ -267,6 +275,8 @@ class Cell_Shading
 	
 	_draw_cell_pass()
 	{
+		var gl = this.gl; // (Alias for brevity)
+
 		// Setup program and uniform resources
 		gl.useProgram(this.cell_pass.program);
 		gl.activeTexture(gl.TEXTURE0 + 0);

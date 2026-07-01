@@ -8,19 +8,21 @@ layout(std140) uniform gouraud_data
 {
 	mat4 proj;
 	mat4 view;
-	vec3 light_pos;
+	mat4 model;
 };
 
+const vec3 light_pos = vec3(-5.0, 5.0, 5.0);
 
-smooth out vec2 interp_color;
+smooth out vec3 interp_color;
 
 void main()
 {
 	vec3 light_dir = normalize( light_pos - pos );
-	
-	float align = dot(light_dir, normal);
+
+	vec3 normal_delta = (model * vec4(normal, 0.0)).xyz;
+	float align = dot(light_dir, normal_delta);
 	align = max(0.0, align);
 
-	interp_color = align * vec3(1.0, 0.0, 0.0);
-	gl_Position = proj * view * vec4(pos, 1.0);								
+	interp_color =  align * vec3(0.5, 0.5, 1.0) + vec3(0.1, 0.1, 0.1);
+	gl_Position = proj * view * model * vec4(pos, 1.0);								
 }

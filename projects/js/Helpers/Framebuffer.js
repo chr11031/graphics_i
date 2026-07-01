@@ -1,4 +1,4 @@
-function _make_framebuffer(attachments)
+function _make_framebuffer(gl, attachments)
 {
 	var framebuffer = gl.createFramebuffer();
 	gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);

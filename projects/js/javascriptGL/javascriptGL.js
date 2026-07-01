@@ -1,6 +1,6 @@
 class javascriptGL
 {
-	// jsGL constants here
+	// jsGL constants here	
 	JSGL_FLT  = 10000
 	JSGL_VEC2 = 10001;
 	JSGL_VEC3 = 10002;
@@ -63,10 +63,10 @@ class javascriptGL
 		this._ctx_width = canvas_element.width;
 		this._ctx_height = canvas_element.height;
 
-		this._clear_color = new RGBA(0.0, 0.0, 0.0, 1.0);
-		this._clear_depth = 0.0;
+		this._clear_color = new RGBA(0.0, 0.0, 0.0, 255.0);
+		this._clear_depth = 1.0;
 
-		this._default_depth_buffer = this._create_2d_buffer(this.ctx_width, this.ctx_height, 1);
+		this._default_depth_buffer = this._create_2d_buffer(this._ctx_width, this._ctx_height, 1);
 		
 		this._viewport_x = 0;
 		this._viewport_y = 0;
@@ -94,18 +94,20 @@ class javascriptGL
 					components.push(0.0);
 				}								
 		
-				row[x].push( components );
+				row.push( components );
 			}
 		
 			buffer.push( row );
 		}
+		
+		return buffer;
 	}
 
 
 	_draw_pixel(x, y, color)
 	{
-		ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
-		ctx.fillRect(x, this._ctx_height - 1 - y, 1, 1);
+		this._ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
+		this._ctx.fillRect(x, this._ctx_height - 1 - y, 1, 1);
 	}
 
 	
@@ -113,15 +115,15 @@ class javascriptGL
 	{
 		if (test == this.CULL_FACE)
 		{
-			this.cull_face_enable = true;
+			this._cull_face_enable = true;
 		}
 		else if (test == this.SCISSOR_TEST)
 		{
-			this.scissor_test_enable = true;
+			this._scissor_test_enable = true;
 		}
 		else if (test == this.DEPTH_TEST)
 		{
-			this.depth_test_enable = true;
+			this._depth_test_enable = true;
 		}
 		else
 		{
@@ -132,14 +134,14 @@ class javascriptGL
 	
 	scissor(x, y, w, h)
 	{
-		x = Math.min(this.ctx_width  - 1, Math.max(x, 0));
-		y = Math.min(this.ctx_height - 1, Math.max(y, 0));
+		x = Math.min(this._ctx_width  - 1, Math.max(x, 0));
+		y = Math.min(this._ctx_height - 1, Math.max(y, 0));
 
-		ex = x + w;
-		ey = y + w;
+		var ex = x + w;
+		var ey = y + w;
 		
-		ex = Math.min(this.ctx_width - 1,  ex);
-		ey = Math.min(this.ctx_height - 1, ey);
+		ex = Math.min(this._ctx_width - 1,  ex);
+		ey = Math.min(this._ctx_height - 1, ey);
 		
 		w = ex - x;
 		h = ey - y;		
@@ -192,12 +194,12 @@ class javascriptGL
 		}		
 	}
 
-	clearColor(color)
+	clearColor(color_r, color_g, color_b, color_a)
 	{
-		this._clear_color.r = color.r;
-		this._clear_color.g = color.g;
-		this._clear_color.b = color.b;
-		this._clear_color.a = color.a;
+		this._clear_color.r = 255 * color_r;
+		this._clear_color.g = 255 * color_g;
+		this._clear_color.b = 255 * color_b;
+		this._clear_color.a = 255 * color_a;
 	}
 
 	clear(targets)
