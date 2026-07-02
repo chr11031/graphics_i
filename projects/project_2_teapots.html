@@ -11,7 +11,6 @@
 		<script type="text/javascript" src="/js/javascriptGL/javascriptGL.js"></script>
 
 		<script type="text/javascript" src="/js/Loaders/Resource_Loader.js"></script>
-		<script type="text/javascript" src="/js/Cameras/Orbit_Camera.js"></script>
 		
 		
 		<script>
@@ -30,9 +29,7 @@
 			var ctx_width = null;
 			var ctx_height = null;
 
-
-			// LOCAL state (View)
-			var camera = null;
+			var view_mode = null;
 
 			
 			function _init_gl(gl)
@@ -272,32 +269,67 @@
 			{
 				var W = 0.92;
 
-				// Draw the top-left section 
-				gl.scissor(0, ctx_height/2, ctx_width/2, ctx_height/2);
-				gl.clearColor(1.0, W, W, 1.0);
-				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
-			
-								
-				// Draw the top-right section 
-				gl.scissor(ctx_width/2, ctx_height/2, ctx_width/2, ctx_height/2);
-				gl.clearColor(W, W, W, 1.0);
-				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+				if (view_mode == "split")
+				{
+					// Draw the top-left section 
+					gl.scissor(0, ctx_height/2, ctx_width/2, ctx_height/2);
+					gl.clearColor(1.0, W, W, 1.0);
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+				
+									
+					// Draw the top-right section 
+					gl.scissor(ctx_width/2, ctx_height/2, ctx_width/2, ctx_height/2);
+					gl.clearColor(W, W, W, 1.0);
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
 
+					// Draw the bottom-left section		
+					gl.scissor(0, 0, ctx_width/2, ctx_height/2);
+					gl.clearColor(W, 1.0, W, 1.0);			
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+				
+				
+					// Draw the bottom-right section 
+					gl.scissor(ctx_width/2, 0, ctx_width/2, ctx_height/2);
+					gl.clearColor(W, W, 1.0, 1.0);
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	
 
-				// Draw the bottom-left section		
-				gl.scissor(0, 0, ctx_width/2, ctx_height/2);
-				gl.clearColor(W, 1.0, W, 1.0);			
-				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
-			
-			
-				// Draw the bottom-right section 
-				gl.scissor(ctx_width/2, 0, ctx_width/2, ctx_height/2);
-				gl.clearColor(W, W, 1.0, 1.0);
-				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	
+					// Reset scissor region 
+					gl.scissor(0, 0, ctx_width, ctx_height);
+				
+				}
+				else
+				{
+					var r = 1.0;
+					var g = 1.0;
+					var b = 1.0;
+					var a = 1.0;
+				
+					if (view_mode == "xy")
+					{
+						g = W;
+						b = W;
+					}
+					else if (view_mode == "product")
+					{
+						r = W;
+						g = W;
+						b = W;
+					}
+					else if (view_mode == "xz")
+					{
+						r = W;
+						b = W;
+					}
+					else if (view_mode == "yz")
+					{
+						r = W;
+						g = W;
+					}
 
+					gl.clearColor(r, g, b, a);
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+				}
 
-				// Reset scissor region 
-				gl.scissor(0, 0, ctx_width, ctx_height);
 			}
 			
 			
@@ -335,7 +367,6 @@
 				this._clear_backgrounds(gl);
 
 
-			
 				var proj_mat = new Matrix4x4();
 				proj_mat.set_perspective(90.0, 90.0, 0.1, 100.0);
 				
@@ -346,50 +377,98 @@
 				model_mat.set_translate(-0.2140625, -1.575, 0.0);
 
 				var tmp_mat = new Matrix4x4();
+				var tmp2_mat = new Matrix4x4();
 				
-				
-				
-				
-				tmp_mat.set_identity();
-				tmp_mat = tmp_mat.mult(view_mat);
-				
-				this._draw_teapot(gl, 0, ctx_height/2, ctx_width/2, ctx_height/2,
-								  proj_mat,
-								  tmp_mat,
-								  model_mat,
-								  webGL_client_data,
-								  webGL_program_handle);
-
-				/*
-				this._draw_teapot(gl, ctx_width/2, ctx_height/2, ctx_width/2, ctx_height/2,
-								  proj_mat,
-								  tmp_mat,
-								  model_mat,
-								  webGL_client_data,
-								  webGL_program_handle);
-				*/
-				
-				
-				tmp_mat.set_identity();
-				tmp_mat.set_rotate('x', -90.0);				
-				tmp_mat = view_mat.mult( tmp_mat );				
-				this._draw_teapot(gl, 0, 0, ctx_width/2, ctx_height/2,
-								  proj_mat,
-								  tmp_mat,
-								  model_mat,
-								  webGL_client_data,
-								  webGL_program_handle);
 
 
-				tmp_mat.set_identity();
-				tmp_mat.set_rotate('y', -90.0);				
-				tmp_mat = view_mat.mult( tmp_mat );				
-				this._draw_teapot(gl, ctx_width/2, 0, ctx_width/2, ctx_height/2,
-								  proj_mat,
-								  tmp_mat,
-								  model_mat,
-								  webGL_client_data,
-								  webGL_program_handle);
+				if (view_mode == "split")
+				{
+					tmp_mat.set_identity();
+					tmp_mat = view_mat.mult(tmp_mat);
+					
+					this._draw_teapot(gl, 0, ctx_height/2, ctx_width/2, ctx_height/2,
+									  proj_mat,
+									  tmp_mat,
+									  model_mat,
+									  webGL_client_data,
+									  webGL_program_handle);
+
+
+					tmp_mat.set_identity();
+					tmp2_mat.set_identity();
+					tmp_mat.set_rotate('y', 35.0);
+					tmp2_mat.set_rotate('x', -35.0);
+					tmp_mat = view_mat.mult( tmp2_mat.mult(tmp_mat) );
+
+					this._draw_teapot(gl, ctx_width/2, ctx_height/2, ctx_width/2, ctx_height/2,
+									  proj_mat,
+									  tmp_mat,
+									  model_mat,
+									  webGL_client_data,
+									  webGL_program_handle);
+
+
+					tmp_mat.set_identity();
+					tmp_mat.set_rotate('x', -90.0);				
+					tmp_mat = view_mat.mult( tmp_mat );				
+					this._draw_teapot(gl, 0, 0, ctx_width/2, ctx_height/2,
+									  proj_mat,
+									  tmp_mat,
+									  model_mat,
+									  webGL_client_data,
+									  webGL_program_handle);
+
+
+					tmp_mat.set_identity();
+					tmp_mat.set_rotate('y', -90.0);				
+					tmp_mat = view_mat.mult( tmp_mat );				
+					this._draw_teapot(gl, ctx_width/2, 0, ctx_width/2, ctx_height/2,
+									  proj_mat,
+									  tmp_mat,
+									  model_mat,
+									  webGL_client_data,
+									  webGL_program_handle);
+				}
+				else 
+				{
+					if (view_mode == "xy")
+					{
+						tmp_mat.set_identity();
+						tmp_mat = tmp_mat.mult(view_mat);
+					}
+					else if (view_mode == "product")
+					{
+						tmp_mat.set_identity();
+						tmp2_mat.set_identity();
+						tmp_mat.set_rotate('y', 35.0);
+						tmp2_mat.set_rotate('x', -35.0);
+						tmp_mat = view_mat.mult( tmp2_mat.mult(tmp_mat) );
+					}
+					else if (view_mode == "xz")
+					{
+						tmp_mat.set_identity();
+						tmp_mat.set_rotate('x', -90.0);				
+						tmp_mat = view_mat.mult( tmp_mat );				
+					}
+					else if (view_mode == "yz")
+					{
+						tmp_mat.set_identity();
+						tmp_mat.set_rotate('y', -90.0);				
+						tmp_mat = view_mat.mult( tmp_mat );				
+					}
+
+					this._draw_teapot(gl, 0, 0, ctx_width, ctx_height,
+									  proj_mat,
+									  tmp_mat,
+									  model_mat,
+									  webGL_client_data,
+									  webGL_program_handle);				
+				
+				}
+			
+				
+				
+				
 
 
 			}
@@ -411,15 +490,30 @@
 			}
 			
 			
+			function view_updated()
+			{
+				var old_mode = view_mode;
+			
+				if (document.getElementById("view_split").checked)
+					view_mode = "split";
+				else if (document.getElementById("view_product").checked)
+					view_mode = "product";
+				else if (document.getElementById("view_X_Y").checked)
+					view_mode = "xy";
+				else if (document.getElementById("view_X_Z").checked)
+					view_mode = "xz";
+				else if (document.getElementById("view_Y_Z").checked)
+					view_mode = "yz";
+					
+				if (old_mode != view_mode)
+				{
+					draw_scene();
+				}
+			}
+			
+			
 			function initialize_demo()
 			{
-				// LOCAL state (View)
-				camera = new Orbit_Camera(60.0, 60.0, 0.1, 100.0, // fov_lr, fov_td, near, far
-									 	  2.5, -30.0, -20.0);	  // orbit_distance, yaw, roll
-
-
-
-
 				// Part #1 - Initialization 
 				var webGL_canvas = document.getElementById("webGL_canvas");
 				webGL = webGL_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});					
@@ -450,7 +544,15 @@
 				//jsGL_client_data  = _build_client_teapot_data(jsGL,  jsGL_program_handle);
 
 								
-				window.requestAnimationFrame(draw_scene);
+				// LOCAL state (View)
+				document.getElementById("view_split").addEventListener(   "change", view_updated);
+				document.getElementById("view_product").addEventListener( "change", view_updated);
+				document.getElementById("view_X_Y").addEventListener(     "change", view_updated);
+				document.getElementById("view_X_Z").addEventListener(     "change", view_updated);
+				document.getElementById("view_Y_Z").addEventListener(     "change", view_updated);
+				
+				// Draw view
+				view_updated();
 			}
 			
 				
@@ -509,6 +611,26 @@
 				<td>
 					<br/>
 					JavascriptGL (Yours)
+				</td>
+			</tr>
+			<tr style="text-align:center">
+				<td colspan="2">
+					<br/>
+					Display Mode: 
+					<input type="radio" id="view_split" name="view mode" value="CAD" checked/>
+					<label for="view_CAD">4-Way Split</label>
+
+					<input type="radio" id="view_X_Y" name="view mode" value="X-Y View" />
+					<label for="view_X_Y">X-Y</label>
+
+					<input type="radio" id="view_product" name="view mode" value="Product View" />
+					<label for="view_product">Product</label>
+
+					<input type="radio" id="view_X_Z" name="view mode" value="X-Z View" />
+					<label for="view_X_Z">X-Z</label>
+					
+					<input type="radio" id="view_Y_Z" name="view mode" value="Y-Z View" />
+					<label for="view_Y_Z">Y-Z</label>				
 				</td>
 			</tr>
 		</table>
