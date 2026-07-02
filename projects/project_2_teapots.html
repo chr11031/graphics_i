@@ -348,8 +348,8 @@
 				gl.bindVertexArray(gl_client_data.teapot_vao);
 
 				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.gouraud_ubo);					
-				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.proj_mat_loc,   proj_mat.data,  0);
-				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.view_mat_loc,   view_mat.data,  0);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.proj_mat_loc,   proj_mat.data, 0);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.view_mat_loc,   view_mat.data, 0);
 				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.model_mat_loc, model_mat.data, 0);
 				
 				gl.drawArrays(
@@ -369,6 +369,7 @@
 
 				var proj_mat = new Matrix4x4();
 				proj_mat.set_perspective(90.0, 90.0, 0.1, 100.0);
+				proj_mat.set_orthographic(-4.0, 4.0, -4.0, 4.0, 0.1, 100.0);
 				
 				var view_mat = new Matrix4x4();
 				view_mat.set_translate(0.0, 0.0, -4.5);
@@ -396,8 +397,8 @@
 
 					tmp_mat.set_identity();
 					tmp2_mat.set_identity();
-					tmp_mat.set_rotate('y', 35.0);
-					tmp2_mat.set_rotate('x', -35.0);
+					tmp_mat.set_rotate('y', 30.0);
+					tmp2_mat.set_rotate('x', -30.0);
 					tmp_mat = view_mat.mult( tmp2_mat.mult(tmp_mat) );
 
 					this._draw_teapot(gl, ctx_width/2, ctx_height/2, ctx_width/2, ctx_height/2,
@@ -440,8 +441,8 @@
 					{
 						tmp_mat.set_identity();
 						tmp2_mat.set_identity();
-						tmp_mat.set_rotate('y', 35.0);
-						tmp2_mat.set_rotate('x', -35.0);
+						tmp_mat.set_rotate('y', 30.0);
+						tmp2_mat.set_rotate('x', -30.0);
 						tmp_mat = view_mat.mult( tmp2_mat.mult(tmp_mat) );
 					}
 					else if (view_mode == "xz")
@@ -465,12 +466,6 @@
 									  webGL_program_handle);				
 				
 				}
-			
-				
-				
-				
-
-
 			}
 
 
@@ -635,28 +630,85 @@
 			</tr>
 		</table>
 
-		<p>	This page demonstrates how a multiple pass effect for cell shading can be realized. Click to drag the camera around the cow subject.
+		<p>	For this project, you will implement several parts of a software rasterizer. You will do this in JavascriptGL, which offers the same API endpoints as WebGL does for the application hosted in this webpage. Except for how shaders are handled (I provide that structure for you), the two will need to perform identically. 
 			<br/>
 			<br/>
-			From an API point of view, several WebGL related objects are created / loaded. These include:
-			<ol type="A">
-				<li>Ten VBOs (Vertex Buffer Objects). Spot the cow and the grass plane each have one vertex VBO, one UV VBO, one normal vector VBO, and one index  buffer VBO. By contrast, the full screen quad drawn in the second pass only makes use of a vertex VBO and a UV VBO.</li>					
-				<li>Three VAOs (Vertex Array Objects). Spot the cow and the grassy plane beneath Spot are each drawn using "DrawElements" WebGL calls, which use indexed VBO data for vertex assembly and are organized as dictated by their respective VAOs. The cell shading pass does not use index vertex data and by contrast uses the "DrawArrays" WebGL call, still requiring a VAO but not a vertex index buffer.</li>					
-				<li>One UBO (Uniform Buffer Object) for uploading MVP matrices for the off screen render pass. Offsets and locations for each matrix, "Uniform" texture inputs for shaders are also loaded for reference on each drawn frame.</li>					
-				<li>Four textures: Two color albedo textures are loaded for Spot the cow and the grassy ground beneath them. A third color texture is created with no initial data. Finally, a fourth, depth texture is created as well.</li>					
-				<li>One Framebuffer for off-screen rendering. The third, color texture and the fourth, depth texture are attached to this Framebuffer so they will be updated/drawn to rather than the default Framebuffer. Said default Framebuffer is provided by default and does not require any initialization.</li>					
-				<li>Two Shader Programs, each including a Vertex Shader and Fragment Shader. Each pair of VS/FS are linked into a WebGL program, each of which is bound when completing the albedo and cell shading passes respectively.
+			From an API point, several functions are already provided. These act as a jump point for you to start reading what is in JavascriptGL and to prepare to extend its functionality:
+			<ol type="A" style="list-style-position: inside;">
+
+
+				<u><b>Global State:</u></b>
+				<br/>
+				<br/>
+				<li>gl.enable - Important for allowing the CULL, SCISSOR, and DEPTH features used in a rasterizer.</li>					
+				<li>gl.clearColor - Sets the value for when the screen is eventually reset to a new color. Used here for a background color effect.</li>					
+				<li>gl.clear - For all flags passed in the respective buffers are cleared. Often used to clear color and depth values.</li>					
+
+				<br/>
+				<u><b>VBO/UBO:</u></b>
+				<br/>
+				<br/>
+				<li>gl.createBuffer - Allocates a new VBO (Vertex Buffer Object) and returns a handle to that VBO. At this point, no type is ascribed to that buffer object.</li>
+				<li>gl.bindBuffer - Set a type to a given VBO and reference this VBO for any subsequent and related buffer object function calls.</li>
+				<li>gl.bufferData - Either allocate a bound VBO's memory or copy an array into VBO memory.</li>
+				<li>gl.bufferSubData - Similar to gl.bufferData, but only modifies a subset of the buffer rather than allocating new memory or overwriting all members in the buffer.</li>
+				
+				<br/>
+				<u><b>VAO:</u></b>
+				<br/>
+				<br/>
+				<li>gl.createVertexArray - Allocate a new VAO (Vertex Array Object). The VAO will reference other VBOs to setup the input layout for a draw call such as "drawArrays".</li>
+				<li>gl.bindVertexArray - Set the VAO as the current, in scope object for all subsequent VAO based function calls.
+				<li>gl.enableVertexAttribArray - Tell the bound VAO that a particular attribute is "enabled" for the "pipeline_input_assembler" reference internally.</li>
+				<li>gl.vertexAttribPointer -  Tell the bound VAO what index, how large, what the spacing is for a particular vertex attribute.</li>
+				
+				<br/>
+				<u><b>UBO:</u></b>
+				<br/>
+				<br/>
+				<li>gl.getUniformBlockIndex - </li>
+				<li>gl.getActiveUniformBlockParameter - </li>
+				<li>gl.bindBufferBase - </li>
+				<li>gl.uniformBlockBinding - </li>
+				<li>gl.getUniformIndices - </li>
+				<li>gl.getActiveUniforms - </li>
+
+
+				<br/>
+				<u><b>Shader Program:</u></b>
+				<br/>
+				<br/>
+				<li>gl.useProgram - </li>
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
 			</ol>
-			Procedurally:
+			You will need to complete the missing functionality in:
 			<ol>
-				<li>JS initializes WebGL and enables the DEPTH, SCISSOR, &amp back-face CULLing tests. Then the rendering loop begins.</li>
-				<li>A collection of "Drawable"s (containing per-object Uniforms, VAO, type, vertex count, &amp indexed/non-indexed data are passed to the "Cell_Shading" effect. 
-				<li>WebGL binds to an off-screen Framebuffer with one texture attached as the first color output attachment and one depth attachment. A WebGL "Clear" operation gives the sky its light blue color. With this off-screen Framebuffer targeted by WebGL, two draw calls render the scene with the albedo details only (Spot the cow &amp the Grass plane under them). At this point, no visible change to the screen is seen.</li>
-				<li>A "Blit" operation is performed, copying rendering data from the off screen Framebuffer to regions in the default (visible) Framebuffer for the left half of the viewing screen.</li>				
-				<li>Limiting the viewport to the right half of the screen, with the default Framebuffer bound, a second pass draws a single viewport-filling square (two triangles). In this draw call, the fragment shader uses the texture, previously attached to the off screen Framebuffer.</li>
-				<li>The Fragment Shader in said draw call, (see "cell_shade_fs" script in the HTML source code) samples from the texture used in the off-screen Framebuffer are used to calculate a new output color. When the color values differ enough, a black line is drawn. For all samples, a desaturated color value is calculated as well. </li>
-				<li>"Scissor" and "Clear" operations are used to draw a vertical bar between the two halves of the default Framebuffer. Note that the scissor region must be reset or future draw calls will not allow drawing to occur anywhere outside the last specified region.</li>
-				<li>JS tells the window to redraw the scene when appropriate: see "window.requestAnimationFrame(draw_scene);".</li>
+				<li>gl.viewport - Changes the viewport transform used at the end of rasterization to a subset of the total target area. This affects rasterization outputs but not functions like gl.clear(...)</li>					
+				<li>gl.scissor - Restricts pixel operations including "gl.clear(...)" to a subset of the total target area.</li>					
+				<li>gl.drawArrays - The essential draw function used to render the teapot. It will work in concert with the following other pieces:</li>
+					<ol type="1">
+						<li>pipeline_input_assembler - Provided for you. Extracts vertex attributes from the attached VAO, dereferencing any appropriate VBO(s) as necessary.</li>
+						<li>pipeline_vertex_shader - </li>
+						<li>pipeline_clipper - </li>
+						<li>pipeline_ndc_conversion - </li>
+						<li>pipeline_viewport_transform - </li>
+						<li>pipeline_coverage_pass - </li>
+						<li>pipeline_interpolation_pass - </li>
+						<li>pipeline_fragment_shader - </li>
+						<li>pipeline_depth_update - </li>
+						<li>pipeline_color_blending - </li>
+					</ol>
 			</ol>						
 		</p>
 	</body>

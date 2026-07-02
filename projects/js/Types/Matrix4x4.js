@@ -167,6 +167,33 @@ class Matrix4x4
 			this.set(3, 3, 1.0);
 		}
 	}
+	
+	set_orthographic(left, right, bot, top, near, far)
+	{
+		// We are looking for the Left-handed coordinate versions of these
+		near = -near;
+		far = -far;
+		
+		this.set(0, 0, 2.0 / (right - left));
+		this.set(0, 1, 0.0);
+		this.set(0, 2, 0.0);
+		this.set(0, 3, -(left + right) / (right - left));
+
+		this.set(1, 0, 0.0);
+		this.set(1, 1, 2.0 / (top - bot));
+		this.set(1, 2, 0.0);
+		this.set(1, 3, -(bot + top) / (top - bot));
+
+		this.set(2, 0, 0.0);
+		this.set(2, 1, 0.0);
+		this.set(2, 2, 2.0 / (far - near));
+		this.set(2, 3, -(near + far) / (far - near));
+
+		this.set(3, 0,  0.0);
+		this.set(3, 1,  0.0);
+		this.set(3, 2,  0.0);
+		this.set(3, 3,  1.0);
+	}
 
 	set_perspective(fov_lr_deg, fov_td_deg, near, far)
 	{
@@ -188,13 +215,10 @@ class Matrix4x4
 		this.set(1, 2, (top + bot) / (top - bot));
 		this.set(1, 3, 0.0);
 
-		// Below values map Z from 0 to 1 with more precision afforded to nearer objects
 		this.set(2, 0, 0.0);
 		this.set(2, 1, 0.0);
 		this.set(2, 2, -(far + near) / (far - near));
 		this.set(2, 3, (-2.0 * far * near) / (far - near));
-		// this.set(2, 2, -(1.0/near) / ( (1.0 / far) - (1.0 / near) ));
-		// this.set(2, 3,  (1.0     ) / ( (1.0 / far) - (1.0 / near) ));
 
 		this.set(3, 0,  0.0);
 		this.set(3, 1,  0.0);
