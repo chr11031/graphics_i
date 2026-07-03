@@ -191,8 +191,21 @@
 			}
 			
 			
+			
+			
+			
 			function _build_program_jsGL(gl)
 			{	
+				TODO;
+				// Code structure and helpers like this:
+				/* See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in
+				const object = { a: 1, b: 2, c: 3 };
+
+				for (const property in object) {
+				  console.log(`${property}: ${object[property]}`);
+				}
+				*/
+			
 				var shader_program = {
 
 					uniform_blocks:		[	
@@ -663,11 +676,11 @@
 				<br/>
 				<br/>
 				<li>gl.getUniformBlockIndex - Finds the block index of a uniform block within a shader program.</li>
-				<li>gl.getActiveUniformBlockParameter - </li>
-				<li>gl.bindBufferBase - </li>
-				<li>gl.uniformBlockBinding - </li>
-				<li>gl.getUniformIndices - </li>
-				<li>gl.getActiveUniforms - </li>
+				<li>gl.getActiveUniformBlockParameter - Used to query information about a Uniform Block in a shader, such as its total byte size (including padding).</li>
+				<li>gl.bindBufferBase - Bind a UBO to a block binding slot.</li>
+				<li>gl.uniformBlockBinding - Map a shader program (vertex + fragment)'s uniform block with a block binding slot.</li>
+				<li>gl.getUniformIndices - From a linked shader program, find the unique uniform index of any given uniform variable.</li>
+				<li>gl.getActiveUniforms - Query information about uniform variables such as the byte offset of a member from the beginning of its block ("gl.UNIFORM_OFFSET").</li>
 
 
 				<br/>
