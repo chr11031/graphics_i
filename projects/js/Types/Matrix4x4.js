@@ -197,13 +197,17 @@ class Matrix4x4
 
 	set_perspective(fov_lr_deg, fov_td_deg, near, far)
 	{
+		// We are looking for the Left-handed coordinate versions of these
+		near = -near;
+		far  = -far;
+		
 		var fov_lr_rad = fov_lr_deg * Math.PI / 180.0;
 		var fov_td_rad = fov_td_deg * Math.PI / 180.0;
 
-		var top = -near * Math.tan(fov_td_rad / 2.0);
-		var bot = -top;
-		var right = -near * Math.tan(fov_lr_rad / 2.0);
-		var left = -right;
+		var left = near * Math.tan(fov_lr_rad / 2.0);
+		var right = -left;
+		var bot = near * Math.tan(fov_td_rad / 2.0);
+		var top = -bot;
 
 		this.set(0, 0, -2.0 * near / (right - left));
 		this.set(0, 1, 0.0);
@@ -218,7 +222,7 @@ class Matrix4x4
 		this.set(2, 0, 0.0);
 		this.set(2, 1, 0.0);
 		this.set(2, 2, -(far + near) / (far - near));
-		this.set(2, 3, (-2.0 * far * near) / (far - near));
+		this.set(2, 3, (2.0 * far * near) / (far - near));
 
 		this.set(3, 0,  0.0);
 		this.set(3, 1,  0.0);
