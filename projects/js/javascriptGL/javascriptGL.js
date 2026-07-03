@@ -1,11 +1,11 @@
 class javascriptGL
 {
 	// jsGL constants here	
-	JSGL_FLT  = 10000
-	JSGL_VEC2 = 10001;
-	JSGL_VEC3 = 10002;
-	JSGL_VEC4 = 10003;
-	JSGL_MAT4 = 10004;
+	JSSL_FLT  = 10000
+	JSSL_VEC2 = 10001;
+	JSSL_VEC3 = 10002;
+	JSSL_VEC4 = 10003;
+	JSSL_MAT4 = 10004;
 	
 	
 	// Constants values here:
@@ -18,6 +18,10 @@ class javascriptGL
 
 	FLOAT = 5126;
 	
+	ARRAY_BUFFER = 34962;
+	UNIFORM_BUFFER = 35345;
+
+
 	
 	
 	// CONTEXT for default framebuffer
@@ -51,11 +55,20 @@ class javascriptGL
 	_active_vbo = null;
 	_active_ubo = null;
 	_active_vao = null;
-	_in_use_program = null;
+	_active_program = null;
 	
 	// BUFFERS
 	_buffers = []; // Such as: VBO, UBO
 	_vao = [];
+	
+	// BINDING POINTS - here we allocate 16 but most GPUs will have many more than this
+	_block_bindings = [null, null, null, null, 
+					   null, null, null, null,
+					   null, null, null, null,
+					   null, null, null, null]; 
+	
+	// PROGRAMS
+	_programs = [];
 	
 	constructor(canvas_element)
 	{
@@ -111,6 +124,9 @@ class javascriptGL
 	}
 
 	
+	///////////////////////////////////
+	// GLOBAL STATE
+	///////////////////////////////////
 	enable(test)
 	{
 		if (test == this.CULL_FACE)
@@ -204,21 +220,21 @@ class javascriptGL
 
 	clear(targets)
 	{
+		var sx = 0;
+		var sy = 0;
+		var ex = this._ctx_width;
+		var ey = this._ctx_height;
+		
+		if (this._scissor_test_enable)
+		{
+			sx = this._scissor_x;
+			sy = this._scissor_y;
+			ex = this._scissor_x + this._scissor_w;
+			ey = this._scissor_y + this._scissor_h;
+		}
+		
 		if (targets & this.COLOR_BUFFER_BIT)
 		{
-			var sx = 0;
-			var sy = 0;
-			var ex = this._ctx_width;
-			var ey = this._ctx_height;
-			
-			if (this._scissor_test_enable)
-			{
-				sx = this._scissor_x;
-				sy = this._scissor_y;
-				ex = this._scissor_x + this._scissor_w;
-				ey = this._scissor_y + this._scissor_h;
-			}
-			
 			for (var y = sy; y < ey; y++)
 			{
 				for (var x = sx; x < ex; x++)
@@ -227,21 +243,9 @@ class javascriptGL
 				}
 			}			
 		}
+		
 		if (targets & this.DEPTH_BUFFER_BIT)
 		{
-			var sx = 0;
-			var sy = 0;
-			var ex = this._ctx_width;
-			var ey = this._ctx_height;
-			
-			if (this._scissor_test_enable)
-			{
-				sx = this._scissor_x;
-				sy = this._scissor_y;
-				ex = this._scissor_x + this._scissor_w;
-				ey = this._scissor_y + this._scissor_h;
-			}
-			
 			for (var y = sy; y < ey; y++)
 			{
 				for (var x = sx; x < ex; x++)
@@ -253,39 +257,26 @@ class javascriptGL
 	}
 	
 	
-	
+	///////////////////////////////////
+	// VBO
+	///////////////////////////////////
 	createBuffer()
 	{
-		var buffer = {
-			type: null,
-			data: []
-		};
+		var buffer = [];
 		
 		this._vbo.push( buffer );
 		return this._vbo.length - 1;
 	}
 	
 	
-	createVertexArray()
-	{
-		var vao = {
-			enabled_attribs: [],
-			attrib_ptrs: [],			
-		};
-				
-		this._vao.push( vao );
-		return this._vao.length - 1;
-	}
-	
-	
 	bindBuffer(target, buffer)
 	{
-		if (target == gl.ARRAY_BUFFER)
+		if (target == this.ARRAY_BUFFER)
 		{
 			this._active_vbo = buffer;
 			this._buffers[ this._active_vbo ].type = target;
 		}
-		else if (target = gl.UNIFORM_BUFFER)
+		else if (target = this.UNIFORM_BUFFER)
 		{
 			this._active_ubo = buffer;
 			this._buffers[ this._active_ubo ].type = target;
@@ -304,7 +295,7 @@ class javascriptGL
 			srcData_or_size = new Array(srcData_or_size);
 		}
 		
-		if (target == gl.ARRAY_BUFFER)
+		if (target == this.ARRAY_BUFFER)
 		{
 			for (var i = 0; i < srcData_or_size.length; i++)
 			{
@@ -315,6 +306,44 @@ class javascriptGL
 		{
 			throw Error("Unsupported buffer data fill");
 		}		
+	}
+	
+	
+	bufferSubData(target, dstByteOffset, srcData)
+	{
+		if (target != this.UNIFORM_BUFFER)
+		{
+			var end = dstByteOffset + srcData.length;
+			var d = dstByteOffset;
+			var s = 0;
+			
+			while (d < end)
+			{
+				this._buffers[ this._active_ubo ][d] = srcData[d];
+				
+				s += 1;
+				d += 1;
+			}
+		}
+		else
+		{
+			throw Error("Unsupported bufferSubData function call");			
+		}
+	}
+	
+	
+	///////////////////////////////////
+	// VAO
+	///////////////////////////////////
+	createVertexArray()
+	{
+		var vao = {
+			enabled_attribs: [],
+			attrib_ptrs: [],			
+		};
+				
+		this._vao.push( vao );
+		return this._vao.length - 1;
 	}
 	
 	
@@ -364,5 +393,223 @@ class javascriptGL
 		{
 			this._vao[ this._active_vao ].attrib_ptrs[match] = attrib_ptr;
 		}
-	}	
+	}
+
+
+	
+	///////////////////////////////////
+	// UBO
+	///////////////////////////////////
+	getUniformBlockIndex(program, uniformBlockName)
+	{
+		if (program == null || program > this._programs.length)
+		{
+			throw new Error("Illegal program handle");
+		}
+		
+		// Find the block
+		var found = null;
+		for (var i = 0; i < this._programs[program].uniform_blocks.length; i++)
+		{
+			if (this._programs[program].uniform_blocks[i].name == uniformBlockName)
+			{
+				found = i;
+				break;
+			}
+		}
+		
+		return found;		
+	}
+	
+	
+	_get_block_new_offset(prev_offset, curr_type)
+	{
+		var new_offset = prev_offset;
+		
+		switch(curr_type)
+		{
+			case jsGL.JSSL_MAT4:
+				new_offset += 16;
+				break;
+			default:
+				throw new Error("Unsupported block member type");
+		}
+		
+		return new_offset;
+		
+	}
+	
+	_get_uniform_block_size(block)
+	{
+		var total = 0;
+		for (var i = 0; i < block.members.length; i++)
+		{
+			total = this._get_block_new_offset(total, block.members[i].type);
+		}
+	}
+	
+	
+	getActiveUniformBlockParameter(program, uniformBlockIndex, pname)
+	{
+		if (program == null || program > this._programs.length)
+		{
+			throw new Error("Illegal program handle");
+		}
+		
+		
+		if (pname == this.UNIFORM_BLOCK_DATA_SIZE)
+		{
+			var block = this._programs[ program ].uniform_blocks[ uniformBlockIndex ];
+			return this._get_uniform_block_size( block );
+		}
+		else
+		{			
+			throw new Error("Unsupported pname type");
+		}
+		
+	}
+	
+	
+	bindBufferBase(target, index, buffer)
+	{
+		if (target != this.UNIFORM_BUFFER)
+		{
+			this._block_bindings[ index ] = buffer;
+		}
+		else
+		{
+			throw new Error("Unsupported target type");			
+		}
+	}
+	
+	
+	uniformBlockBinding(program, uniformBlockIndex, uniformBlockBinding)
+	{
+		if (program == null || program > this._programs.length)
+		{
+			throw new Error("Illegal program handle");
+		}
+
+		this._programs[ program ].uniform_blocks[ uniformBlockIndex ].block_bind_index = uniformBlockBinding;
+	}
+	
+	
+	_get_uniform_index(program, uniform_name)
+	{
+		var index = 0;
+		for (var b = 0; b < this._programs[ program ].uniform_blocks.length; b++)
+		{
+			for (var m = 0; m < this._programs[ program ].uniform_blocks[b].members.length; m++)
+			{
+				var curr_member = this._programs[ program ].uniform_blocks[b].members[m];
+				if (m.name == uniform_name)
+				{
+					return index;
+				}
+
+				index += 1;
+			}
+		}	
+
+		return null;
+	}
+	
+	
+	getUniformIndices(program, uniformNames)
+	{
+		if (program == null || program > this._programs.length)
+		{
+			throw new Error("Illegal program handle");
+		}
+
+		var indices = [];
+		for (var i = 0; i < uniformNames.length; i++)
+		{
+			indices.push( this._get_uniform_index(program, uniformNames[i]) )	
+		}
+		
+		
+		return indices;
+	}
+
+
+	_get_uniform_offset(program, uniform_index)
+	{
+		var index = 0;
+		for (var b = 0; b < this._programs[ program ].uniform_blocks.length; b++)
+		{
+			var offset = 0;
+			for (var m = 0; m < this._programs[ program ].uniform_blocks[b].members.length; m++)
+			{
+				if (uniform_index == index)
+				{
+					return offset;
+				}
+
+				index += 1;
+				offset = this._get_block_new_offset(offset, m.type);				
+			}
+		}	
+
+		return null;
+	}
+
+	
+	getActiveUniforms(program, uniformIndices, pname)
+	{
+		if (program == null || program > this._programs.length)
+		{
+			throw new Error("Illegal program handle");
+		}
+
+		if (pname == this.UNIFORM_OFFSET)
+		{
+			var offsets = [];
+			for (var i = 0; i < uniformIndices.length; i++)
+			{
+				offsets.push( this._get_uniform_offset(program, uniformIndices[i]) );
+			}
+			
+			return offsets;
+		}
+		else
+		{
+			throw new Error("Unsupported pname");
+		}
+		
+	}
+
+
+	///////////////////////////////////
+	// Shader Program
+	///////////////////////////////////	
+	__register_program(program)
+	{	
+		this._programs.push( program );
+		return this._programs.length - 1;
+	}
+	
+	
+	useProgram(program)
+	{
+		this._active_program = program;
+	}
+	
+	
+	///////////////////////////////////
+	// Drawing
+	///////////////////////////////////	
+	drawArrays()
+	{
+		
+	}
+	
+	
+	
+	///////////////////////////////////
+	// Pipeline Internals
+	///////////////////////////////////	
+	
+	// TODO: put in all the "_pipeline_" functions
+	
 }

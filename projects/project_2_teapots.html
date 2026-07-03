@@ -156,7 +156,6 @@
 				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.gouraud_ubo);
 				
 				var block_index = gl.getUniformBlockIndex(gl_shader_program, "gouraud_data");
-												  
 		
 				var block_size = gl.getActiveUniformBlockParameter(gl_shader_program,
 																   block_index,
@@ -173,7 +172,6 @@
 				var ubo_offsets = gl.getActiveUniforms(gl_shader_program,
 													   ubo_indices,
 													   gl.UNIFORM_OFFSET);
-
 				gl_client_data.proj_mat_loc  = ubo_offsets[0];
 				gl_client_data.view_mat_loc  = ubo_offsets[1];
 				gl_client_data.model_mat_loc = ubo_offsets[2];
@@ -196,33 +194,31 @@
 			function _build_program_jsGL(gl)
 			{	
 				var shader_program = {
-	
-					vertex: {
-						uniform_blocks:		[	
-												{
-													block_index: 0,
-													block_binding: null,
-													members: [
-														{ type: jsGL.JSGL_MAT4, name: "proj"      },
-														{ type: jsGL.JSGL_MAT4, name: "view"      },
-													]						
-												}
-											],
-						shader: 			jsGL_gouraud_vertex_shader,					
-					},
+
+					uniform_blocks:		[	
+											{
+												name: "gouraud_data",
+												block_bind_idx: null,
+												members: [
+													{ type: jsGL.JSSL_MAT4, name: "proj"      },
+													{ type: jsGL.JSSL_MAT4, name: "view"      },
+												]						
+											}
+										],
+				
+					vertex_shader: 		jsGL_gouraud_vertex_shader,					
 								
-					varyings: 				[
-												{ type: jsGL.JSGL_VEC3, name: "interp_color" }				
-											],
+					varyings: 			[
+											{ type: jsGL.JSSL_VEC3, name: "interp_color" }				
+										],
 					
-					fragment: {
-						uniform_blocks:		[],
-						shader:				jsGL_gouraud_fragment_shader,
-					},
+					fragment_shader:	jsGL_gouraud_fragment_shader,
 					
 				};
 			
-				return shader_program;
+			
+				var program_handle = gl.__register_program(shader_program);
+				return program_handle;
 			}
 			
 						
@@ -348,9 +344,9 @@
 				gl.bindVertexArray(gl_client_data.teapot_vao);
 
 				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.gouraud_ubo);					
-				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.proj_mat_loc,   proj_mat.data, 0);
-				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.view_mat_loc,   view_mat.data, 0);
-				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.model_mat_loc, model_mat.data, 0);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.proj_mat_loc,   proj_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.view_mat_loc,   view_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.model_mat_loc, model_mat.data);
 				
 				gl.drawArrays(
 					gl.TRIANGLES,
@@ -666,7 +662,7 @@
 				<u><b>UBO:</u></b>
 				<br/>
 				<br/>
-				<li>gl.getUniformBlockIndex - </li>
+				<li>gl.getUniformBlockIndex - Finds the block index of a uniform block within a shader program.</li>
 				<li>gl.getActiveUniformBlockParameter - </li>
 				<li>gl.bindBufferBase - </li>
 				<li>gl.uniformBlockBinding - </li>
