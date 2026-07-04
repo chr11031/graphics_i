@@ -1,0 +1,205 @@
+<html style="font-family: 'Roboto', sans-serif;">
+	<head>
+		<title>Demo: IFS Fractal</title>
+		<style>
+			table {border: 0px solid;}
+		</style>
+		<script>
+			var ctx = null;
+			var ctx_width = null;
+			var ctx_height = null;
+			var slider = null;
+			var slider_view = null;
+			var edge_list = null;
+
+			class vec2 
+			{
+				constructor(x, y) 
+				{
+					this.x = x;
+					this.y = y;
+				}
+			}
+
+			class rgba
+			{
+				constructor(r, g, b, a)
+				{
+					this.r = r;
+					this.g = g;
+					this.b = b;
+					this.a = a;
+				}
+				
+				equals(other)
+				{
+					return (this.r == other.r &&
+							this.g == other.g &&
+							this.b == other.b &&
+							this.a == other.a);
+				}
+			
+			}			
+
+
+			function draw_pixel(pt, color)
+			{			
+				ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
+				ctx.fillRect(pt.x, ctx_height - pt.y + 1, 1, 1);
+			}
+			
+			
+			function clear_canvas(color)
+			{
+				ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
+				ctx.fillRect(0, 0, ctx_width, ctx_height);			
+			}
+			
+
+			function draw_fern()
+			{
+				
+				for (var z = 0; z < 1000000; z++)
+				{
+					var pt = new vec2(
+									  (Math.random() * 2 - 1) * (ctx_width-1),
+									  (Math.random() * 2 - 1) * (ctx_height-1));
+					var color = new rgba(0,0,0,255);
+					
+					for (var i = 0; i < 100; i++)
+					{			
+						var n = Math.random();
+						
+						var a, b, c, d, e, f;
+						
+						if (n < 0.01)
+						{
+							color.r = 255;
+							color.g = 0;
+							color.b = 0;
+							
+							a = 0;
+							b = 0;
+							c = 0;
+							
+							d = 0;
+							e = 0.16;
+							f = 0;
+						}
+						else if (n < 0.86)
+						{
+							color.r = 0;
+							color.g = 255;
+							color.b = 0;
+							
+							a = 0.85;
+							b = 0.04;
+							c = 0.0;
+							
+							d =-0.04;
+							e = 0.85;
+							f = 1.6;				
+						}
+						else if (n < 0.93)
+						{
+							color.r = 0;
+							color.g = 0;
+							color.b = 255;
+							
+							a = 0.2;
+							b =-0.26;
+							c = 0.0;
+							
+							d = 0.23;
+							e = 0.22;
+							f = 1.6;								
+						}
+						else
+						{
+							color.r = 255;
+							color.g = 255;
+							color.b = 0;
+						
+							a =-0.15;
+							b = 0.28;
+							c = 0.0;
+							
+							d = 0.26;
+							e = 0.24;
+							f = 0.44;												
+						}
+
+
+						var tx = pt.x * a + pt.y * b + c;
+						var ty = pt.x * d + pt.y * e + f;
+						
+						pt.x = tx;
+						pt.y = ty;
+
+		
+
+
+					}
+
+					var W = 250;
+					var screen = new vec2(W*pt.x / 2 + (ctx_width/2),
+										  W*pt.y / 2 );
+										  
+					if (screen.x >= 0 && screen.x <= (ctx_width-1) &&
+						screen.y >= 0 && screen.y <= (ctx_height-1))
+					{
+						draw_pixel( screen, color );
+					}
+
+				}
+			}
+
+
+		
+			function main()
+			{
+				var frame_canvas = document.getElementById("frame_canvas");
+				ctx = frame_canvas.getContext("2d");
+				ctx_width = frame_canvas.width;
+				ctx_height = frame_canvas.height;
+
+
+				clear_canvas(new rgba(0.0, 0.0,0.0,255.0));
+				draw_fern();
+
+			}
+		</script>
+		
+	</head>	
+
+	<body onload="main()">
+		<h1>Demo: IFS Fractal</h1>	
+		<p>
+			Name: Dane Christensen</br>
+			Date: 7/4/2026
+		</p>
+		
+		<table>
+			<tr>
+				<td>
+					<canvas	id="frame_canvas"
+							style="background-color: #FFFFFF;" 
+							width=1024 
+							height=1280>
+					</canvas>
+					<br/>
+				</td>			
+			</tr>
+		</table>
+	
+		</br>
+		
+		<h2>Description</h2>
+		IFS fractals are represented by a group of 2D affine transformations that are used repeatedly on random input points for some number of iterations. At each iteration a given transformation has a probability of being applied the results of the point from the previous iteration. Principal among these is the Barnsley Fern, which is reproduced in the canvas above.
+		
+		</br>
+		</br>
+		
+	</body>
+
+</html>
