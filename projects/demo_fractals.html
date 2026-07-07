@@ -45,7 +45,7 @@
 			function draw_pixel(pt, color)
 			{			
 				ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
-				ctx.fillRect(pt.x, ctx_height - pt.y + 1, 1, 1);
+				ctx.fillRect(pt.x, ctx_height - pt.y - 1, 1, 1);
 			}
 			
 			
