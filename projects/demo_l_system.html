@@ -1,0 +1,264 @@
+<html style="font-family: 'Roboto', sans-serif;">
+	<head>
+		<title>Demo: L-System</title>
+		<style>
+			table {border: 0px solid;}
+		</style>
+		<script>
+			var ctx = null;
+			var ctx_width = null;
+			var ctx_height = null;
+			var slider = null;
+			var slider_view = null;
+			var edge_list = null;
+
+			class vec2 
+			{
+				constructor(x, y) 
+				{
+					this.x = x;
+					this.y = y;
+				}
+				
+				sum(v2)
+				{
+					var rv = new vec2(this.x + v2.x,
+									  this.y + v2.y);
+									  
+					return rv;
+				}
+			}
+
+			class mat2
+			{
+				constructor()
+				{
+					this.data = [ [ 1, 0, ],
+								  [ 0, 1, ] ];
+				}
+				
+				set(r, c, v)
+				{
+					this.data[c][r] = v;
+				}
+				
+				set_rotate(theta_deg)
+				{
+					var theta = theta_deg * Math.PI / 180.0;
+					var sin   = Math.sin(theta);
+					var cos   = Math.cos(theta);
+					
+					this.set(0,0, cos);
+					this.set(0,1,-sin);
+					this.set(1,0, sin);
+					this.set(1,1, cos);
+				}
+				
+				get(r, c)
+				{
+					return this.data[c][r];
+				}
+				
+				mult_vec2(v)
+				{
+					var tx = this.get(0,0) * v.x + this.get(0,1) * v.y;
+					var ty = this.get(1,0) * v.x + this.get(1,1) * v.y;
+					
+					tx = Math.round(tx);
+					ty = Math.round(ty);
+					
+					return new vec2(tx, ty);
+					
+				}
+				
+			}
+
+			class rgba
+			{
+				constructor(r, g, b, a)
+				{
+					this.r = r;
+					this.g = g;
+					this.b = b;
+					this.a = a;
+				}
+				
+				equals(other)
+				{
+					return (this.r == other.r &&
+							this.g == other.g &&
+							this.b == other.b &&
+							this.a == other.a);
+				}
+			
+			}			
+
+
+			function draw_pixel(pt, color)
+			{			
+				ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
+				ctx.fillRect(pt.x, ctx_height - pt.y + 1, 1, 1);
+			}
+			
+			
+			function clear_canvas(color)
+			{
+				ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
+				ctx.fillRect(0, 0, ctx_width, ctx_height);			
+			}
+
+			function sleep(ms)
+			{
+				return new Promise(resolve => setTimeout(resolve, ms));
+			}
+
+
+			function draw_line(start, end)
+			{
+				var pt = new vec2(start.x, start.y);
+				if (start.x == end.x)
+				{
+					var dy = start.y < end.y ? +1 : -1;
+					
+					while (pt.y != end.y)
+					{
+						draw_pixel(pt, new rgba(255, 255, 255, 255));
+						pt.y += dy;
+					}
+
+					
+				}
+				else if (start.y == end.y)
+				{
+					var dx = start.x < end.x ? +1 : -1;
+					
+					while (pt.x != end.x)
+					{
+						draw_pixel(pt, new rgba(255, 255, 255, 255));
+						pt.x += dx;
+					}				
+				}
+				else
+				{
+					alert("Not implemented!\n");
+					return;
+				}
+			}
+
+			function iterate_hilbert(str)
+			{
+				var out = "";
+				
+				for (var i = 0; i < str.length; i++)
+				{
+					if (str[i] == "-")
+					{
+						out += "-";
+					}
+					else if (str[i] == "+")
+					{
+						out += "+";
+					}
+					else if (str[i] == "F")
+					{
+						out += "F";
+					}
+					else if (str[i] == "X")
+					{
+						out += "-YF+XFX+FY-";
+					}
+					else if (str[i] == "Y")
+					{
+						out += "+XF-YFY-FX+";						
+					}					
+				}
+				
+				return out;
+			}
+
+
+			async function draw_l_system(deg)
+			{
+				var str = "X";
+				for (var i = 0; i < deg; i++)
+				{
+					str = iterate_hilbert(str);
+					console.log(str);
+				}
+				
+				var rot_left = new mat2();
+				rot_left.set_rotate(90.0);
+				var rot_right = new mat2();
+				rot_right.set_rotate(-90.0);
+				
+				
+				var pos = new vec2(10,ctx_height-10);
+				var dir = new vec2(20, 0);
+				
+				for (var i = 0; i < str.length; i++)
+				{
+					if (str[i] == "F")
+					{
+						var next = pos.sum(dir);						
+						draw_line(pos, next);
+						await sleep(5);
+						pos = next;
+					}
+					else if (str[i] == "-") // Turn right
+					{
+						dir = rot_right.mult_vec2(dir);						
+					}
+					else if (str[i] == "+") // Turn left 
+					{
+						dir = rot_left.mult_vec2(dir);
+					}				
+				}
+			}
+
+		
+			function main()
+			{
+				var frame_canvas = document.getElementById("frame_canvas");
+				ctx = frame_canvas.getContext("2d");
+				ctx_width = frame_canvas.width;
+				ctx_height = frame_canvas.height;
+
+				clear_canvas(new rgba(0.0, 0.0,0.0,255.0));
+				
+				draw_l_system(5);
+				
+			}
+		</script>
+		
+	</head>	
+
+	<body onload="main()">
+		<h1>Demo: L-System</h1>	
+		<p>
+			Name: Dane Christensen</br>
+			Date: 7/4/2026
+		</p>
+		
+		<table>
+			<tr>
+				<td>
+					<canvas	id="frame_canvas"
+							style="background-color: #FFFFFF;" 
+							width=640 
+							height=640>
+					</canvas>
+					<br/>
+				</td>			
+			</tr>
+		</table>
+	
+		</br>
+		
+		<h2>Description</h2>
+		L-Systems represent simple, non-context-free grammars that can be parsed iteratively to create fractal-like patterns. The Hilbert Curve by Paul Bourke (1981) is reproduced here.		
+		</br>
+		</br>
+		
+	</body>
+
+</html>
