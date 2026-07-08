@@ -64,11 +64,7 @@
 					var tx = this.get(0,0) * v.x + this.get(0,1) * v.y;
 					var ty = this.get(1,0) * v.x + this.get(1,1) * v.y;
 					
-					tx = Math.round(tx);
-					ty = Math.round(ty);
-					
-					return new vec2(tx, ty);
-					
+					return new vec2(tx, ty);					
 				}
 				
 			}
@@ -207,10 +203,18 @@
 					else if (str[i] == "-") // Turn right
 					{
 						dir = rot_right.mult_vec2(dir);						
+						
+						// For this application, round to nearest whole numbers
+						dir.x = Math.round(dir.x);
+						dir.y = Math.round(dir.y);
 					}
 					else if (str[i] == "+") // Turn left 
 					{
 						dir = rot_left.mult_vec2(dir);
+
+						// For this application, round to nearest whole numbers
+						dir.x = Math.round(dir.x);
+						dir.y = Math.round(dir.y);
 					}				
 				}
 			}
