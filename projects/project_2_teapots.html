@@ -8,8 +8,7 @@
 		<script type="text/javascript" src="/js/Types/RGBA.js"></script>
 		<script type="text/javascript" src="/js/Types/Matrix4x4.js"></script>		
 		<script type="text/javascript" src="/js/Helpers/Shader.js"></script>
-		<script type="text/javascript" src="/js/javascriptGL/javascriptGL.js"></script>
-
+		<script type="text/javascript" src="/js/Wheel/Software_Renderer.js"></script>
 		<script type="text/javascript" src="/js/Loaders/Resource_Loader.js"></script>
 		
 		
@@ -39,8 +38,7 @@
 				gl.enable(gl.SCISSOR_TEST);
 			}
 			
-
-			function _build_client_teapot_data(gl, gl_shader_program)
+			function _build_client_teapot_data_webgl(gl, gl_shader_program)
 			{
 				var gl_client_data = {
 					vertices_vbo: null,
@@ -54,8 +52,8 @@
 					model_mat_loc: null,					
 				};
 			
-				var obj_verts =   [];
-				var obj_norms =   [];
+				var obj_verts = [];
+				var obj_norms = [];
 			
 				var teapot_obj = resources["teapot_obj"];
 			
@@ -179,6 +177,16 @@
 
 				return gl_client_data;
 			}
+			
+			
+			function _build_client_teapot_data_jsGL(gl, gl_shader_program)
+			{
+				gl_client_data = {};
+				
+				// YOUR CODE HERE...
+				
+				return gl_client_data;
+			}
 						
 					
 			function _build_program_webGL(gl)
@@ -190,13 +198,9 @@
 				return program;
 			}
 			
-			
-			
-			
-			
+						
 			function _build_program_jsGL(gl)
 			{	
-				TODO;
 				// Code structure and helpers like this:
 				/* See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in
 				const object = { a: 1, b: 2, c: 3 };
@@ -208,22 +212,30 @@
 			
 				var shader_program = {
 
-					uniform_blocks:		[	
-											{
-												name: "gouraud_data",
-												block_bind_idx: null,
-												members: [
-													{ type: jsGL.JSSL_MAT4, name: "proj"      },
-													{ type: jsGL.JSSL_MAT4, name: "view"      },
-												]						
-											}
-										],
-				
+					input_data:
+					{
+						pos:    { type: jsGL.JSSL_VEC3, value: null },
+						normal: { type: jsGL.JSSL_VEC3, value: null }
+					},
+
+
+					uniform_blocks:		
+					{
+						gouraud_data: {
+							_block_bind_idx: null,
+							
+							proj: { type: jsGL.JSSL_MAT4, value: null },
+							view: { type: jsGL.JSSL_MAT4, value: null },
+													
+						}					
+					},
+					
 					vertex_shader: 		jsGL_gouraud_vertex_shader,					
 								
-					varyings: 			[
-											{ type: jsGL.JSSL_VEC3, name: "interp_color" }				
-										],
+					varyings: 			
+					{
+						interp_color: { type: jsGL.JSSL_VEC3, value: null }					
+					},
 					
 					fragment_shader:	jsGL_gouraud_fragment_shader,
 					
@@ -231,22 +243,23 @@
 			
 			
 				var program_handle = gl.__register_program(shader_program);
+				
 				return program_handle;
 			}
 			
 						
-			function jsGL_gouraud_vertex_shader(input_vertex_uniforms,
+			function jsGL_gouraud_vertex_shader(uniforms,
 												input_vertex_data,
 												output_varyings)
 			{
 				// Per-Vertex Data
-				var pos          = input_vertex_data.pos;
-				var normal       = input_vertex_data.normal;
+				var pos          = input_vertex_data.pos.value;
+				var normal       = input_vertex_data.normal.value;
 
 				// Uniforms (Draw Call Globals)
-				var proj         = input_vertex_uniforms_arr.proj;
-				var view         = input_vertex_uniforms_arr.view;
-				var light_pos    = input_vertex_uniforms_arr.light_pos;
+				var proj         = uniforms_arr.proj.value;
+				var view         = uniforms_arr.view.value;
+				var light_pos    = uniforms_arr.light_pos.value;
 
 				// Data to interpolate between vertices
 				output_varyings.interp_color.r = 1.0;
@@ -259,12 +272,12 @@
 			}
 			
 			
-			function jsGL_gouraud_fragment_shader(input_fragment_uniforms,
+			function jsGL_gouraud_fragment_shader(uniforms,
 												  input_varyings,
 												  output_attachments)
 			{				
 				// Interpolated data
-				var interp_color = input_varyings.interp_color;
+				var interp_color = input_varyings.interp_color.value;
 			
 				// Writes to output_attachments
 				output_attachments[0] = new RGBA(interp_color.r, 
@@ -518,13 +531,17 @@
 			
 			function initialize_demo()
 			{
+				
+				
 				// Part #1 - Initialization 
 				var webGL_canvas = document.getElementById("webGL_canvas");
 				webGL = webGL_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});					
 				_init_gl(webGL);
 				
+				
 				var jsGL_canvas = document.getElementById("jsGL_canvas");
-				jsGL = new javascriptGL(jsGL_canvas);
+				jsGL = new Software_Renderer(jsGL_canvas);
+				
 				_init_gl(jsGL);
 
 
@@ -544,8 +561,8 @@
 
 
 				// Part #3 - VBO, VAO, UBO dependencies
-				webGL_client_data = _build_client_teapot_data(webGL, webGL_program_handle);
-				//jsGL_client_data  = _build_client_teapot_data(jsGL,  jsGL_program_handle);
+				webGL_client_data = _build_client_teapot_data_webgl(webGL, webGL_program_handle);
+				jsGL_client_data  = _build_client_teapot_data_jsGL(jsGL,  jsGL_program_handle);
 
 								
 				// LOCAL state (View)
@@ -621,10 +638,10 @@
 				<td colspan="2">
 					<br/>
 					Display Mode: 
-					<input type="radio" id="view_split" name="view mode" value="CAD" checked/>
+					<input type="radio" id="view_split" name="view mode" value="CAD"/>
 					<label for="view_CAD">4-Way Split</label>
 
-					<input type="radio" id="view_X_Y" name="view mode" value="X-Y View" />
+					<input type="radio" id="view_X_Y" name="view mode" value="X-Y View" checked/>
 					<label for="view_X_Y">X-Y</label>
 
 					<input type="radio" id="view_product" name="view mode" value="Product View" />
@@ -687,14 +704,7 @@
 				<u><b>Shader Program:</u></b>
 				<br/>
 				<br/>
-				<li>gl.useProgram - </li>
-				
-				
-				
-				
-				
-				
-				
+				<li>gl.useProgram - Binds an already built GLSL program (vertex + fragment shaders) so any uniform/draw calls reference it.</li>
 				
 				
 				

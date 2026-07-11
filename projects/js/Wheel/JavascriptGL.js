@@ -147,6 +147,26 @@ class javascriptGL
 		}
 	}
 	
+	disable(test)
+	{
+		if (test == this.CULL_FACE)
+		{
+			this.cull_face_enable = false;
+		}
+		else if (test == SCISSOR_TEST)
+		{
+			this.scissor_test_enable = false;
+		}
+		else if (test == DEPTH_TEST)
+		{
+			this.depth_test_enable = false;
+		}
+		else
+		{
+			throw new Error("Invalid function argument");
+		}		
+	}
+
 	
 	scissor(x, y, w, h)
 	{
@@ -174,8 +194,8 @@ class javascriptGL
 		x = Math.min(this.ctx_width  - 1, Math.max(x, 0));
 		y = Math.min(this.ctx_height - 1, Math.max(y, 0));
 
-		ex = x + w;
-		ey = y + w;
+		var ex = x + w;
+		var ey = y + w;
 		
 		ex = Math.min(this.ctx_width - 1,  ex);
 		ey = Math.min(this.ctx_height - 1, ey);
@@ -189,26 +209,6 @@ class javascriptGL
 		this._viewport_h = h;
 	}
 
-
-	disable(test)
-	{
-		if (test == this.CULL_FACE)
-		{
-			this.cull_face_enable = false;
-		}
-		else if (test == SCISSOR_TEST)
-		{
-			this.scissor_test_enable = false;
-		}
-		else if (test == DEPTH_TEST)
-		{
-			this.depth_test_enable = false;
-		}
-		else
-		{
-			throw new Error("Invalid function argument");
-		}		
-	}
 
 	clearColor(color_r, color_g, color_b, color_a)
 	{
@@ -264,8 +264,8 @@ class javascriptGL
 	{
 		var buffer = [];
 		
-		this._vbo.push( buffer );
-		return this._vbo.length - 1;
+		this._buffers.push( buffer );
+		return this._buffers.length - 1;
 	}
 	
 	
@@ -274,12 +274,10 @@ class javascriptGL
 		if (target == this.ARRAY_BUFFER)
 		{
 			this._active_vbo = buffer;
-			this._buffers[ this._active_vbo ].type = target;
 		}
 		else if (target = this.UNIFORM_BUFFER)
 		{
 			this._active_ubo = buffer;
-			this._buffers[ this._active_ubo ].type = target;
 		}
 		else
 		{
@@ -290,7 +288,7 @@ class javascriptGL
 	
 	bufferData(target, srcData_or_size, usage)
 	{
-		if (Array.isArray(srcData_or_size) == false)
+		if ('length' in srcData_or_size == false)
 		{
 			srcData_or_size = new Array(srcData_or_size);
 		}
@@ -299,7 +297,7 @@ class javascriptGL
 		{
 			for (var i = 0; i < srcData_or_size.length; i++)
 			{
-				this._vbo[this._active_vbo].push( srcData_or_size[i] );
+				this._buffers[this._active_vbo].push( srcData_or_size[i] );
 			}
 		}
 		else
@@ -311,7 +309,7 @@ class javascriptGL
 	
 	bufferSubData(target, dstByteOffset, srcData)
 	{
-		if (target != this.UNIFORM_BUFFER)
+		if (target == this.UNIFORM_BUFFER)
 		{
 			var end = dstByteOffset + srcData.length;
 			var d = dstByteOffset;
@@ -355,7 +353,7 @@ class javascriptGL
 
 	enableVertexAttribArray(index)
 	{
-		if (this._vao[ this._active_vao ].enabled_attribs.contains( index ) == false)
+		if ( this._vao[ this._active_vao ].enabled_attribs.includes(index) == false)
 		{
 			this._vao[ this._active_vao ].enabled_attribs.push( index );
 		}
@@ -387,7 +385,7 @@ class javascriptGL
 		
 		if (match == -1)
 		{
-			this._vao[ this._active_vao ].attrib_ptrs.push(new attrib_ptr);
+			this._vao[ this._active_vao ].attrib_ptrs.push( attrib_ptr );
 		}
 		else
 		{
@@ -407,15 +405,18 @@ class javascriptGL
 			throw new Error("Illegal program handle");
 		}
 		
+		
 		// Find the block
 		var found = null;
-		for (var i = 0; i < this._programs[program].uniform_blocks.length; i++)
+		var i = 0;
+		for (const [key, value] of Object.entries(this._programs[program].uniform_blocks))
 		{
-			if (this._programs[program].uniform_blocks[i].name == uniformBlockName)
+			if (key == uniformBlockBinding)
 			{
 				found = i;
 				break;
 			}
+			i += 1;
 		}
 		
 		return found;		
@@ -601,7 +602,10 @@ class javascriptGL
 	///////////////////////////////////	
 	drawArrays()
 	{
+		// Connect VAO and shader inputs 
 		
+		
+		// Pull, normalize where necessary, 
 	}
 	
 	
