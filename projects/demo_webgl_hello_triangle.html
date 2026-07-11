@@ -1,0 +1,195 @@
+<html style="font-family: 'Roboto', sans-serif;">
+	<head>
+		<title>Demo: Hello WebGL</title>
+		<style>
+			table {border: 0px solid;}
+		</style>
+		<script>
+
+			var gl;
+			var vbo1;
+			var vbo2;
+			var vao;
+			var program;
+
+			
+			function draw_gl_canvas()
+			{
+				gl.clearColor(0,0.2,0,1);
+				gl.clear(gl.COLOR_BUFFER_BIT);		
+
+				gl.bindVertexArray(vao);
+				gl.useProgram(program);
+				
+				gl.drawArrays(
+					gl.TRIANGLES,
+					0,
+					3
+				);
+				
+			}
+			
+			
+			function main()
+			{
+				var frame_canvas = document.getElementById("frame_canvas");
+				
+				gl = frame_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});
+				
+				
+				var positions = new Float32Array([
+					-0.5, -0.0, 0.0, 1.0,
+					 0.5, -0.0, 0.0, 1.0,
+					 0.0, 0.5,  0.0, 1.0, 			
+				]);
+				
+				
+				vbo1 = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					vbo1
+				);
+								
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					positions,
+					gl.STATIC_DRAW
+				);
+				
+				
+				var colors = new Uint8Array([
+					255, 0, 0,
+					0, 255, 0,
+					0, 0, 255
+				]);
+				
+				
+				vbo2 = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					vbo2
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER, 
+					colors, 
+					gl.STATIC_DRAW
+				);
+				
+				
+				vao = gl.createVertexArray();
+				gl.bindVertexArray(vao);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, vbo1);
+				gl.enableVertexAttribArray(0);
+				gl.vertexAttribPointer(
+					0,
+					4,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, vbo2);
+				gl.enableVertexAttribArray(1);
+				gl.vertexAttribPointer(
+					1,
+					3,
+					gl.UNSIGNED_BYTE,
+					true,
+					0,
+					0					
+				);
+				
+				gl.bindVertexArray(null);
+				
+				var vs_code = `#version 300 es
+								precision highp float;
+								layout(location=0) in vec4 aPos;
+								layout(location=1) in vec3 aCol;
+
+								smooth out vec3 vCol;
+								
+								void main(){
+
+									vCol = aCol;
+									
+									gl_Position = aPos;								
+								}`;
+				
+				
+				var vertex_shader = gl.createShader(gl.VERTEX_SHADER);
+				gl.shaderSource(vertex_shader, vs_code);
+				gl.compileShader(vertex_shader);
+				if (!gl.getShaderParameter(vertex_shader, gl.COMPILE_STATUS))
+				{
+					alert('Failed to compile vertex shader:' + gl.getShaderInfoLog(vertex_shader));
+					return;
+				}
+
+
+				var fs_code = `#version 300 es
+								precision highp float;
+								
+								smooth in vec3 vCol;
+								
+								out vec4 outCol;
+								
+								void main() {
+								
+									outCol = vec4(vCol, 1.0);
+									
+								}`;
+								
+				var fragment_shader = gl.createShader(gl.FRAGMENT_SHADER);
+				gl.shaderSource(fragment_shader, fs_code);
+				gl.compileShader(fragment_shader);
+				if (!gl.getShaderParameter(fragment_shader, gl.COMPILE_STATUS))
+				{
+					alert('Failed to compile fragment shader:' + gl.getShaderInfoLog(fragment_shader));
+					return;
+				}
+						
+				
+				program = gl.createProgram();
+				gl.attachShader(program, vertex_shader);
+				gl.attachShader(program, fragment_shader);
+				gl.linkProgram(program);
+				
+				if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+				{
+					alert('Failed to link shader program:' + gl.getProgramInfoLog(program));
+					return;
+				}
+				
+				
+				draw_gl_canvas();
+			}
+		</script>
+		
+	</head>	
+
+	<body onload="main()">
+		<h1>Demo: Hello WebGL</h1>	
+		<p>
+			Name: Dane Christensen</br>
+			Date: 7/11/2026
+		</p>
+		
+		<canvas	id="frame_canvas"
+				style="background-color: #FFFFFF;" 
+				width=512 
+				height=512>
+		</canvas>	
+	
+		</br>
+		
+		<h2>Description</h2>
+		Hello Triangle presented in WebGL with a slightly green, dark background.</br>
+
+	</body>
+
+</html>
