@@ -8,8 +8,7 @@
 		<script type="text/javascript" src="/js/Types/RGBA.js"></script>
 		<script type="text/javascript" src="/js/Types/Matrix4x4.js"></script>		
 		<script type="text/javascript" src="/js/Helpers/Shader.js"></script>
-		<script type="text/javascript" src="/js/Wheel/Software_Renderer_Key.js"></script>
-		<script type="text/javascript" src="/js/Wheel/Combined_Renderer.js"></script>
+		<script type="text/javascript" src="/js/Wheel/Software_Renderer.js"></script>
 		<script type="text/javascript" src="/js/Loaders/Resource_Loader.js"></script>
 		
 		<script>
@@ -17,9 +16,9 @@
 			// App state
 			var resources = null;
 			
-			var combined_renderer = null;
-			var combined_renderer_client_data = null;
-			var combined_renderer_program_handle = null;
+			var webGL = null;
+			var webGL_client_data = null;
+			var webGL_program_handle = null;
 
 			var ctx_width = null;
 			var ctx_height = null;
@@ -174,100 +173,16 @@
 				return gl_client_data;
 			}
 			
-					
+				
 			function _build_program_webGL(gl)
 			{
-				var vs = _make_gl_shader(gl, resources["gouraud.vs"], gl.VERTEX_SHADER);				
-				var fs = _make_gl_shader(gl, resources["gouraud.fs"], gl.FRAGMENT_SHADER);
-				var program = _make_gl_program(gl, vs, fs);
+				var vs = _make_gl_shader(webGL, resources["gouraud.vs"], gl.VERTEX_SHADER);				
+				var fs = _make_gl_shader(webGL, resources["gouraud.fs"], gl.FRAGMENT_SHADER);
+				var program = _make_gl_program(webGL, vs, fs);
 					
 				return program;
 			}
-			
 						
-			function _build_program_jsGL(gl)
-			{	
-				// Code structure and helpers like this:
-				/* See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in
-				const object = { a: 1, b: 2, c: 3 };
-
-				for (const property in object) {
-				  console.log(`${property}: ${object[property]}`);
-				}
-				*/
-			
-				var shader_program = {
-
-					uniform_blocks:		
-					{
-						gouraud_data: {
-							proj:  { type: gl.GLSL_MAT4, value: null },
-							view:  { type: gl.GLSL_MAT4, value: null },
-							model: { type: gl.GLSL_MAT4, value: null },
-													
-						}					
-					},
-					
-					input_data:
-					{
-						pos:    { type: gl.GLSL_VEC3, value: null },
-						normal: { type: gl.GLSL_VEC3, value: null }
-					},
-
-					vertex_shader: 		software_gouraud_vertex_shader,					
-								
-					varyings: 			
-					{
-						interp_color: { type: gl.GLSL_VEC3, value: null }					
-					},
-					
-					fragment_shader:	software_gouraud_fragment_shader,
-					
-				};
-				
-				
-				return shader_program;
-			}
-			
-						
-			function software_gouraud_vertex_shader(uniforms,
-												input_vertex_data,
-												output_varyings)
-			{
-				// Per-Vertex Data
-				var pos          = input_vertex_data.pos.value;
-				var normal       = input_vertex_data.normal.value;
-
-				// Uniforms (Draw Call Globals)
-				var proj         = uniforms_arr.proj.value;
-				var view         = uniforms_arr.view.value;
-				var light_pos    = uniforms_arr.light_pos.value;
-
-				// Data to interpolate between vertices
-				output_varyings.interp_color.r = 1.0;
-				output_varyings.interp_color.g = 0.0;
-				output_varyings.interp_color.b = 0.0;
-				
-				
-				// Returns gl_Position;
-				return proj.mult(view.mult_vec4(pos));
-			}
-			
-			
-			function software_gouraud_fragment_shader(uniforms,
-												  input_varyings,
-												  output_attachments)
-			{				
-				// Interpolated data
-				var interp_color = input_varyings.interp_color.value;
-			
-				// Writes to output_attachments
-				output_attachments[0] = new RGBA(interp_color.r, 
-												 interp_color.g,
-												 interp_color.b,
-												 1.0);
-			}
-			
 			
 			function _clear_backgrounds(gl)
 			{
@@ -395,8 +310,8 @@
 									  proj_mat,
 									  tmp_mat,
 									  model_mat,
-									  combined_renderer_client_data,
-									  combined_renderer_program_handle);
+									  webGL_client_data,
+									  webGL_program_handle);
 
 
 					tmp_mat.set_identity();
@@ -409,8 +324,8 @@
 									  proj_mat,
 									  tmp_mat,
 									  model_mat,
-									  combined_renderer_client_data,
-									  combined_renderer_program_handle);
+									  webGL_client_data,
+									  webGL_program_handle);
 
 
 					tmp_mat.set_identity();
@@ -420,8 +335,8 @@
 									  proj_mat,
 									  tmp_mat,
 									  model_mat,
-									  combined_renderer_client_data,
-									  combined_renderer_program_handle);
+									  webGL_client_data,
+									  webGL_program_handle);
 
 
 					tmp_mat.set_identity();
@@ -431,8 +346,8 @@
 									  proj_mat,
 									  tmp_mat,
 									  model_mat,
-									  combined_renderer_client_data,
-									  combined_renderer_program_handle);
+									  webGL_client_data,
+									  webGL_program_handle);
 				}
 				else 
 				{
@@ -466,8 +381,8 @@
 									  proj_mat,
 									  tmp_mat,
 									  model_mat,
-									  combined_renderer_client_data,
-									  combined_renderer_program_handle);
+									  webGL_client_data,
+									  webGL_program_handle);				
 				
 				}
 			}
@@ -479,7 +394,7 @@
 			function draw_scene()
 			{
 				// Part #4 - Rendering with the pipeline
-				this._draw_scene(combined_renderer, combined_renderer_client_data);
+				this._draw_scene(webGL, webGL_client_data);
 				
 				
 				// Redraw the screen 
@@ -511,24 +426,19 @@
 			
 			
 			function initialize_demo()
-			{			
-				combined_renderer = new Combined_Renderer(document.getElementById("webGL_canvas"),
-														  document.getElementById("jsGL_canvas"));
-								
-				_init_gl(combined_renderer);
-				
-				this.ctx_width = combined_renderer.ctx_width;
-				this.ctx_height = combined_renderer.ctx_height;
+			{
+				this.webGL = webGL_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});		
+				_init_gl(this.webGL);
 
+				this.ctx_width = webGL_canvas.width;
+				this.ctx_height = webGL_canvas.height;
 
 				// Part #2 - Vertex Shader, Fragment Shader, Shader Program (completed for you)
-				this.combined_renderer_program_handle = {};
-				this.combined_renderer_program_handle.webGL = _build_program_webGL(combined_renderer);
-				this.combined_renderer_program_handle.jsGL  = _build_program_jsGL(combined_renderer);
+				webGL_program_handle = _build_program_webGL(webGL);
 
 
 				// Part #3 - VBO, VAO, UBO dependencies
-				this.combined_renderer_client_data = _build_client_teapot_data_webgl(this.combined_renderer, 																	 this.combined_renderer_program_handle);
+				webGL_client_data = _build_client_teapot_data_webgl(webGL, webGL_program_handle);
 
 								
 				// LOCAL state (View)
@@ -567,7 +477,7 @@
 		
 	</head>	
 
-		<body onload="load_resources()">
+	<body onload="load_resources()">
 		<h1>Project 2: Teapots</h1>	
 		<p>
 			Name: Dane Christensen</br>
