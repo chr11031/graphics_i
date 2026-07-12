@@ -1,5 +1,10 @@
 class Software_Renderer
 {	
+	// Software_Renderer/Combined_Renderer unique constants
+	GLSL_VEC3 = 500000;
+	GLSL_MAT4 = 500001;
+	
+	
 	// Constants values here (same values as used in WebGL)
 	TRIANGLES = 4;
 
@@ -239,23 +244,6 @@ class Software_Renderer
 	}
 	
 	
-	_get_uniform_index(program, uniform_name)
-	{
-		for (const block_name in program.uniform_blocks)
-		{		
-			for (const member_name in program.uniform_blocks[block_name])
-			{
-				if (uniform_name == member_name)
-				{
-					return { block_name: block_name, member_name: member_name };
-				}
-			}
-		}			
-
-		return this.INVALID_INDEX;
-	}
-
-	
 	getActiveUniforms(program, uniformIndices, pname)
 	{
 		if (pname == this.UNIFORM_OFFSET)
@@ -291,7 +279,8 @@ class Software_Renderer
 			throw Error("Unsupported 'first' offset parameter to function call");			
 		}
 		
-		alert("Drawing time!");
+	
+		this._invoke_pipeline(mode);
 	}
 	
 	
@@ -433,6 +422,22 @@ class Software_Renderer
 	///////////////////////////////////
 	// Private Methods
 	///////////////////////////////////
+	_get_uniform_index(program, uniform_name)
+	{
+		for (const block_name in program.uniform_blocks)
+		{		
+			for (const member_name in program.uniform_blocks[block_name])
+			{
+				if (uniform_name == member_name)
+				{
+					return { block_name: block_name, member_name: member_name };
+				}
+			}
+		}			
+
+		return this.INVALID_INDEX;
+	}
+
 	
 	_create_2d_buffer(width, height, num_components)
 	{
@@ -458,12 +463,32 @@ class Software_Renderer
 	}
 
 
-	
-
 	_draw_pixel(x, y, color)
 	{
 		this._ctx.fillStyle = "rgba("+color.r+","+color.g+","+color.b+","+(color.a/255)+")";
 		this._ctx.fillRect(x, this._ctx_height - 1 - y, 1, 1);
+	}
+
+
+	_invoke_pipeline(mode)
+	{
+		var data_to_process = this._input_assembler();
+		
+		
+		
+		
+		
+		
+		// Input assembler
+		
+		// 
+		
+	}
+
+	
+	_input_assembler()
+	{
+		
 	}
 
 
@@ -504,7 +529,7 @@ class Software_Renderer
 		var tri_area = vec2_determinant(edge_ab, new vec2(pt_c.x - pt_a.x, pt_c.y - pt_a.y));
 		
 		// Back-Face Culling
-		if (tri_area < 0)
+		if (this._cull_face_enable && tri_area < 0)
 		{
 			return; 
 		}

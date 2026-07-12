@@ -30,6 +30,26 @@ class Combined_Renderer
 		this.ctx_width = webGL_canvas.width;
 		this.ctx_height = webGL_canvas.height;
 		
+		// Constants to verify between this class and the Software_Renderer:
+		var proprietary_constants = [
+										"GLSL_VEC3",
+										"GLSL_MAT4",
+									];
+		for (var i = 0; i < proprietary_constants.length; i++)
+		{
+			var name = proprietary_constants[i];
+			
+			if (this[name] != this.jsGL[name])
+			{
+				var mismatch_msg = "Mismatched Constant: " + name + 
+								   " has Combined_Renderer value " + this[name] + 
+								   " vs Software_Renderer value: " + this.jsGL[name]; 
+
+				alert(mismatch_msg);
+				throw new Error(mismatch_msg);
+			}				
+		}
+
 		
 		// Constants to add to this class and to verify in Software_Renderer:
 		var shared_constants = [
@@ -77,7 +97,7 @@ class Combined_Renderer
 			}				
 		}
 	}
-	
+		
 
 	///////////////////////////////////
 	// Shared API calls
