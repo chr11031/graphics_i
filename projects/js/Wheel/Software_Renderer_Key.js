@@ -280,7 +280,7 @@ class Software_Renderer
 		}
 		
 	
-		this._invoke_pipeline(mode);
+		this._invoke_pipeline(mode, first, count);
 	}
 	
 	
@@ -470,27 +470,104 @@ class Software_Renderer
 	}
 
 
-	_invoke_pipeline(mode)
+	_invoke_pipeline(mode, first, count)
 	{
-		var data_to_process = this._input_assembler();
+		// Step #1
+		var input_data = this._input_assembler();
 		
+		// Step #2 
+		var gl_Position_data = this._vertex_shader(input_data);
 		
+		// Step #3
+		var clipped_data = this._clip_data(gl_Position_data);
 		
+		// Step #4
+		var ndc_data = this._ndc_conversion(clipped_data);
 		
+		// Step #5
+		var viewport_data = this._viewport(ndc_data);
 		
-		
-		// Input assembler
-		
-		// 
-		
+		// Steps #6, #7, #8
+		this._raster_data(viewport_data);		
 	}
 
 	
-	_input_assembler()
+	_input_assembler(offset, num_vertices)
+	{
+		var input_data = {};
+
+		var active_vao = this._vaos[ this._active_vao ]; 
+
+		
+		for (var i = 0; i < active_vao.attrib_ptrs.length; i++)
+		{
+			var the_ptr = active_vao.attrib_ptrs[i];
+			
+			if (the_ptr.index in active_vao.enabled_attribs == false)
+			{
+				continue;
+			}
+			
+			
+			var target_buf = active_vao.attrib_ptrs[i].vbo_ref;
+			
+			input_data[the_ptr.index] = {
+											size:  the_ptr.size,
+											data:  []
+										}
+		
+			
+			var start = offset * the_ptr.size;
+			var end   = start + (num_vertices * the_ptr);
+			for (var c = start; c < end; c++)
+			{
+				input_data[the_ptr.index].data.push( this._buffers[ target_buf ][c] );
+			}
+			
+		}
+		
+		
+		return input_data;
+	}
+	
+	_vertex_shader(input_data)
+	{
+		var gl_Position_data = [];
+		
+		
+		return gl_Position_data;
+	}
+
+
+	_clip_data(gl_Position_data)
+	{
+		var clipped_data = [];
+		
+		return clipped_data;		
+	}
+
+
+	_ndc_conversion(clipped_data)
+	{
+		var ndc_data = [];
+		
+		return ndc_data;
+	}
+	
+	
+	_viewport(ndc_data)
+	{
+		var viewport_data = [];
+		
+		return viewport_data;
+	}
+	
+	
+	_raster_data(viewport_data)
 	{
 		
 	}
-
+	
 
 	_edge_is_top_or_left(pt_a, pt_b, other_pt)
 	{
