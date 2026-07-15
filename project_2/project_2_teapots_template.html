@@ -1,0 +1,596 @@
+<html style="font-family: 'Roboto', sans-serif;">
+	<head>
+		<title>Project 2: Teapots</title>
+		<style>
+			table {border: 0px solid;}
+		</style>
+		
+		<script type="text/javascript" src="/js/Types/RGBA.js"></script>
+		<script type="text/javascript" src="/js/Types/Matrix4x4.js"></script>		
+		<script type="text/javascript" src="/js/Helpers/Shader.js"></script>
+		<script type="text/javascript" src="/js/Wheel/Software_Renderer.js"></script>
+		<script type="text/javascript" src="/js/Loaders/Resource_Loader.js"></script>
+		
+		<script>
+
+			// App state
+			var resources = null;
+			
+			var webGL = null;
+			var webGL_client_data = null;
+			var webGL_program_handle = null;
+
+			var ctx_width = null;
+			var ctx_height = null;
+
+			var view_mode = null;
+
+			
+			function _init_gl(gl)
+			{
+				gl.enable(gl.CULL_FACE);
+				gl.enable(gl.DEPTH_TEST);							
+				gl.enable(gl.SCISSOR_TEST);
+			}
+			
+			function _build_client_teapot_data_webgl(gl, gl_shader_program)
+			{
+				var gl_client_data = {
+					vertices_vbo: null,
+					normals_vbo: null,
+					teapot_vao: null,
+					vertices_count: null,					
+
+					gouraud_ubo: null,					
+					view_mat_loc: null,
+					proj_mat_loc: null,
+					model_mat_loc: null,					
+				};
+			
+				var obj_verts = [];
+				var obj_norms = [];
+			
+				var teapot_obj = resources["teapot_obj"];
+			
+				for (var i = 0; i < teapot_obj.length; i++)
+				{
+					// XYZs
+					obj_verts.push(teapot_obj[i].v0.x);
+					obj_verts.push(teapot_obj[i].v0.y);
+					obj_verts.push(teapot_obj[i].v0.z);
+					
+					obj_verts.push(teapot_obj[i].v1.x);
+					obj_verts.push(teapot_obj[i].v1.y);
+					obj_verts.push(teapot_obj[i].v1.z);
+
+					obj_verts.push(teapot_obj[i].v2.x);
+					obj_verts.push(teapot_obj[i].v2.y);
+					obj_verts.push(teapot_obj[i].v2.z);
+					
+					
+					// NORMs
+					obj_norms.push(teapot_obj[i].v0.nx);
+					obj_norms.push(teapot_obj[i].v0.ny);
+					obj_norms.push(teapot_obj[i].v0.nz);
+					
+					obj_norms.push(teapot_obj[i].v1.nx);
+					obj_norms.push(teapot_obj[i].v1.ny);
+					obj_norms.push(teapot_obj[i].v1.nz);
+					
+					obj_norms.push(teapot_obj[i].v2.nx);
+					obj_norms.push(teapot_obj[i].v2.ny);
+					obj_norms.push(teapot_obj[i].v2.nz);
+				}
+
+
+				// OBJ Verts
+				gl_client_data.vertices_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					gl_client_data.vertices_vbo
+				);
+
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(obj_verts),
+					gl.STATIC_DRAW
+				);
+				
+				// OBJ NORMs 
+				gl_client_data.normals_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					gl_client_data.normals_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(obj_norms),
+					gl.STATIC_DRAW
+				);
+				
+				// OBJ VAO
+				gl_client_data.teapot_vao = gl.createVertexArray();
+				gl.bindVertexArray(gl_client_data.teapot_vao);
+
+				gl.bindBuffer(gl.ARRAY_BUFFER, gl_client_data.vertices_vbo);
+				gl.enableVertexAttribArray(0);
+				gl.vertexAttribPointer(
+					0,
+					3,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				gl_client_data.vertices_count = teapot_obj.length * 3;
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, gl_client_data.normals_vbo);
+				gl.enableVertexAttribArray(1);
+				gl.vertexAttribPointer(
+					1,
+					3,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				// Unbind VAO attachment
+				gl.bindVertexArray(null);
+
+
+
+				// Shader specific UBO allocation and internal member offsets
+				gl_client_data.gouraud_ubo = gl.createBuffer();
+				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.gouraud_ubo);
+				
+				var block_index = gl.getUniformBlockIndex(gl_shader_program, "gouraud_data");
+		
+				var block_size = gl.getActiveUniformBlockParameter(gl_shader_program,
+																   block_index,
+																   gl.UNIFORM_BLOCK_DATA_SIZE);
+				gl.bufferData(gl.UNIFORM_BUFFER, block_size, gl.DYNAMIC_DRAW);
+
+				gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, gl_client_data.gouraud_ubo);
+				gl.uniformBlockBinding(gl_shader_program, block_index, 0);
+
+				
+				var ubo_names = ["proj", "view", "model"];
+				var ubo_indices = gl.getUniformIndices(gl_shader_program,
+													   ubo_names);
+				var ubo_offsets = gl.getActiveUniforms(gl_shader_program,
+													   ubo_indices,
+													   gl.UNIFORM_OFFSET);
+				gl_client_data.proj_mat_loc  = ubo_offsets[0];
+				gl_client_data.view_mat_loc  = ubo_offsets[1];
+				gl_client_data.model_mat_loc = ubo_offsets[2];
+
+
+				return gl_client_data;
+			}
+			
+				
+			function _build_program_webGL(gl)
+			{
+				var vs = _make_gl_shader(webGL, resources["gouraud.vs"], gl.VERTEX_SHADER);				
+				var fs = _make_gl_shader(webGL, resources["gouraud.fs"], gl.FRAGMENT_SHADER);
+				var program = _make_gl_program(webGL, vs, fs);
+					
+				return program;
+			}
+						
+			
+			function _clear_backgrounds(gl)
+			{
+				var W = 0.92;
+
+				if (view_mode == "split")
+				{
+					// Draw the top-left section 
+					gl.scissor(0, ctx_height/2, ctx_width/2, ctx_height/2);
+					gl.clearColor(1.0, W, W, 1.0);
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+				
+									
+					// Draw the top-right section 
+					gl.scissor(ctx_width/2, ctx_height/2, ctx_width/2, ctx_height/2);
+					gl.clearColor(W, W, W, 1.0);
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+
+					// Draw the bottom-left section		
+					gl.scissor(0, 0, ctx_width/2, ctx_height/2);
+					gl.clearColor(W, 1.0, W, 1.0);			
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+				
+				
+					// Draw the bottom-right section 
+					gl.scissor(ctx_width/2, 0, ctx_width/2, ctx_height/2);
+					gl.clearColor(W, W, 1.0, 1.0);
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	
+
+					// Reset scissor region 
+					gl.scissor(0, 0, ctx_width, ctx_height);
+				
+				}
+				else
+				{
+					var r = 1.0;
+					var g = 1.0;
+					var b = 1.0;
+					var a = 1.0;
+				
+					if (view_mode == "xy")
+					{
+						g = W;
+						b = W;
+					}
+					else if (view_mode == "product")
+					{
+						r = W;
+						g = W;
+						b = W;
+					}
+					else if (view_mode == "xz")
+					{
+						r = W;
+						b = W;
+					}
+					else if (view_mode == "yz")
+					{
+						r = W;
+						g = W;
+					}
+
+					gl.clearColor(r, g, b, a);
+					gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);										
+				}
+
+			}
+			
+			
+			function _draw_teapot(gl, sx, sy, ex, ey,
+								  proj_mat,
+								  view_mat,
+								  model_mat,
+								  gl_client_data,
+								  gl_shader_program)
+			{
+				gl.viewport(sx, sy, ex, ey);
+			
+				
+				gl.useProgram(gl_shader_program);
+				
+				gl.bindVertexArray(gl_client_data.teapot_vao);
+
+				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.gouraud_ubo);					
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.proj_mat_loc,   proj_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.view_mat_loc,   view_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.model_mat_loc, model_mat.data);
+				
+				gl.drawArrays(
+					gl.TRIANGLES,
+					0,
+					gl_client_data.vertices_count
+				);								
+				
+				gl.bindVertexArray(null);
+			}
+							
+			
+			function _draw_scene(gl)
+			{
+				this._clear_backgrounds(gl);
+
+
+				var proj_mat = new Matrix4x4();
+				proj_mat.set_orthographic(-4.0, 4.0, -4.0, 4.0, 0.1, 100.0);
+				
+				var view_mat = new Matrix4x4();
+				view_mat.set_translate(0.0, 0.0, -4.5);
+
+				var model_mat = new Matrix4x4();
+				model_mat.set_translate(-0.2140625, -1.575, 0.0);
+
+				var tmp_mat = new Matrix4x4();
+				var tmp2_mat = new Matrix4x4();
+				
+
+
+				if (view_mode == "split")
+				{
+					tmp_mat.set_identity();
+					tmp_mat = view_mat.mult(tmp_mat);
+					
+					this._draw_teapot(gl, 0, ctx_height/2, ctx_width/2, ctx_height/2,
+									  proj_mat,
+									  tmp_mat,
+									  model_mat,
+									  webGL_client_data,
+									  webGL_program_handle);
+
+
+					tmp_mat.set_identity();
+					tmp2_mat.set_identity();
+					tmp_mat.set_rotate('y', 30.0);
+					tmp2_mat.set_rotate('x', -30.0);
+					tmp_mat = view_mat.mult( tmp2_mat.mult(tmp_mat) );
+
+					this._draw_teapot(gl, ctx_width/2, ctx_height/2, ctx_width/2, ctx_height/2,
+									  proj_mat,
+									  tmp_mat,
+									  model_mat,
+									  webGL_client_data,
+									  webGL_program_handle);
+
+
+					tmp_mat.set_identity();
+					tmp_mat.set_rotate('x', -90.0);				
+					tmp_mat = view_mat.mult( tmp_mat );				
+					this._draw_teapot(gl, 0, 0, ctx_width/2, ctx_height/2,
+									  proj_mat,
+									  tmp_mat,
+									  model_mat,
+									  webGL_client_data,
+									  webGL_program_handle);
+
+
+					tmp_mat.set_identity();
+					tmp_mat.set_rotate('y', -90.0);				
+					tmp_mat = view_mat.mult( tmp_mat );				
+					this._draw_teapot(gl, ctx_width/2, 0, ctx_width/2, ctx_height/2,
+									  proj_mat,
+									  tmp_mat,
+									  model_mat,
+									  webGL_client_data,
+									  webGL_program_handle);
+				}
+				else 
+				{
+					if (view_mode == "xy")
+					{
+						tmp_mat.set_identity();
+						tmp_mat = tmp_mat.mult(view_mat);
+					}
+					else if (view_mode == "product")
+					{
+						tmp_mat.set_identity();
+						tmp2_mat.set_identity();
+						tmp_mat.set_rotate('y', 30.0);
+						tmp2_mat.set_rotate('x', -30.0);
+						tmp_mat = view_mat.mult( tmp2_mat.mult(tmp_mat) );
+					}
+					else if (view_mode == "xz")
+					{
+						tmp_mat.set_identity();
+						tmp_mat.set_rotate('x', -90.0);				
+						tmp_mat = view_mat.mult( tmp_mat );				
+					}
+					else if (view_mode == "yz")
+					{
+						tmp_mat.set_identity();
+						tmp_mat.set_rotate('y', -90.0);				
+						tmp_mat = view_mat.mult( tmp_mat );				
+					}
+
+					this._draw_teapot(gl, 0, 0, ctx_width, ctx_height,
+									  proj_mat,
+									  tmp_mat,
+									  model_mat,
+									  webGL_client_data,
+									  webGL_program_handle);				
+				
+				}
+			}
+
+
+
+
+			
+			function draw_scene()
+			{
+				// Part #4 - Rendering with the pipeline
+				this._draw_scene(webGL, webGL_client_data);
+				
+				
+				// Redraw the screen 
+				// Disabled due to low performance in javascript
+				// window.requestAnimationFrame(draw_scene);				
+			}
+			
+			
+			function view_updated()
+			{
+				var old_mode = view_mode;
+			
+				if (document.getElementById("view_split").checked)
+					view_mode = "split";
+				else if (document.getElementById("view_product").checked)
+					view_mode = "product";
+				else if (document.getElementById("view_X_Y").checked)
+					view_mode = "xy";
+				else if (document.getElementById("view_X_Z").checked)
+					view_mode = "xz";
+				else if (document.getElementById("view_Y_Z").checked)
+					view_mode = "yz";
+					
+				if (old_mode != view_mode)
+				{
+					draw_scene();
+				}
+			}
+			
+			
+			function initialize_demo()
+			{
+				this.webGL = webGL_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});		
+				_init_gl(this.webGL);
+
+				this.ctx_width = webGL_canvas.width;
+				this.ctx_height = webGL_canvas.height;
+
+				// Part #2 - Vertex Shader, Fragment Shader, Shader Program (completed for you)
+				webGL_program_handle = _build_program_webGL(webGL);
+
+
+				// Part #3 - VBO, VAO, UBO dependencies
+				webGL_client_data = _build_client_teapot_data_webgl(webGL, webGL_program_handle);
+
+								
+				// LOCAL state (View)
+				document.getElementById("view_split").addEventListener(   "change", view_updated);
+				document.getElementById("view_product").addEventListener( "change", view_updated);
+				document.getElementById("view_X_Y").addEventListener(     "change", view_updated);
+				document.getElementById("view_X_Z").addEventListener(     "change", view_updated);
+				document.getElementById("view_Y_Z").addEventListener(     "change", view_updated);
+				
+				// Draw view
+				view_updated();
+			}
+			
+				
+			function load_resources()
+			{	
+				// Load the Engine resources
+				var demo_resource_list = [
+					["teapot_obj",		"/assets/objs/teapot.json",		"json"],
+					["gouraud.vs",		"/shaders/3D/gouraud.vs",		"text" ],
+					["gouraud.fs",		"/shaders/3D/gouraud.fs",		"text" ],
+				];
+				
+				var all_resources_dict = {
+					demo:		demo_resource_list,
+				};
+				
+				load_external_resources(all_resources_dict, function (resource_sets)
+				{
+					resources = resource_sets['demo'];
+					initialize_demo();
+				});
+			}
+			
+		</script>
+		
+	</head>	
+
+	<body onload="load_resources()">
+		<h1>Project 2: Teapots</h1>	
+		<p>
+			Name: Dane Christensen</br>
+			Date: 6/16/2026
+		</p>
+		<table>
+			<tr>
+				<td style="border-color:green; border-style: solid;">
+					<canvas	id="webGL_canvas"
+							style="background-color: #FFFFFF;" 
+							width=512 
+							height=512>
+					</canvas>	
+				</td>
+				<td style="border-color:gray; border-style: solid;">
+					<canvas	id="jsGL_canvas"
+							style="background-color: #FFFFFF;" 
+							width=512 
+							height=512>
+					</canvas>	
+				</td>
+			</tr>
+			<tr style="text-align:center">
+				<td>
+					<br/>
+					WebGL (GPU Reference)
+				</td> 
+				<td>
+					<br/>
+					Software Renderer (Yours)
+				</td>
+			</tr>
+			<tr style="text-align:center">
+				<td colspan="2">
+					<br/>
+					Display Mode: 
+					<input type="radio" id="view_split" name="view mode" value="CAD"/>
+					<label for="view_CAD">4-Way Split</label>
+
+					<input type="radio" id="view_X_Y" name="view mode" value="X-Y View" checked/>
+					<label for="view_X_Y">X-Y</label>
+
+					<input type="radio" id="view_product" name="view mode" value="Product View" />
+					<label for="view_product">Product</label>
+
+					<input type="radio" id="view_X_Z" name="view mode" value="X-Z View" />
+					<label for="view_X_Z">X-Z</label>
+					
+					<input type="radio" id="view_Y_Z" name="view mode" value="Y-Z View" />
+					<label for="view_Y_Z">Y-Z</label>				
+				</td>
+			</tr>
+		</table>
+
+		<p>	For this project, you will implement several parts of your own software rasterizer. You will do this by extending the Javascript in this web page as well as in Software_Renderer.js. In the latter, you will add state and function calls to reproduce the functionality of WebGL using Javascript. The webGL version and your Software_Renderer will need to provide similar renderings of the teapots used in this template. 
+			<br/>
+			<br/>
+			From an API point, you are free to mimic or deviate from the conventions used by WebGL. These act as a jump point for you to start reading what your Software Renderer will need to proivde an equivalence for:
+			<ol type="A" style="list-style-position: inside;">
+
+
+				<u><b>Global State:</u></b>
+				<br/>
+				<br/>
+				<li>gl.enable - Important for allowing the CULL, SCISSOR, and DEPTH features used in a rasterizer.</li>					
+				<li>gl.clearColor - Sets the value for when the screen is eventually reset to a new color. Used here for a background color effect.</li>					
+				<li>gl.clear - For all flags passed in the respective buffers are cleared. Often used to clear color and depth values.</li>					
+
+				<br/>
+				<u><b>VBO/UBO:</u></b>
+				<br/>
+				<br/>
+				<li>gl.createBuffer - Allocates a new buffer (VBO, UBO, etc) and returns a handle to that object. At this point, no type is ascribed to that buffer object.</li>
+				<li>gl.bindBuffer - Set a type to a given buffer and references this object for any subsequent and related buffer object function calls.</li>
+				<li>gl.bufferData - Either allocate a bound buffer's memory or copy an array into buffer memory.</li>
+				<li>gl.bufferSubData - Similar to gl.bufferData, but only modifies a subset of the buffer rather than allocating new memory or overwriting all members in the buffer.</li>
+				
+				<br/>
+				<u><b>VAO:</u></b>
+				<br/>
+				<br/>
+				<li>gl.createVertexArray - Allocate a new VAO (Vertex Array Object). The VAO will reference other VBOs to setup the input layout for a draw call such as "drawArrays".</li>
+				<li>gl.bindVertexArray - Set the VAO as the current, in scope object for all subsequent VAO based function calls.
+				<li>gl.enableVertexAttribArray - Tell the bound VAO that a particular attribute is "enabled" for the "pipeline_input_assembler" reference internally.</li>
+				<li>gl.vertexAttribPointer -  Tell the bound VAO what index, how large, what the spacing is for a particular vertex attribute.</li>
+				
+				<br/>
+				<u><b>UBO:</u></b>
+				<br/>
+				<br/>
+				<li>gl.getUniformBlockIndex - Finds the block index of a uniform block within a shader program.</li>
+				<li>gl.getActiveUniformBlockParameter - Used to query information about a Uniform Block in a shader, such as its total byte size (including padding).</li>
+				<li>gl.bindBufferBase - Bind a UBO to a block binding slot.</li>
+				<li>gl.uniformBlockBinding - Map a shader program (vertex + fragment)'s uniform block with a block binding slot.</li>
+				<li>gl.getUniformIndices - From a linked shader program, find the unique uniform index of any given uniform variable.</li>
+				<li>gl.getActiveUniforms - Query information about uniform variables such as the byte offset of a member from the beginning of its block ("gl.UNIFORM_OFFSET").</li>
+
+
+				<br/>
+				<u><b>Shader Program:</u></b>
+				<br/>
+				<br/>
+				<li>gl.useProgram - Binds an already built GLSL program (vertex + fragment shaders) so any uniform/draw calls reference it.</li>
+				
+				<br/>
+				<u><b>Drawing:</u></b>
+				<br/>
+				<br/>
+				<li>gl.viewport - Changes the viewport transform used at the end of rasterization to a subset of the total target area. This affects rasterization outputs but not functions like gl.clear(...)</li>					
+				<li>gl.scissor - Restricts pixel operations including "gl.clear(...)" to a subset of the total target area.</li>					
+				<li>gl.drawArrays - The essential draw function used to render the teapot. Draws triangles to render the teapot above.</li>
+			</ol>
+			<br/>
+			<br/>
+		</p>
+	</body>
+</html>
