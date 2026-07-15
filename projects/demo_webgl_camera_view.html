@@ -7,12 +7,13 @@
 		<script>
 
 			
-
-
+			var pyramid_rot;
+			var camera_pitch;
 
 			var gl;
 			var vbo1;
 			var vbo2;
+			var ebo1;
 			var vao;
 			var program;
 
@@ -224,41 +225,6 @@
 					this.set(3, 3,  1.0);
 				}
 
-				set_perspective(fov_lr_deg, fov_td_deg, near, far)
-				{
-					// We are looking for the Left-handed coordinate versions of these
-					near = -near;
-					far  = -far;
-					
-					var fov_lr_rad = fov_lr_deg * Math.PI / 180.0;
-					var fov_td_rad = fov_td_deg * Math.PI / 180.0;
-
-					var left = near * Math.tan(fov_lr_rad / 2.0);
-					var right = -left;
-					var bot = near * Math.tan(fov_td_rad / 2.0);
-					var top = -bot;
-
-					this.set(0, 0, -2.0 * near / (right - left));
-					this.set(0, 1, 0.0);
-					this.set(0, 2, (right + left) / (right - left));
-					this.set(0, 3, 0.0);
-
-					this.set(1, 0, 0.0);
-					this.set(1, 1, -2.0 * near / (top - bot));
-					this.set(1, 2, (top + bot) / (top - bot));
-					this.set(1, 3, 0.0);
-
-					this.set(2, 0, 0.0);
-					this.set(2, 1, 0.0);
-					this.set(2, 2, -(far + near) / (far - near));
-					this.set(2, 3, (2.0 * far * near) / (far - near));
-
-					this.set(3, 0,  0.0);
-					this.set(3, 1,  0.0);
-					this.set(3, 2, -1.0);
-					this.set(3, 3,  0.0);
-				}
-
 				set_columns_basis_r3(col_right, col_up, col_forward)
 				{
 					this.set_identity();
@@ -415,36 +381,52 @@
 			}
 
 
-
-			var rot = 0.0;
+			
 			
 
 			
 			function draw_gl_canvas()
 			{
 				gl.clearColor(0.2,0,0,1);
-				gl.clear(gl.COLOR_BUFFER_BIT);		
+				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);		
 
 				gl.bindVertexArray(vao);
 				gl.useProgram(program);
 				
 			
-				model_mat.set_rotate('y', rot);
-				rot += 0.1;
+				proj_mat.set_orthographic(-2, 2, -2, 2, 0.1, 3);
+				
+				var tmp = new Matrix4x4();
+				view_mat.set_identity();
+				tmp.set_rotate('x', camera_pitch);
+				view_mat.set_translate(0, 0, -2);
+				view_mat = view_mat.mult(tmp);
+
+				pyramid_rot += 0.2;
+				
+				model_mat.set_rotate('y', pyramid_rot);
 			
 				
 				gl.bindBuffer(gl.UNIFORM_BUFFER, ubo);					
-				gl.bufferSubData(gl.UNIFORM_BUFFER, model_loc, model_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, model_mat_loc, model_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, view_mat_loc, view_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, proj_mat_loc, proj_mat.data);
 
-				
-				gl.drawArrays(
+
+				gl.drawElements(
 					gl.TRIANGLES,
-					0,
-					3
-				);
-				
+					12,
+					gl.UNSIGNED_INT,
+					0);
+
+			
 				window.requestAnimationFrame(draw_gl_canvas)
 				
+			}
+
+			function update_pitch()
+			{
+				camera_pitch = -document.getElementById("camera_pitch_slider").value;
 			}
 			
 			
@@ -453,15 +435,17 @@
 				var frame_canvas = document.getElementById("frame_canvas");
 				
 				gl = frame_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});
-				
+				gl.enable(gl.DEPTH_TEST);
 				
 				var positions = new Float32Array([
-					-0.5, -0.0, 0.0, 1.0,
-					 0.5, -0.0, 0.0, 1.0,
-					 0.0, 0.5,  0.0, 1.0, 			
+					-0.5, -0.0, 0.5, 1.0,
+					 0.5, -0.0, 0.5, 1.0,
+					 0.5, 0.0, -0.5, 1.0,
+					-0.5, 0.0, -0.5, 1.0,
+					 0.0, 0.5,  0.0, 1.0,
 				]);
 				
-				
+		
 				vbo1 = gl.createBuffer();
 				
 				gl.bindBuffer(
@@ -479,9 +463,11 @@
 				var colors = new Uint8Array([
 					255, 0, 0,
 					0, 255, 0,
-					0, 0, 255
+					0, 0, 255,
+					0, 0, 0,
+					255, 255, 255,
 				]);
-				
+					
 				
 				vbo2 = gl.createBuffer();
 				
@@ -496,6 +482,25 @@
 					gl.STATIC_DRAW
 				);
 				
+
+				var indices = new Uint32Array([
+					4, 0, 1,
+					4, 1, 2,
+					4, 2, 3,
+					4, 3, 0,
+				]);
+
+				ebo1 = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ELEMENT_ARRAY_BUFFER,
+					ebo1);
+					
+				gl.bufferData(
+					gl.ELEMENT_ARRAY_BUFFER,
+					new Uint32Array(indices),
+					gl.STATIC_DRAW
+				);
 				
 				vao = gl.createVertexArray();
 				gl.bindVertexArray(vao);
@@ -521,6 +526,8 @@
 					0,
 					0					
 				);
+
+				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo1);
 				
 				gl.bindVertexArray(null);
 				
@@ -531,6 +538,8 @@
 
 								uniform global_data
 								{
+									mat4 proj;
+									mat4 view;
 									mat4 model;
 								};
 
@@ -541,7 +550,7 @@
 
 									vCol = aCol;
 									
-									gl_Position = model * aPos;								
+									gl_Position = proj * view * model * aPos;								
 								}`;
 				
 				
@@ -592,47 +601,42 @@
 				
 				ubo = gl.createBuffer();
 				gl.bindBuffer(gl.UNIFORM_BUFFER, ubo);
+			
+
+		
 				
+				var block_index = gl.getUniformBlockIndex(program, "global_data");
+		
+				var block_size = gl.getActiveUniformBlockParameter(program,
+																   block_index,
+																   gl.UNIFORM_BLOCK_DATA_SIZE);
+				gl.bufferData(gl.UNIFORM_BUFFER, block_size, gl.DYNAMIC_DRAW);
+
+				gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, ubo);
+				gl.uniformBlockBinding(program, block_index, 0);
 
 				
-						
-						var block_index = gl.getUniformBlockIndex(program, "global_data");
-				
-						var block_size = gl.getActiveUniformBlockParameter(program,
-																		   block_index,
-																		   gl.UNIFORM_BLOCK_DATA_SIZE);
-						gl.bufferData(gl.UNIFORM_BUFFER, block_size, gl.DYNAMIC_DRAW);
-
-						gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, ubo);
-						gl.uniformBlockBinding(program, block_index, 0);
-
-						
-						var ubo_names = [/*"proj", "view",*/ "model"];
-						var ubo_indices = gl.getUniformIndices(program,
-															   ubo_names);
-						var ubo_offsets = gl.getActiveUniforms(program,
-															   ubo_indices,
-															   gl.UNIFORM_OFFSET);
-						//proj_mat_loc  = ubo_offsets[0];
-						//view_mat_loc  = ubo_offsets[1];
-						model_mat_loc = ubo_offsets[2];
+				var ubo_names = ["proj", "view", "model"];
+				var ubo_indices = gl.getUniformIndices(program,
+													   ubo_names);
+				var ubo_offsets = gl.getActiveUniforms(program,
+													   ubo_indices,
+													   gl.UNIFORM_OFFSET);
+				proj_mat_loc  = ubo_offsets[0];
+				view_mat_loc  = ubo_offsets[1];
+				model_mat_loc = ubo_offsets[2];
+		
+		
 				
 				
 				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
+				pyramid_rot = 0.0;
 				
 				model_mat = new Matrix4x4();
 				view_mat = new Matrix4x4();
 				proj_mat = new Matrix4x4();				
+				
+				update_pitch();
 				
 				draw_gl_canvas();
 			}
@@ -652,6 +656,9 @@
 				width=512 
 				height=512>
 		</canvas>	
+		<input type="range" oninput="update_pitch()" style="width:512px;" id="camera_pitch_slider" value="0" min="0" max="90"/>
+		<br/>
+		Camera Angle
 	
 		</br>
 		

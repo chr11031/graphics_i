@@ -253,8 +253,8 @@ class Cell_Shading
 				gl.drawElements(
 					drawables[i].primitive_type,
 					drawables[i].num_verts,
-					0,
-					gl.UNSIGNED_INT
+					gl.UNSIGNED_INT,
+					0,					
 				);
 			}
 			else
