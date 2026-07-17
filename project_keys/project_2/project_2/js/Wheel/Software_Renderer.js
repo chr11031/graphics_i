@@ -50,6 +50,7 @@ class Software_Renderer
 		this._ctx.fillRect(x, this._ctx_height - 1 - y, 1, 1);
 	}
 
+
 	clear_depth()
 	{
 		for (var r = 0; r < _ctx_height; r++)
@@ -79,11 +80,11 @@ class Software_Renderer
 
 	set_viewport(x, y, width, height)
 	{
-		this._viewport_x = Math.max(0, Math.min(0, _ctx_width-1 ));
-		this._viewport_y = Math.max(0, Math.min(0, _ctx_height-1));
+		this._viewport_x = Math.max(0, Math.min(x, this._ctx_width-1 ));
+		this._viewport_y = Math.max(0, Math.min(y, this._ctx_height-1));
 		
-		var max_w = this._ctx_width  -1 - this._viewport_x;
-		var max_y = this._ctx_height -1 - this._viewport_y;
+		var max_w = this._ctx_width  - this._viewport_x -1;
+		var max_h = this._ctx_height - this._viewport_y -1;
 		
 		this._viewport_w = Math.max(0, Math.min(width,  max_w));
 		this._viewport_h = Math.max(0, Math.min(height, max_h));
@@ -121,12 +122,15 @@ class Software_Renderer
 		
 		for (var i = 0; i < viewport_data.length; i+=3)
 		{
-			console.log(viewport_data[0]);
-			console.log(viewport_data[1]);
-			console.log(viewport_data[2]);
-			
-			// fragment_shader
-			break;
+			console.log(viewport_data[i+0]);
+			console.log(viewport_data[i+1]);
+			console.log(viewport_data[i+2]);
+		
+			this._raster_triangle(viewport_data[i+0],
+								  viewport_data[i+1],
+								  viewport_data[i+2],
+								  uniform_data,
+								  fragment_shader);
 		}
 	}
 
@@ -182,6 +186,21 @@ class Software_Renderer
 		};
 		
 		return rv;		
+	}
+	
+	
+	_raster_triangle(Q, R, S, uniform_data, fragment_shader)
+	{
+		var min_x = Math.min(Q.gl_Position[0], Math.min(R.gl_Position[0], S.gl_Position[0]));
+		var max_x = Math.max(Q.gl_Position[0], Math.max(R.gl_Position[0], S.gl_Position[0]));
+		var min_y = Math.min(Q.gl_Position[1], Math.min(R.gl_Position[1], S.gl_Position[1]));
+		var max_y = Math.max(Q.gl_Position[1], Math.max(R.gl_Position[1], S.gl_Position[1]));
+		
+		this.draw_rect(min_x, 
+					   min_y, 
+					   max_x - min_x + 1, 
+					   max_y - min_y + 1,
+					   new RGBA(255, 0, 0, 255));
 	}
 	
 }
