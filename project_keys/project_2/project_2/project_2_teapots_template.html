@@ -320,6 +320,8 @@
 					model: model_mat,
 				};
 				
+				jsgl.set_viewport(sx, sy, ex, ey);
+				
 				jsgl.draw_triangles(this.jsgl_vertex_inputs, 
 									this.jsgl_uniforms, 
 									jsgl_vertex_shader,
