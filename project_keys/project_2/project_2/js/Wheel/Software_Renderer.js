@@ -129,9 +129,6 @@ class Software_Renderer
 								  viewport_data[i+2],
 								  uniform_data,
 								  fragment_shader);
-								  
-			//if (i > 1)
-				//break;
 		}
 	}
 
