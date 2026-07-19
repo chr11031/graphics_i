@@ -1,3 +1,87 @@
+class Vec2
+{
+	constructor(x, y)
+	{
+		this.x = x;
+		this.y = y;
+	}
+	
+}
+
+class Vec3
+{
+	constructor(x, y, z)
+	{
+		this.x = x;
+		this.y = y;
+		this.z = z;
+	}
+}
+
+class Vec4
+{
+	constructor(x, y, z, w)
+	{
+		this.x = x;
+		this.y = y;
+		this.z = z;
+		this.w = w;
+	}
+}
+
+function min_of_3(x, y, z)
+{
+	if (x < y)
+	{
+		if (x < z)
+		{
+			return x;
+		}
+		else
+		{
+			return z;
+		}
+	}
+	else
+	{
+		if (y < z)
+		{
+			return y;
+		}
+		else
+		{
+			return z;
+		}		
+	}
+}
+
+
+function max_of_3(x, y, z)
+{
+	if (x > y)
+	{
+		if (x > z)
+		{
+			return x;
+		}
+		else
+		{
+			return z;
+		}
+	}
+	else
+	{
+		if (y > z)
+		{
+			return y;
+		}
+		else
+		{
+			return z;
+		}		
+	}
+}
+
 class Software_Renderer
 {	
 	// CONTEXT for default framebuffer
@@ -121,11 +205,7 @@ class Software_Renderer
 		
 		
 		for (var i = 0; i < viewport_data.length; i+=3)
-		{
-			console.log(viewport_data[i+0]);
-			console.log(viewport_data[i+1]);
-			console.log(viewport_data[i+2]);
-		
+		{		
 			this._raster_triangle(viewport_data[i+0],
 								  viewport_data[i+1],
 								  viewport_data[i+2],
@@ -168,39 +248,119 @@ class Software_Renderer
 				this._viewport_h + this._viewport_y;
 		
 		var vz = (0.5 * (in_data.gl_Position[2] + 1) );		
-		
-		
+
+
 		var rv = {
-			gl_Position: [
-							vx,
-							vy,
-							vz,
-							in_data.gl_Position[3]
-						 ],
+			gl_Position: new Vec4(vx,
+								  vy,
+								  vz,
+								  in_data.gl_Position[3]
+								 ),
 						 
-			interp_color:[
-							in_data.interp_color[0],
-							in_data.interp_color[1],
-							in_data.interp_color[2]
-						 ]
+			interp_color: new Vec3(in_data.interp_color[0],
+								   in_data.interp_color[1],
+								   in_data.interp_color[2])
 		};
 		
 		return rv;		
 	}
 	
 	
+	_edge_is_top_or_left(pt_a, pt_b, other_pt)
+	{
+		var dy = pt_b.y - pt_a.y;
+	
+		// Is top 
+		if (dy == 0 && pt_a.x > pt_b.x)
+		{
+			return 1;
+		}
+		
+		// Is left					
+		if (dy < 0 && pt_b.y >= other_pt.y)
+		{
+			return 1;
+		}
+	
+		// Neither
+		return 0;
+	}
+	
+	
 	_raster_triangle(Q, R, S, uniform_data, fragment_shader)
 	{
-		var min_x = Math.min(Q.gl_Position[0], Math.min(R.gl_Position[0], S.gl_Position[0]));
-		var max_x = Math.max(Q.gl_Position[0], Math.max(R.gl_Position[0], S.gl_Position[0]));
-		var min_y = Math.min(Q.gl_Position[1], Math.min(R.gl_Position[1], S.gl_Position[1]));
-		var max_y = Math.max(Q.gl_Position[1], Math.max(R.gl_Position[1], S.gl_Position[1]));
+		// TODO: Check this math again for the X-Y coordinate center offsetting
+		var tri_min = new vec2( Math.max(this._viewport_x, min_of_3(Q.gl_Position.x, R.gl_Position.x, S.gl_Position.x)), 
+							    Math.max(this._viewport_y, min_of_3(Q.gl_Position.y, R.gl_Position.y, S.gl_Position.y)) );
+
+		var tri_max = new vec2( Math.min(this._viewport_x + this._viewport_w, max_of_3(Q.gl_Position.x, R.gl_Position.x, S.gl_Position.x)), 
+							    Math.min(this._viewport_y + this._viewport_h, max_of_3(Q.gl_Position.y, R.gl_Position.y, S.gl_Position.y)) );
 		
+		
+		var edge_qr = new Vec2( R.gl_Position.x - Q.gl_Position.x, R.gl_Position.y - Q.gl_Position..y );
+		var edge_rs = new Vec2( S.gl_Position.x - R.gl_Position.x, S.gl_Position.y - R.gl_Position.y );
+		var edge_sq = new Vec2( Q.gl_Position.x - S.gl_Position.x, Q.gl_Position.y - S.gl_Position.y );
+		
+		var tri_area = vec2_determinant(edge_qr, new vec2(-edge_sq.x, -edge_sq.y));
+		
+		// Back-face culling 
+		if (tri_area < 0)
+		{
+			return;
+		}
+		
+		
+		var tri_coef = 1.0 / tri_area;
+		
+		
+		// Barycentric coverage test 
+		var bias_qr = this._edge_is_top_or_left(Q.gl_Position, R.gl_Position, S.gl_Position);
+		var bias_rs = this._edge_is_top_or_left(R.gl_Position, S.gl_Position, Q.gl_Position);
+		var bias_sq = this._edge_is_top_or_left(S.gl_Position, Q.gl_Position, R.gl_Position);
+		
+		
+		var P = new Vec2(tri_min.x, tri_min.y);
+		while (P.y < tri_max.y)
+		{
+			while (P.x < tri_max.y)
+			{
+				var edge_QP = new Vec2(P.x - Q.x, P.y - Q.y);
+				var edge_RP = new Vec2(P.x - R.x, P.y - R.y);
+				var edge_SP = new Vec2(P.x - S.x, P.y - S.y);
+				
+				
+				var det_s = vec2_determinant(edge_QR, edge_QP);
+				var det_q = vec2_determinant(edge_RS, edge_RP);
+				var det_r = vec2_determinant(edge_SQ, edge_SP);
+				
+				
+				if (det_q - bias_rs >= 0 && det_r - bias_sq >= 0 && det_s - bias_qr >= 0)
+				{
+					var interp_s = tri_coef * det_s;
+					var interp_q = tri_coef * det_q;
+					var interp_r = tri_coef * det_r;
+					
+					// this._draw_pixel(
+				}
+			
+				it.x += 1;
+			}
+			
+			it.x =  pt_min.x;
+			it.y += 1;
+		}
+		
+		
+		
+		
+		
+		/*
 		this.draw_rect(min_x, 
 					   min_y, 
 					   max_x - min_x + 1, 
 					   max_y - min_y + 1,
 					   new RGBA(255, 0, 0, 255));
+		*/
 	}
 	
 }
