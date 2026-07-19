@@ -230,9 +230,7 @@ class Software_Renderer
 		var bias_rs = this._edge_is_top_or_left(R.gl_Position, S.gl_Position, Q.gl_Position);
 		var bias_sq = this._edge_is_top_or_left(S.gl_Position, Q.gl_Position, R.gl_Position);
 		
-		
 		var P = new Vec2(tri_min.x, tri_min.y);
-		
 		
 		var edge_qp = new Vec2(P.x - Q.gl_Position.x, P.y - Q.gl_Position.y);
 		var edge_rp = new Vec2(P.x - R.gl_Position.x, P.y - R.gl_Position.y);
@@ -242,14 +240,10 @@ class Software_Renderer
 		var det_q = Vec2_determinant(edge_rs, edge_rp);
 		var det_r = Vec2_determinant(edge_sq, edge_sp);
 
-		var col_s = -edge_qr.y;
-		var col_q = -edge_rs.y;
-		var col_r = -edge_sq.y;
-		
 		var row_width = tri_max.x - tri_min.x + 1;
-		var row_s = edge_qr.x - (row_width * col_s);
-		var row_q = edge_rs.x - (row_width * col_q);
-		var row_r = edge_sq.x - (row_width * col_r);
+		var row_s = edge_qr.x + (row_width * edge_qr.y);
+		var row_q = edge_rs.x + (row_width * edge_rs.y);
+		var row_r = edge_sq.x + (row_width * edge_sq.y);
 		
 		
 		while (P.y <= tri_max.y)
@@ -296,9 +290,9 @@ class Software_Renderer
 					}
 				}
 
-				det_s += col_s;
-				det_q += col_q;
-				det_r += col_r;
+				det_s -= edge_qr.y;
+				det_q -= edge_rs.y;
+				det_r -= edge_sq.y;
 			
 				P.x += 1;
 			}
@@ -311,6 +305,7 @@ class Software_Renderer
 			P.x = tri_min.x;
 			P.y += 1;
 		}
+		
 	}
 	
 }
