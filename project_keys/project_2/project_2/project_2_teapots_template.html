@@ -6,6 +6,9 @@
 		</style>
 		
 		<script type="text/javascript" src="/js/Types/RGBA.js"></script>
+		<script type="text/javascript" src="/js/Types/Vec2.js"></script>		
+		<script type="text/javascript" src="/js/Types/Vec3.js"></script>		
+		<script type="text/javascript" src="/js/Types/Vec4.js"></script>		
 		<script type="text/javascript" src="/js/Types/Matrix4x4.js"></script>		
 		<script type="text/javascript" src="/js/Helpers/Shader.js"></script>
 		<script type="text/javascript" src="/js/Wheel/Software_Renderer.js"></script>
@@ -223,18 +226,18 @@
 					///////////////////////////////////////
 					// jsgl EQUIVALENT
 					///////////////////////////////////////
-				
+								
 					var col0 = new RGBA(255, W*255, W*255, 255);
-					jsgl.draw_rect(0, ctx_height/2, ctx_width/2, ctx_height/2, col0);
+					jsgl.clear(0, ctx_height/2, ctx_width/2, ctx_height/2, col0);
 
-					var col1 = new RGBA(W*255, W*255, W*255, W*255);
-					jsgl.draw_rect(ctx_width/2, ctx_height/2, ctx_width/2, ctx_height/2, col1);
+					var col1 = new RGBA(W*255, W*255, W*255, 255);
+					jsgl.clear(ctx_width/2, ctx_height/2, ctx_width/2, ctx_height/2, col1);
 
 					var col2 = new RGBA(W*255, 255, W*255, 255);
-					jsgl.draw_rect(0, 0, ctx_width/2, ctx_height/2, col2);
+					jsgl.clear(0, 0, ctx_width/2, ctx_height/2, col2);
 					
 					var col3 = new RGBA(W*255, W*255, 255, 255);
-					jsgl.draw_rect(ctx_width/2, 0, ctx_width/2, ctx_height/2, col3);
+					jsgl.clear(ctx_width/2, 0, ctx_width/2, ctx_height/2, col3);
 					
 				}
 				else
@@ -275,7 +278,7 @@
 					///////////////////////////////////////
 
 					var col = new RGBA(r*255, g*255, b*255, 255);
-					jsgl.draw_rect(0, 0, ctx_width, ctx_height, col);
+					jsgl.clear(0, 0, ctx_width, ctx_height, col);
 
 				}
 
@@ -333,53 +336,43 @@
 			// jsgl Equivalent 
 			///////////////////////////////////////////
 			function jsgl_vertex_shader(vertex_input, uniforms)
-			{
-				var rv = {
-					gl_Position:  null,
-					interp_color: null,
-				};
+			{		
+				const light_pos = new Vec3(-5.0, 
+											5.0, 
+											5.0);
 			
-				const light_pos = [-5.0, 
-									5.0, 
-									5.0];
 			
-				var light_dir = [light_pos[0]-vertex_input.pos[0],
-								 light_pos[1]-vertex_input.pos[1],
-								 light_pos[2]-vertex_input.pos[2]];
-					
-				var light_len = Math.sqrt(light_dir[0]*light_dir[0] + 
-										  light_dir[1]*light_dir[1] + 
-										  light_dir[2]*light_dir[2]);
-				var inv_len = 1.0 / light_len;										  
-				light_dir[0] *= inv_len;
-				light_dir[1] *= inv_len;
-				light_dir[2] *= inv_len;
-								 
+				var light_dir = Vec3_sub(light_pos, vertex_input.pos);
+				light_dir.normalize();
+	
 			
-				var normal_delta = uniforms.model.mult_vec4( [vertex_input.normal[0],
-															  vertex_input.normal[1],
-															  vertex_input.normal[2],
-															  0.0] );
-
-				var align = light_dir[0] * normal_delta[0] + 
-							light_dir[1] * normal_delta[1] + 
-							light_dir[2] * normal_delta[2];
+				var normal_delta = uniforms.model.mult_Vec4( new Vec4(vertex_input.normal.x,
+																	  vertex_input.normal.y,
+																	  vertex_input.normal.z,
+																	  0.0) 
+														   );
 							
-				align = Math.max(0, align);
+				var align = Math.max( 0, Vec3_dot(light_dir, normal_delta) );
 				
-				rv.interp_color = [ align*0.5 + 0.1,
-									align*0.5 + 0.1,
-									align*1.0 + 0.1 ];
 
-				rv.gl_Position = uniforms.proj.mult_vec4( 
-									uniforms.view.mult_vec4( 
-										uniforms.model.mult_vec4( [vertex_input.pos[0],
-																   vertex_input.pos[1],
-																   vertex_input.pos[2],
-																   1.0
-																  ] ) 
-									) 
-								);
+				var rv = {
+					gl_Position: uniforms.proj.mult_Vec4( 
+									uniforms.view.mult_Vec4( 
+										uniforms.model.mult_Vec4( 
+											new Vec4(vertex_input.pos.x,
+													 vertex_input.pos.y,
+													 vertex_input.pos.z,
+													 1.0) 
+										) 
+									)
+								 ),
+										   
+					interp_color: new Vec3(align*0.5 + 0.1,
+										   align*0.5 + 0.1,
+										   align*1.0 + 0.1)
+				};
+						
+								
 				return rv;
 			}
 
@@ -390,12 +383,18 @@
 			function jsgl_fragment_shader(fragment_input, uniforms)
 			{
 				var rv = {
-					out_color : [ fragment_input.interp_color[0],
-								  fragment_input.interp_color[1],
-								  fragment_input.interp_color[2],
-								  1.0 ]
-				}
+					gl_Position: new Vec4(fragment_input.gl_Position.x,
+										  fragment_input.gl_Position.y,
+										  fragment_input.gl_Position.z,
+										  fragment_input.gl_Position.w),
+										  
+					out_color: new Vec4(fragment_input.interp_color.x,
+										fragment_input.interp_color.y,
+										fragment_input.interp_color.z,
+										1.0)
 				
+				};
+			
 				return rv;
 			}
 							
@@ -542,6 +541,7 @@
 				}
 			}
 			
+			
 			function _init_jsgl_variables(canvas_element)
 			{
 				this.jsgl = new Software_Renderer(canvas_element);
@@ -553,51 +553,49 @@
 				for (var i = 0; i < teapot_obj.length; i++)
 				{
 					var vert_input_a = {
-						pos: [],
-						normal: [],
+
+						pos: new Vec3(teapot_obj[i].v0.x,
+									  teapot_obj[i].v0.y,
+									  teapot_obj[i].v0.z),
+									  
+						normal: new Vec3(teapot_obj[i].v0.nx,
+										 teapot_obj[i].v0.ny,
+										 teapot_obj[i].v0.nz)
+
 					};
 					
-					vert_input_a.pos.push( teapot_obj[i].v0.x );
-					vert_input_a.pos.push( teapot_obj[i].v0.y );
-					vert_input_a.pos.push( teapot_obj[i].v0.z );
-
-					vert_input_a.normal.push( teapot_obj[i].v0.nx );
-					vert_input_a.normal.push( teapot_obj[i].v0.ny );
-					vert_input_a.normal.push( teapot_obj[i].v0.nz );
-
 					this.jsgl_vertex_inputs.push( vert_input_a );
 					
 					
 					var vert_input_b = {
-						pos: [],
-						normal: [],
+
+						pos: new Vec3(teapot_obj[i].v1.x,
+									  teapot_obj[i].v1.y,
+									  teapot_obj[i].v1.z),
+									  
+						normal: new Vec3(teapot_obj[i].v1.nx,
+										 teapot_obj[i].v1.ny,
+										 teapot_obj[i].v1.nz)
+
 					};
 					
-					vert_input_b.pos.push( teapot_obj[i].v1.x );
-					vert_input_b.pos.push( teapot_obj[i].v1.y );
-					vert_input_b.pos.push( teapot_obj[i].v1.z );
-
-					vert_input_b.normal.push( teapot_obj[i].v1.nx );
-					vert_input_b.normal.push( teapot_obj[i].v1.ny );
-					vert_input_b.normal.push( teapot_obj[i].v1.nz );
-
 					this.jsgl_vertex_inputs.push( vert_input_b );
-
 					
+
 					var vert_input_c = {
-						pos: [],
-						normal: [],
+
+						pos: new Vec3(teapot_obj[i].v2.x,
+									  teapot_obj[i].v2.y,
+									  teapot_obj[i].v2.z),
+									  
+						normal: new Vec3(teapot_obj[i].v2.nx,
+										 teapot_obj[i].v2.ny,
+										 teapot_obj[i].v2.nz)
+
 					};
 					
-					vert_input_c.pos.push( teapot_obj[i].v2.x );
-					vert_input_c.pos.push( teapot_obj[i].v2.y );
-					vert_input_c.pos.push( teapot_obj[i].v2.z );
-
-					vert_input_c.normal.push( teapot_obj[i].v2.nx );
-					vert_input_c.normal.push( teapot_obj[i].v2.ny );
-					vert_input_c.normal.push( teapot_obj[i].v2.nz );
-
 					this.jsgl_vertex_inputs.push( vert_input_c );
+					
 				}
 				
 			

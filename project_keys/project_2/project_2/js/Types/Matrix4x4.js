@@ -268,9 +268,9 @@ class Matrix4x4
 		return rv;              
 	}
 	
-	mult_vec4(vec4)
+	mult_vec4(v4)
 	{
-		if (vec4.length != 4)
+		if (v4.length != 4)
 		{
 			alert('Invalid vec4');
 			console.log('Invalid vec4');
@@ -278,13 +278,25 @@ class Matrix4x4
 		}
 		
 		var rv = [
-					this.get(0,0)*vec4[0] + this.get(0,1)*vec4[1] + this.get(0,2)*vec4[2] + this.get(0,3)*vec4[3],
-					this.get(1,0)*vec4[0] + this.get(1,1)*vec4[1] + this.get(1,2)*vec4[2] + this.get(1,3)*vec4[3],
-					this.get(2,0)*vec4[0] + this.get(2,1)*vec4[1] + this.get(2,2)*vec4[2] + this.get(2,3)*vec4[3],
-					this.get(3,0)*vec4[0] + this.get(3,1)*vec4[1] + this.get(3,2)*vec4[2] + this.get(3,3)*vec4[3]					
+					this.get(0,0)*v4[0] + this.get(0,1)*v4[1] + this.get(0,2)*v4[2] + this.get(0,3)*v4[3],
+					this.get(1,0)*v4[0] + this.get(1,1)*v4[1] + this.get(1,2)*v4[2] + this.get(1,3)*v4[3],
+					this.get(2,0)*v4[0] + this.get(2,1)*v4[1] + this.get(2,2)*v4[2] + this.get(2,3)*v4[3],
+					this.get(3,0)*v4[0] + this.get(3,1)*v4[1] + this.get(3,2)*v4[2] + this.get(3,3)*v4[3]					
 				];
 		
 		return rv;		
+	}
+	
+	mult_Vec4(V4)
+	{
+		var rv = new Vec4(
+					this.get(0,0)*V4.x + this.get(0,1)*V4.y + this.get(0,2)*V4.z + this.get(0,3)*V4.w,
+					this.get(1,0)*V4.x + this.get(1,1)*V4.y + this.get(1,2)*V4.z + this.get(1,3)*V4.w,
+					this.get(2,0)*V4.x + this.get(2,1)*V4.y + this.get(2,2)*V4.z + this.get(2,3)*V4.w,
+					this.get(3,0)*V4.x + this.get(3,1)*V4.y + this.get(3,2)*V4.z + this.get(3,3)*V4.w					
+				);
+		
+		return rv;				
 	}
 	
 	add(other_mat)
