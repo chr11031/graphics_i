@@ -197,6 +197,10 @@ class Software_Renderer
 	
 	_raster_triangle(Q, R, S, uniform_data, fragment_shader)
 	{
+		
+		
+		
+		// TODO: Check this math again for the X-Y coordinate center offsetting
 		var tri_min = new Vec2( Math.max(this._viewport_x, min_of_3(Q.gl_Position.x, R.gl_Position.x, S.gl_Position.x)), 
 							    Math.max(this._viewport_y, min_of_3(Q.gl_Position.y, R.gl_Position.y, S.gl_Position.y)) );
 
@@ -221,8 +225,7 @@ class Software_Renderer
 		var tri_coef = 1.0 / tri_area;
 		
 		
-		// Barycentric coverage pass 
-		
+		// Barycentric coverage test 
 		var bias_qr = this._edge_is_top_or_left(Q.gl_Position, R.gl_Position, S.gl_Position);
 		var bias_rs = this._edge_is_top_or_left(R.gl_Position, S.gl_Position, Q.gl_Position);
 		var bias_sq = this._edge_is_top_or_left(S.gl_Position, Q.gl_Position, R.gl_Position);
@@ -243,106 +246,37 @@ class Software_Renderer
 		var row_r = edge_sq.x + (row_width * edge_sq.y);
 		
 		
-		
-		var covered = new Array(tri_max.y - tri_min.y);
-		
-		var r = 0;
-		var c = 0;
 		while (P.y <= tri_max.y)
 		{			
-			covered[r] = new Array(row_width);
 			while (P.x <= tri_max.x)
 			{
-				covered[r][c] = det_q >= bias_rs && det_r >= bias_sq && det_s >= bias_qr;
-				
-				det_s -= edge_qr.y;
-				det_q -= edge_rs.y;
-				det_r -= edge_sq.y;
-			
-				c += 1;
-				P.x += 1;
-			}
-			
-			det_s += row_s;
-			det_q += row_q;
-			det_r += row_r;
-						
-
-			P.x = tri_min.x;
-			c = 0;
-
-			r += 1;
-			P.y += 1;
-		}
-		
-		
-		// Interpolation pass
-		
-		/*
-		var Az = tri_coef * ( (R.y - S.y) * Q.z + (S.y - Q.y) * R.z + (Q.y - R.y) * S.z );
-		var Bz = tri_coef * ( (S.x - R.x) * Q.z + (Q.x - S.x) * R.z + (R.x - Q.x) * S.z );
-		var Cz = tri_coef * ( (R.x*S.y - R.y*S.x)*Q.z + (Q.y*S.x - Q.x*S.y)*R.z + (Q.x*R.y - Q.y*R.x)*S.z );
-		*/
-		
-		var det_rs = R.gl_Position.x * S.gl_Position.y - R.gl_Position.y * S.gl_Position.x;
-		var det_sq = S.gl_Position.x * Q.gl_Position.y - S.gl_Position.y * Q.gl_Position.x;
-		var det_qr = Q.gl_Position.x * R.gl_Position.y - Q.gl_Position.y * R.gl_Position.x;
-		
-		
-		var Az = tri_coef * ( -edge_rs.y * Q.gl_Position.z + -edge_sq.y * R.gl_Position.z + -edge_qr.y * S.gl_Position.z );
-		var Bz = tri_coef * (  edge_rs.x * Q.gl_Position.z +  edge_sq.x * R.gl_Position.z +  edge_qr.x * S.gl_Position.z );
-		var Cz = tri_coef * (  det_rs    * Q.gl_Position.z +     det_sq * R.gl_Position.z +     det_qr * S.gl_Position.z );
-		var interp_z = tri_min.x * Az + tri_min.y * Bz + Cz;
-		var row_z = Bz - (row_width * Az);
-
-		
-		var Aw = tri_coef * ( -edge_rs.y * Q.gl_Position.w + -edge_sq.y * R.gl_Position.w + -edge_qr.y * S.gl_Position.w );
-		var Bw = tri_coef * (  edge_rs.x * Q.gl_Position.w +  edge_sq.x * R.gl_Position.w +  edge_qr.x * S.gl_Position.w );
-		var Cw = tri_coef * (  det_rs    * Q.gl_Position.w +     det_sq * R.gl_Position.w +     det_qr * S.gl_Position.w );
-		var interp_w = tri_min.x * Aw + tri_min.y * Bw + Cw;
-		var row_w = Bw - (row_width * Aw);
-
-
-		var Ar = tri_coef * ( -edge_rs.y * Q.interp_color.x + -edge_sq.y * R.interp_color.x + -edge_qr.y * S.interp_color.x );
-		var Br = tri_coef * (  edge_rs.x * Q.interp_color.x +  edge_sq.x * R.interp_color.x +  edge_qr.x * S.interp_color.x );
-		var Cr = tri_coef * (  det_rs    * Q.interp_color.x +     det_sq * R.interp_color.x +     det_qr * S.interp_color.x );
-		var interp_r = tri_min.x * Ar + tri_min.y * Br + Cr;
-		var row_r = Br - (row_width * Ar);
-
-
-		var Ag = tri_coef * ( -edge_rs.y * Q.interp_color.y + -edge_sq.y * R.interp_color.y + -edge_qr.y * S.interp_color.y );
-		var Bg = tri_coef * (  edge_rs.x * Q.interp_color.y +  edge_sq.x * R.interp_color.y +  edge_qr.x * S.interp_color.y );
-		var Cg = tri_coef * (  det_rs    * Q.interp_color.y +     det_sq * R.interp_color.y +     det_qr * S.interp_color.y );
-		var interp_g = tri_min.x * Ag + tri_min.y * Bg + Cg;
-		var row_g = Bg - (row_width * Ag);
-
-
-		var Ab = tri_coef * ( -edge_rs.y * Q.interp_color.z + -edge_sq.y * R.interp_color.z + -edge_qr.y * S.interp_color.z );
-		var Bb = tri_coef * (  edge_rs.x * Q.interp_color.z +  edge_sq.x * R.interp_color.z +  edge_qr.x * S.interp_color.z );
-		var Cb = tri_coef * (  det_rs    * Q.interp_color.z +     det_sq * R.interp_color.z +     det_qr * S.interp_color.z );
-		var interp_b = tri_min.x * Ab + tri_min.y * Bb + Cb;
-		var row_b = Bb - (row_width * Ab);
-		
-		
-		
-		r = 0; 
-		for (P.y = tri_min.y; P.y <= tri_max.y; P.y += 1)
-		{
-			c = 0;
-			for (P.x = tri_min.x; P.x <= tri_max.x; P.x += 1)
-			{
-				if (covered[r][c])
+				if (det_q >= bias_rs && det_r >= bias_sq && det_s >= bias_qr)
 				{
+					var interp_s = tri_coef * det_s;
+					var interp_q = tri_coef * det_q;
+					var interp_r = tri_coef * det_r;
+					
+					
+					var interp_z = interp_s * S.gl_Position.z + interp_q * Q.gl_Position.z + interp_r * R.gl_Position.z;
+					var interp_w = interp_s * S.gl_Position.w + interp_q * Q.gl_Position.w + interp_r * R.gl_Position.w;
+					
+					var interp_col0 = interp_s * S.interp_color.x + interp_q * Q.interp_color.x + interp_r * R.interp_color.x;
+					var interp_col1 = interp_s * S.interp_color.y + interp_q * Q.interp_color.y + interp_r * R.interp_color.y;
+					var interp_col2 = interp_s * S.interp_color.z + interp_q * Q.interp_color.z + interp_r * R.interp_color.z;
+					
+					
 					var fragment_input = {
 						
 						gl_Position:  new Vec4(P.x,
 											   P.y,
 											   interp_z,
-											   interp_w),
+											   interp_w
+											  ),
 						
-						interp_color: new Vec3(interp_r, 
-											   interp_g, 
-											   interp_b)
+						interp_color: new Vec3(interp_col0, 
+											   interp_col1, 
+											   interp_col2,
+											  )
 					};
 					
 					var fragment_out = fragment_shader(fragment_input, uniform_data);
@@ -354,29 +288,26 @@ class Software_Renderer
 						this._depth_buf[fragment_out.gl_Position.y][fragment_out.gl_Position.x] = fragment_out.gl_Position.z;
 						this._draw_pixel(P, fragment_out.out_color);
 					}
-				}	
+				}
 
-				
-				interp_z += Az;
-				interp_w += Aw;
-				
-				interp_r += Ar;
-				interp_g += Ag;
-				interp_b += Ab;
-
-				c += 1;
+				det_s -= edge_qr.y;
+				det_q -= edge_rs.y;
+				det_r -= edge_sq.y;
+			
+				P.x += 1;
 			}
 			
-			interp_z += row_z;
-			interp_w += row_w;
+			det_s += row_s;
+			det_q += row_q;
+			det_r += row_r;
+						
 			
-			interp_r += row_r;
-			interp_g += row_g;
-			interp_b += row_b;
-			
-			r += 1;				
+			P.x = tri_min.x;
+			P.y += 1;
 		}
+		
 	}
+	
 }
 
 
