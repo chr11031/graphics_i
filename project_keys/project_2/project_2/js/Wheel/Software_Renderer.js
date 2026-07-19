@@ -232,21 +232,31 @@ class Software_Renderer
 		
 		
 		var P = new Vec2(tri_min.x, tri_min.y);
+		
+		
+		var edge_qp = new Vec2(P.x - Q.gl_Position.x, P.y - Q.gl_Position.y);
+		var edge_rp = new Vec2(P.x - R.gl_Position.x, P.y - R.gl_Position.y);
+		var edge_sp = new Vec2(P.x - S.gl_Position.x, P.y - S.gl_Position.y);
+
+		var det_s = Vec2_determinant(edge_qr, edge_qp);
+		var det_q = Vec2_determinant(edge_rs, edge_rp);
+		var det_r = Vec2_determinant(edge_sq, edge_sp);
+
+		var col_s = -edge_qr.y;
+		var col_q = -edge_rs.y;
+		var col_r = -edge_sq.y;
+		
+		var row_width = tri_max.x - tri_min.x + 1;
+		var row_s = edge_qr.x - (row_width * col_s);
+		var row_q = edge_rs.x - (row_width * col_q);
+		var row_r = edge_sq.x - (row_width * col_r);
+		
+		
 		while (P.y <= tri_max.y)
-		{
+		{			
 			while (P.x <= tri_max.x)
 			{
-				var edge_qp = new Vec2(P.x - Q.gl_Position.x, P.y - Q.gl_Position.y);
-				var edge_rp = new Vec2(P.x - R.gl_Position.x, P.y - R.gl_Position.y);
-				var edge_sp = new Vec2(P.x - S.gl_Position.x, P.y - S.gl_Position.y);
-				
-				
-				var det_s = Vec2_determinant(edge_qr, edge_qp);
-				var det_q = Vec2_determinant(edge_rs, edge_rp);
-				var det_r = Vec2_determinant(edge_sq, edge_sp);
-				
-				
-				if (det_q - bias_rs >= 0 && det_r - bias_sq >= 0 && det_s - bias_qr >= 0)
+				if (det_q >= bias_rs && det_r >= bias_sq && det_s >= bias_qr)
 				{
 					var interp_s = tri_coef * det_s;
 					var interp_q = tri_coef * det_q;
@@ -285,9 +295,18 @@ class Software_Renderer
 						this._draw_pixel(P, fragment_out.out_color);
 					}
 				}
+
+				det_s += col_s;
+				det_q += col_q;
+				det_r += col_r;
 			
 				P.x += 1;
 			}
+			
+			det_s += row_s;
+			det_q += row_q;
+			det_r += row_r;
+						
 			
 			P.x = tri_min.x;
 			P.y += 1;
