@@ -160,7 +160,7 @@
 				var block_size = gl.getActiveUniformBlockParameter(gl_shader_program,
 																   block_index,
 																   gl.UNIFORM_BLOCK_DATA_SIZE);
-				gl.bufferData(gl.UNIORM_BUFFER, block_size, gl.DYNAMIC_DRAW);
+				gl.bufferData(gl.UNIFORM_BUFFER, block_size, gl.DYNAMIC_DRAW);
 
 				gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, gl_client_data.phong_ubo);
 				gl.uniformBlockBinding(gl_shader_program, block_index, 0);

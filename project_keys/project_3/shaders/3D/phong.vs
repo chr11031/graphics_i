@@ -12,13 +12,14 @@ layout(std140) uniform phong_data
 };
 
 smooth out vec3 interp_normal;
-smooth out vec4 interp_pos;
+smooth out vec3 interp_pos;
 
 
 void main()
 {
 	interp_normal = (view * model * vec4(normal, 0.0)).xyz;
-	interp_pos = view * model * vec4(pos, 1.0);
+	vec4 tmp = view * model * vec4(pos, 1.0);
+	interp_pos = tmp.xyz;
 	
-	gl_Position = proj * interp_pos;								
+	gl_Position = proj * tmp;								
 }
