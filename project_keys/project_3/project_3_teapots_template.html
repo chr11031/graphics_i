@@ -43,86 +43,96 @@
 			function _build_client_data_webgl(gl, gl_shader_program)
 			{
 				var gl_client_data = {
-					vertices_vbo: null,
-					normals_vbo: null,
-					bunny_vao: null,
-					vertices_count: null,					
+					floor_vao: null,
+					floor_vertices_count: null,
 
+					bunny_vao: null,
+					bunny_vertices_count: null,					
+					
 					phong_ubo: null,					
 					view_mat_loc: null,
 					proj_mat_loc: null,
 					model_mat_loc: null,					
 				};
 			
-				var obj_verts = [];
-				var obj_norms = [];
 			
-				var bunny_obj = resources["bunny_obj"];
-			
-				for (var i = 0; i < bunny_obj.length; i++)
-				{
-					// XYZs
-					obj_verts.push(bunny_obj[i].v0.x);
-					obj_verts.push(bunny_obj[i].v0.y);
-					obj_verts.push(bunny_obj[i].v0.z);
+				
+				var floor_verts = [
+					-1.0, 0.0, -1.0,
+					-1.0, 0.0,  1.0,
+					 1.0, 0.0,  1.0,
+					 
+					 1.0, 0.0,  1.0,
+					 1.0, 0.0, -1.0,
+					-1.0, 0.0, -1.0,					 
+				];
+				
+				var floor_norms = [
+					0.0, 1.0, 0.0,
+					0.0, 1.0, 0.0,
+					0.0, 1.0, 0.0,
 					
-					obj_verts.push(bunny_obj[i].v1.x);
-					obj_verts.push(bunny_obj[i].v1.y);
-					obj_verts.push(bunny_obj[i].v1.z);
-
-					obj_verts.push(bunny_obj[i].v2.x);
-					obj_verts.push(bunny_obj[i].v2.y);
-					obj_verts.push(bunny_obj[i].v2.z);
+					0.0, 1.0, 0.0,
+					0.0, 1.0, 0.0,
+					0.0, 1.0, 0.0				
+				];
+				var floor_uvs = [
+					0.0, 1.0,
+					0.0, 0.0,
+					1.0, 0.0,
 					
-					
-					// NORMs
-					obj_norms.push(bunny_obj[i].v0.nx);
-					obj_norms.push(bunny_obj[i].v0.ny);
-					obj_norms.push(bunny_obj[i].v0.nz);
-					
-					obj_norms.push(bunny_obj[i].v1.nx);
-					obj_norms.push(bunny_obj[i].v1.ny);
-					obj_norms.push(bunny_obj[i].v1.nz);
-					
-					obj_norms.push(bunny_obj[i].v2.nx);
-					obj_norms.push(bunny_obj[i].v2.ny);
-					obj_norms.push(bunny_obj[i].v2.nz);
-				}
+					1.0, 0.0,
+					1.0, 1.0,
+				    0.0, 1.0
+				];
 
 
-				// OBJ Verts
-				gl_client_data.vertices_vbo = gl.createBuffer();
+				var floor_verts_vbo = gl.createBuffer();
 				
 				gl.bindBuffer(
 					gl.ARRAY_BUFFER,
-					gl_client_data.vertices_vbo
-				);
-
-				gl.bufferData(
-					gl.ARRAY_BUFFER,
-					new Float32Array(obj_verts),
-					gl.STATIC_DRAW
-				);
-				
-				// OBJ NORMs 
-				gl_client_data.normals_vbo = gl.createBuffer();
-				
-				gl.bindBuffer(
-					gl.ARRAY_BUFFER,
-					gl_client_data.normals_vbo
+					floor_verts_vbo
 				);
 				
 				gl.bufferData(
 					gl.ARRAY_BUFFER,
-					new Float32Array(obj_norms),
+					new Float32Array(floor_verts),
+					gl.STATIC_DRAW
+				);
+
+				var floor_norms_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					floor_norms_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(floor_norms),
 					gl.STATIC_DRAW
 				);
 				
-				// OBJ VAO
-				gl_client_data.bunny_vao = gl.createVertexArray();
-				gl.bindVertexArray(gl_client_data.bunny_vao);
+				var floor_uvs_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					floor_uvs_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(floor_uvs),
+					gl.STATIC_DRAW
+				);
 
-				gl.bindBuffer(gl.ARRAY_BUFFER, gl_client_data.vertices_vbo);
+				gl_client_data.floor_vao = gl.createVertexArray();
+				
+				gl.bindVertexArray(gl_client_data.floor_vao);
+				
+				
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, floor_verts_vbo);
 				gl.enableVertexAttribArray(0);
 				gl.vertexAttribPointer(
 					0,
@@ -133,9 +143,7 @@
 					0				
 				);
 				
-				gl_client_data.vertices_count = bunny_obj.length * 3;
-				
-				gl.bindBuffer(gl.ARRAY_BUFFER, gl_client_data.normals_vbo);
+				gl.bindBuffer(gl.ARRAY_BUFFER, floor_norms_vbo);
 				gl.enableVertexAttribArray(1);
 				gl.vertexAttribPointer(
 					1,
@@ -146,8 +154,162 @@
 					0				
 				);
 				
+				gl.bindBuffer(gl.ARRAY_BUFFER, floor_uvs_vbo);
+				gl.enableVertexAttribArray(2);
+				gl.vertexAttribPointer(
+					2,
+					2,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+											
+				gl_client_data.floor_vertices_count = 6;
+				
+				gl.bindVertexArray(null);
+						
+				
+				var bunny_verts = [];
+				var bunny_norms = [];
+				var bunny_uvs = [];
+			
+			
+				var bunny_obj = resources["bunny_obj"];
+			
+				for (var i = 0; i < bunny_obj.length; i++)
+				{
+					// XYZs
+					bunny_verts.push(bunny_obj[i].v0.x);
+					bunny_verts.push(bunny_obj[i].v0.y);
+					bunny_verts.push(bunny_obj[i].v0.z);
+					
+					bunny_verts.push(bunny_obj[i].v1.x);
+					bunny_verts.push(bunny_obj[i].v1.y);
+					bunny_verts.push(bunny_obj[i].v1.z);
+
+					bunny_verts.push(bunny_obj[i].v2.x);
+					bunny_verts.push(bunny_obj[i].v2.y);
+					bunny_verts.push(bunny_obj[i].v2.z);
+					
+					
+					// NORMs
+					bunny_norms.push(bunny_obj[i].v0.nx);
+					bunny_norms.push(bunny_obj[i].v0.ny);
+					bunny_norms.push(bunny_obj[i].v0.nz);
+					
+					bunny_norms.push(bunny_obj[i].v1.nx);
+					bunny_norms.push(bunny_obj[i].v1.ny);
+					bunny_norms.push(bunny_obj[i].v1.nz);
+					
+					bunny_norms.push(bunny_obj[i].v2.nx);
+					bunny_norms.push(bunny_obj[i].v2.ny);
+					bunny_norms.push(bunny_obj[i].v2.nz);
+					
+					
+					// UVs (OVERRIDDEN)
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+				}
+
+
+				// OBJ Verts
+				var bunny_verts_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					bunny_verts_vbo
+				);
+
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(bunny_verts),
+					gl.STATIC_DRAW
+				);
+				
+				// OBJ NORMs 
+				var bunny_normals_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					bunny_normals_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(bunny_norms),
+					gl.STATIC_DRAW
+				);
+
+				
+				// OBJ UVs
+				var bunny_uvs_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER,
+							  bunny_uvs_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(bunny_uvs),
+					gl.STATIC_DRAW
+				);
+
+				
+				// OBJ VAO
+				gl_client_data.bunny_vao = gl.createVertexArray();
+
+				gl.bindVertexArray(gl_client_data.bunny_vao);
+
+				gl.bindBuffer(gl.ARRAY_BUFFER, bunny_verts_vbo);
+				gl.enableVertexAttribArray(0);
+				gl.vertexAttribPointer(
+					0,
+					3,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, bunny_normals_vbo);
+				gl.enableVertexAttribArray(1);
+				gl.vertexAttribPointer(
+					1,
+					3,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, bunny_uvs_vbo);
+				gl.enableVertexAttribArray(2);
+				gl.vertexAttribPointer(
+					2,
+					2,
+					gl.FLOAT,
+					false,
+					0,
+					0
+				);
+				
+				gl_client_data.bunny_vertices_count = bunny_obj.length * 3;
+
 				// Unbind VAO attachment
 				gl.bindVertexArray(null);
+
+
 
 
 
@@ -294,21 +456,38 @@
 			{
 				gl.viewport(sx, sy, ex, ey);
 			
-				
+			
 				gl.useProgram(gl_shader_program);
+
+				var tmp = new Matrix4x4();
+				tmp.set_scale(4, 1, 4);
+				tmp.set_translate(0, -1.5, 0);
+				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.phong_ubo);					
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.model_mat_loc, tmp.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.proj_mat_loc,   proj_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.view_mat_loc,   view_mat.data);
+								
+												
+								
+				gl.bindVertexArray(gl_client_data.floor_vao);
+				gl.drawArrays(
+					gl.TRIANGLES,
+					0,
+					gl_client_data.floor_vertices_count
+				);
+
+
 				
 				gl.bindVertexArray(gl_client_data.bunny_vao);
 
-				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.phong_ubo);					
-				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.proj_mat_loc,   proj_mat.data);
-				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.view_mat_loc,   view_mat.data);
 				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.model_mat_loc, model_mat.data);
 				
 				gl.drawArrays(
 					gl.TRIANGLES,
 					0,
-					gl_client_data.vertices_count
-				);								
+					gl_client_data.bunny_vertices_count
+				);
+		
 				
 				gl.bindVertexArray(null);
 	
