@@ -12,3 +12,4 @@ function Vec2_determinant(M, N)
 {
 	return M.x * N.y - M.y * N.x;
 }
+

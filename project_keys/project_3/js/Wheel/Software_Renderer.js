@@ -143,9 +143,16 @@ class Software_Renderer
 								   in_data.gl_Position.z * div_by_w,
 								   div_by_w),			
 							
-			interp_color: new Vec3(in_data.interp_color.x,
-								   in_data.interp_color.y,
-								   in_data.interp_color.z)
+			interp_pos:   new Vec3(in_data.interp_pos.x * div_by_w,
+								   in_data.interp_pos.y * div_by_w,
+								   in_data.interp_pos.z * div_by_w),
+								   
+			interp_normal: new Vec3(in_data.interp_normal.x * div_by_w,
+									in_data.interp_normal.y * div_by_w,
+									in_data.interp_normal.z * div_by_w),
+							
+			interp_uv:	   new Vec2(in_data.interp_uv.x * div_by_w,
+									in_data.interp_uv.y * div_by_w)
 		};
 		
 		return rv;
@@ -165,9 +172,16 @@ class Software_Renderer
 											  vz,
 								   in_data.gl_Position.w),
 						 
-			interp_color: new Vec3(in_data.interp_color.x,
-								   in_data.interp_color.y,
-								   in_data.interp_color.z)
+			interp_pos:   new Vec3(in_data.interp_pos.x,
+								   in_data.interp_pos.y,
+								   in_data.interp_pos.z),
+								   
+			interp_normal: new Vec3(in_data.interp_normal.x,
+									in_data.interp_normal.y,
+									in_data.interp_normal.z),
+							
+			interp_uv:	   new Vec2(in_data.interp_uv.x,
+									in_data.interp_uv.y)
 		};
 		
 		return rv;		
@@ -303,25 +317,60 @@ class Software_Renderer
 		var row_w = Bw - (row_width * Aw);
 
 
-		var Ar = tri_coef * ( -edge_rs.y * Q.interp_color.x + -edge_sq.y * R.interp_color.x + -edge_qr.y * S.interp_color.x );
-		var Br = tri_coef * (  edge_rs.x * Q.interp_color.x +  edge_sq.x * R.interp_color.x +  edge_qr.x * S.interp_color.x );
-		var Cr = tri_coef * (  det_rs    * Q.interp_color.x +     det_sq * R.interp_color.x +     det_qr * S.interp_color.x );
+		var Ar = tri_coef * ( -edge_rs.y * Q.interp_pos.x + -edge_sq.y * R.interp_pos.x + -edge_qr.y * S.interp_pos.x );
+		var Br = tri_coef * (  edge_rs.x * Q.interp_pos.x +  edge_sq.x * R.interp_pos.x +  edge_qr.x * S.interp_pos.x );
+		var Cr = tri_coef * (  det_rs    * Q.interp_pos.x +     det_sq * R.interp_pos.x +     det_qr * S.interp_pos.x );
 		var interp_r = tri_min.x * Ar + tri_min.y * Br + Cr;
 		var row_r = Br - (row_width * Ar);
 
 
-		var Ag = tri_coef * ( -edge_rs.y * Q.interp_color.y + -edge_sq.y * R.interp_color.y + -edge_qr.y * S.interp_color.y );
-		var Bg = tri_coef * (  edge_rs.x * Q.interp_color.y +  edge_sq.x * R.interp_color.y +  edge_qr.x * S.interp_color.y );
-		var Cg = tri_coef * (  det_rs    * Q.interp_color.y +     det_sq * R.interp_color.y +     det_qr * S.interp_color.y );
+		var Ag = tri_coef * ( -edge_rs.y * Q.interp_pos.y + -edge_sq.y * R.interp_pos.y + -edge_qr.y * S.interp_pos.y );
+		var Bg = tri_coef * (  edge_rs.x * Q.interp_pos.y +  edge_sq.x * R.interp_pos.y +  edge_qr.x * S.interp_pos.y );
+		var Cg = tri_coef * (  det_rs    * Q.interp_pos.y +     det_sq * R.interp_pos.y +     det_qr * S.interp_pos.y );
 		var interp_g = tri_min.x * Ag + tri_min.y * Bg + Cg;
 		var row_g = Bg - (row_width * Ag);
 
 
-		var Ab = tri_coef * ( -edge_rs.y * Q.interp_color.z + -edge_sq.y * R.interp_color.z + -edge_qr.y * S.interp_color.z );
-		var Bb = tri_coef * (  edge_rs.x * Q.interp_color.z +  edge_sq.x * R.interp_color.z +  edge_qr.x * S.interp_color.z );
-		var Cb = tri_coef * (  det_rs    * Q.interp_color.z +     det_sq * R.interp_color.z +     det_qr * S.interp_color.z );
+		var Ab = tri_coef * ( -edge_rs.y * Q.interp_pos.z + -edge_sq.y * R.interp_pos.z + -edge_qr.y * S.interp_pos.z );
+		var Bb = tri_coef * (  edge_rs.x * Q.interp_pos.z +  edge_sq.x * R.interp_pos.z +  edge_qr.x * S.interp_pos.z );
+		var Cb = tri_coef * (  det_rs    * Q.interp_pos.z +     det_sq * R.interp_pos.z +     det_qr * S.interp_pos.z );
 		var interp_b = tri_min.x * Ab + tri_min.y * Bb + Cb;
 		var row_b = Bb - (row_width * Ab);
+
+
+		var Ad = tri_coef * ( -edge_rs.y * Q.interp_normal.x + -edge_sq.y * R.interp_normal.x + -edge_qr.y * S.interp_normal.x );
+		var Bd = tri_coef * (  edge_rs.x * Q.interp_normal.x +  edge_sq.x * R.interp_normal.x +  edge_qr.x * S.interp_normal.x );
+		var Cd = tri_coef * (  det_rs    * Q.interp_normal.x +     det_sq * R.interp_normal.x +     det_qr * S.interp_normal.x );
+		var interp_d = tri_min.x * Ad + tri_min.y * Bd + Cd;
+		var row_d = Bd - (row_width * Ad);
+
+
+		var Ae = tri_coef * ( -edge_rs.y * Q.interp_normal.y + -edge_sq.y * R.interp_normal.y + -edge_qr.y * S.interp_normal.y );
+		var Be = tri_coef * (  edge_rs.x * Q.interp_normal.y +  edge_sq.x * R.interp_normal.y +  edge_qr.x * S.interp_normal.y );
+		var Ce = tri_coef * (  det_rs    * Q.interp_normal.y +     det_sq * R.interp_normal.y +     det_qr * S.interp_normal.y );
+		var interp_e = tri_min.x * Ae + tri_min.y * Be + Ce;
+		var row_e = Be - (row_width * Ae);
+
+
+		var Af = tri_coef * ( -edge_rs.y * Q.interp_normal.z + -edge_sq.y * R.interp_normal.z + -edge_qr.y * S.interp_normal.z );
+		var Bf = tri_coef * (  edge_rs.x * Q.interp_normal.z +  edge_sq.x * R.interp_normal.z +  edge_qr.x * S.interp_normal.z );
+		var Cf = tri_coef * (  det_rs    * Q.interp_normal.z +     det_sq * R.interp_normal.z +     det_qr * S.interp_normal.z );
+		var interp_f = tri_min.x * Af + tri_min.y * Bf + Cf;
+		var row_f = Bf - (row_width * Af);
+
+		
+		var Am = tri_coef * ( -edge_rs.y * Q.interp_uv.x + -edge_sq.y * R.interp_uv.x + -edge_qr.y * S.interp_uv.x );
+		var Bm = tri_coef * (  edge_rs.x * Q.interp_uv.x +  edge_sq.x * R.interp_uv.x +  edge_qr.x * S.interp_uv.x );
+		var Cm = tri_coef * (  det_rs    * Q.interp_uv.x +     det_sq * R.interp_uv.x +     det_qr * S.interp_uv.x );
+		var interp_m = tri_min.x * Am + tri_min.y * Bm + Cm;
+		var row_m = Bm - (row_width * Am);
+		
+		
+		var An = tri_coef * ( -edge_rs.y * Q.interp_uv.y + -edge_sq.y * R.interp_uv.y + -edge_qr.y * S.interp_uv.y );
+		var Bn = tri_coef * (  edge_rs.x * Q.interp_uv.y +  edge_sq.x * R.interp_uv.y +  edge_qr.x * S.interp_uv.y );
+		var Cn = tri_coef * (  det_rs    * Q.interp_uv.y +     det_sq * R.interp_uv.y +     det_qr * S.interp_uv.y );
+		var interp_n = tri_min.x * An + tri_min.y * Bn + Cn;
+		var row_n = Bn - (row_width * An);
 		
 		
 		
@@ -333,6 +382,8 @@ class Software_Renderer
 			{
 				if (covered[r][c])
 				{
+					var flipped_w = 1.0 / interp_w;
+					
 					var fragment_input = {
 						
 						gl_Position:  new Vec4(P.x,
@@ -340,9 +391,17 @@ class Software_Renderer
 											   interp_z,
 											   interp_w),
 						
-						interp_color: new Vec3(interp_r, 
-											   interp_g, 
-											   interp_b)
+						interp_pos:   new Vec3(interp_r * flipped_w, 
+											   interp_g * flipped_w, 
+											   interp_b * flipped_w),
+											   
+						interp_normal:new Vec3(interp_d * flipped_w,
+											   interp_e * flipped_w,
+											   interp_f * flipped_w),
+												
+						interp_uv:	  new Vec2(interp_m * flipped_w,
+											   interp_n * flipped_w),
+											   
 					};
 					
 					var fragment_out = fragment_shader(fragment_input, uniform_data);
@@ -363,6 +422,13 @@ class Software_Renderer
 				interp_r += Ar;
 				interp_g += Ag;
 				interp_b += Ab;
+				
+				interp_d += Ad;
+				interp_e += Ae;
+				interp_f += Af;
+				
+				interp_m += Am;
+				interp_n += An;
 
 				c += 1;
 			}
@@ -374,10 +440,18 @@ class Software_Renderer
 			interp_g += row_g;
 			interp_b += row_b;
 			
+			interp_d += row_d;
+			interp_e += row_e;
+			interp_f += row_f;
+			
+			interp_m += row_m;
+			interp_n += row_n;
+			
 			r += 1;				
 		}
 	}
 }
+			
 
 
 function min_of_3(x, y, z)

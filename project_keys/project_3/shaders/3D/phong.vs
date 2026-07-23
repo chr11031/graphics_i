@@ -10,6 +10,7 @@ layout(std140) uniform phong_data
 	mat4 proj;
 	mat4 view;
 	mat4 model;
+	mediump vec3 camera_pos;
 };
 
 smooth out vec3 interp_pos;
@@ -18,12 +19,12 @@ smooth out vec2 interp_uv;
 
 void main()
 {
-	interp_normal = (view * model * vec4(normal, 0.0)).xyz;
+	interp_normal = (model * vec4(normal, 0.0)).xyz;
 
-	vec4 tmp = view * model * vec4(pos, 1.0);
+	vec4 tmp = model * vec4(pos, 1.0);
 	interp_pos = tmp.xyz;
 
 	interp_uv = uv;
 	
-	gl_Position = proj * tmp;								
+	gl_Position = proj * view * tmp;								
 }
