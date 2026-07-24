@@ -529,8 +529,8 @@
 			///////////////////////////////////////////
 			function jsgl_fragment_shader(fragment_input, uniforms)
 			{
-				var uv_checker_x = Math.round(fragment_input.interp_uv.x * 8.0);
-				var uv_checker_y = Math.round(fragment_input.interp_uv.y * 8.0);
+				var uv_checker_x = Math.floor(fragment_input.interp_uv.x * 8.0);
+				var uv_checker_y = Math.floor(fragment_input.interp_uv.y * 8.0);
 				
 				var base_color = new Vec3(1.0, 1.0, 1.0);
 				if (uv_checker_x % 2 == uv_checker_y % 2)
