@@ -1,0 +1,711 @@
+<html style="font-family: 'Roboto', sans-serif;">
+	<head>
+		<title>Demo: WebGL Hello Perspective Camera</title>
+		<style>
+			table {border: 0px solid;}
+		</style>
+		<script>
+
+			
+			var mesh_rot;
+			var camera_pitch;
+
+			var gl;
+			var vbo1;
+			var vbo2;
+			var vbo3;
+			var ebo1;
+			var vao;
+			var program;
+
+			var ubo;
+			var model_loc;
+			var view_loc;
+			var proj_loc;
+			
+			var model_mat;
+			var view_mat;
+			var proj_mat;
+			
+
+
+			class Matrix4x4
+			{
+				constructor()
+				{
+					this.data = new Float32Array(16);
+					this.set_identity();
+				}
+				
+				copy()
+				{
+					var rv = new Matrix4x4();
+					
+					for (var r = 0; r < 4; r++)
+					{
+						for (var c = 0; c < 4; c++)
+						{
+							rv.set(r, c, this.get(r, c));
+						}
+					}
+					
+					return rv;
+				}
+
+				set(r, c, value)
+				{
+					this.data[(c * 4) + r] = value;
+				}
+
+				get(r, c)
+				{
+					return this.data[(c * 4) + r];
+				}
+
+				zero()
+				{
+					for (var r = 0; r < 4; r++)
+					{
+						for (var c = 0; c < 4; c++)
+						{
+							this.set(r, c, 0);
+						}
+					}
+				}
+
+				_swap(r_a, c_a, r_b, c_b)
+				{
+					var tmp = this.get(r_a, c_a);
+					this.set(r_a, c_a, this.get(r_b, c_b));
+					this.set(r_b, c_b, tmp);
+				}
+
+				transpose()
+				{
+					var rv = this.copy();
+					rv._swap(0, 1, 1, 0);
+					rv._swap(0, 2, 2, 0);
+					rv._swap(0, 3, 3, 0);
+
+					rv._swap(1, 2, 2, 1);
+					rv._swap(1, 3, 3, 1);
+
+					rv._swap(2, 3, 3, 2);
+					
+					return rv;
+				}
+
+				set_identity()
+				{
+					this.zero();
+					for (var i = 0; i < 4; i++)
+					{
+						this.set(i, i, 1.0);
+					}
+				}
+
+				set_scale(x, y, z)
+				{
+					this.set(0, 0, x);
+					this.set(1, 1, y);
+					this.set(2, 2, z);
+				}
+
+				set_translate(x, y, z)
+				{
+					this.set(0, 3, x);
+					this.set(1, 3, y);
+					this.set(2, 3, z);
+				}
+
+				set_rotate(axis='x', rot_deg)
+				{
+					if (axis != 'x' && axis != 'y' && axis != 'z')
+					{
+						alert('Bad rotation matrix around axis ' + axis );
+						return;
+					}
+
+					var rad = Math.PI * rot_deg / 180.0;
+					var cos_t = Math.cos(rad);
+					var sin_t = Math.sin(rad);
+
+					if (axis == 'x')
+					{
+						this.set(0, 0, 1.0);
+						this.set(0, 1, 0.0);
+						this.set(0, 2, 0.0);
+						this.set(0, 3, 0.0);
+
+						this.set(1, 0, 0.0);
+						this.set(1, 1, cos_t);
+						this.set(1, 2, sin_t);
+						this.set(1, 3, 0.0);
+
+						this.set(2, 0, 0.0);
+						this.set(2, 1, -sin_t);
+						this.set(2, 2, cos_t);
+						this.set(2, 3, 0.0);
+
+						this.set(3, 0, 0.0);
+						this.set(3, 1, 0.0);
+						this.set(3, 2, 0.0);
+						this.set(3, 3, 1.0);
+					}
+					else if (axis == 'y')
+					{
+						this.set(0, 0, cos_t);
+						this.set(0, 1, 0.0);
+						this.set(0, 2, -sin_t);
+						this.set(0, 3, 0.0);
+
+						this.set(1, 0, 0.0);
+						this.set(1, 1, 1.0);
+						this.set(1, 2, 0.0);
+						this.set(1, 3, 0.0);
+
+						this.set(2, 0, sin_t);
+						this.set(2, 1, 0.0);
+						this.set(2, 2, cos_t);
+						this.set(2, 3, 0.0);
+
+						this.set(3, 0, 0.0);
+						this.set(3, 1, 0.0);
+						this.set(3, 2, 0.0);
+						this.set(3, 3, 1.0);
+
+					}
+					else if (axis == 'z')
+					{
+						this.set(0, 0, cos_t);
+						this.set(0, 1, -sin_t);
+						this.set(0, 2, 0.0);
+						this.set(0, 3, 0.0);
+
+						this.set(1, 0, sin_t);
+						this.set(1, 1, cos_t);
+						this.set(1, 2, 0.0);
+						this.set(1, 3, 0.0);
+
+						this.set(2, 0, 0.0);
+						this.set(2, 1, 0.0);
+						this.set(2, 2, 1.0);
+						this.set(2, 3, 0.0);
+
+						this.set(3, 0, 0.0);
+						this.set(3, 1, 0.0);
+						this.set(3, 2, 0.0);
+						this.set(3, 3, 1.0);
+					}
+				}
+				
+				set_perspective(fov_lr_deg, fov_td_deg, near, far)
+				{
+					// We are looking for the Left-handed coordinate versions of these
+					near = -near;
+					far  = -far;
+					
+					var fov_lr_rad = fov_lr_deg * Math.PI / 180.0;
+					var fov_td_rad = fov_td_deg * Math.PI / 180.0;
+
+					var left = near * Math.tan(fov_lr_rad / 2.0);
+					var right = -left;
+					var bot = near * Math.tan(fov_td_rad / 2.0);
+					var top = -bot;
+
+					this.set(0, 0, -2.0 * near / (right - left));
+					this.set(0, 1, 0.0);
+					this.set(0, 2, (right + left) / (right - left));
+					this.set(0, 3, 0.0);
+
+					this.set(1, 0, 0.0);
+					this.set(1, 1, -2.0 * near / (top - bot));
+					this.set(1, 2, (top + bot) / (top - bot));
+					this.set(1, 3, 0.0);
+
+					this.set(2, 0, 0.0);
+					this.set(2, 1, 0.0);
+					this.set(2, 2, -(far + near) / (far - near));
+					this.set(2, 3, (2.0 * far * near) / (far - near));
+
+					this.set(3, 0,  0.0);
+					this.set(3, 1,  0.0);
+					this.set(3, 2, -1.0);
+					this.set(3, 3,  0.0);
+				}
+				
+				set_orthographic(left, right, bot, top, near, far)
+				{
+					// We are looking for the Left-handed coordinate versions of these
+					near = -near;
+					far = -far;
+					
+					this.set(0, 0, 2.0 / (right - left));
+					this.set(0, 1, 0.0);
+					this.set(0, 2, 0.0);
+					this.set(0, 3, -(left + right) / (right - left));
+
+					this.set(1, 0, 0.0);
+					this.set(1, 1, 2.0 / (top - bot));
+					this.set(1, 2, 0.0);
+					this.set(1, 3, -(bot + top) / (top - bot));
+
+					this.set(2, 0, 0.0);
+					this.set(2, 1, 0.0);
+					this.set(2, 2, 2.0 / (far - near));
+					this.set(2, 3, -(near + far) / (far - near));
+
+					this.set(3, 0,  0.0);
+					this.set(3, 1,  0.0);
+					this.set(3, 2,  0.0);
+					this.set(3, 3,  1.0);
+				}
+
+				set_columns_basis_r3(col_right, col_up, col_forward)
+				{
+					this.set_identity();
+
+					this.set(0, 0, col_right[0]);
+					this.set(1, 0, col_right[1]);
+					this.set(2, 0, col_right[2]);
+
+					this.set(0, 1, col_up[0]);
+					this.set(1, 1, col_up[1]);
+					this.set(2, 1, col_up[2]);
+
+					this.set(0, 2, col_forward[0]);
+					this.set(1, 2, col_forward[1]);
+					this.set(2, 2, col_forward[2]);
+				}
+
+				mult(other_mat)
+				{
+					var rv = new Matrix4x4();
+
+					for (var r = 0; r < 4; r++)
+					{
+						for (var c = 0; c < 4; c++) 
+						{
+							var sum = 0;                      
+							for (var i = 0; i < 4; i++)
+							{
+								sum = sum + (this.get(r, i) * other_mat.get(i, c));
+							}
+
+							rv.set(r, c, sum);
+						}
+					}
+
+					return rv;              
+				}
+				
+				mult_vec4(vec4)
+				{
+					if (vec4.length != 4)
+					{
+						alert('Invalid vec4');
+						console.log('Invalid vec4');
+						return null;
+					}
+					
+					var rv = [
+								this.get(0,0)*vec4[0] + this.get(0,1)*vec4[1] + this.get(0,2)*vec4[2] + this.get(0,3)*vec4[3],
+								this.get(1,0)*vec4[0] + this.get(1,1)*vec4[1] + this.get(1,2)*vec4[2] + this.get(1,3)*vec4[3],
+								this.get(2,0)*vec4[0] + this.get(2,1)*vec4[1] + this.get(2,2)*vec4[2] + this.get(2,3)*vec4[3],
+								this.get(3,0)*vec4[0] + this.get(3,1)*vec4[1] + this.get(3,2)*vec4[2] + this.get(3,3)*vec4[3]					
+							];
+					
+					return rv;		
+				}
+				
+				add(other_mat)
+				{
+					var rv = this.copy();
+					
+					for (var r = 0; r < 4; r++)
+					{
+						for (var c = 0; c < 4; c++)
+						{
+							rv.set(r, c, rv.get(r,c) + other_mat.get(r,c));
+						}
+					}
+					
+					return rv;
+				}
+
+				sub(other_mat)
+				{
+					var rv = this.copy();
+					
+					for (var r = 0; r < 4; r++)
+					{
+						for (var c = 0; c < 4; c++)
+						{
+							rv.set(r, c, rv.get(r,c) - other_mat.get(r,c));
+						}
+					}
+					
+					return rv;
+				}
+				
+				_det(r, c)
+				{
+					if (r.length < 2)
+					{
+						alert('Invalid call to _det');
+						console.log('Invalid call to _det');
+						return null;
+					}
+					else if (r.length == 2)
+					{
+						return this.get(r[0],c[0])*this.get(r[1],c[1]) - this.get(r[0],c[1])*this.get(r[1],c[0]);
+					}
+					
+					var sum = 0;
+					for (var i = 0; i < r.length; i++)
+					{
+						var tmp_r = structuredClone(r);
+						tmp_r.splice(0,1);
+						var tmp_c = structuredClone(c);
+						tmp_c.splice(i,1);
+									
+						var sign = (0 + i) % 2 == 0 ? 1.0 : -1.0;
+						sum = sum + ( sign * this.get(r[0],c[i]) * this._det(tmp_r, tmp_c) );
+					}
+						
+					return sum;
+				}
+				
+				det()
+				{
+					var r = [0,1,2,3];
+					var c = [0,1,2,3];
+					var det = this._det(r, c);
+					return det;
+				}
+				
+				inverse()
+				{
+					var r = [0,1,2,3];
+					var c = [0,1,2,3];
+					var det = this._det(r, c);
+					if (det == 0.0)
+					{
+						alert('Invalid Matrix4x4 inversion: matrix cannot be inverted!');
+						console.log('Invalid Matrix4x4 inversion: matrix cannot be inverted!');
+						return null;
+					}
+					var coef = 1.0 / det;
+						
+					var adj = new Matrix4x4();
+					for (var r_i = 0; r_i < 4; r_i++)
+					{
+						for (var c_i = 0; c_i < 4; c_i++)
+						{
+							var tmp_r = structuredClone(r);
+							tmp_r.splice(r_i,1);
+							var tmp_c = structuredClone(c);
+							tmp_c.splice(c_i,1);
+										
+							var sign = (r_i + c_i) % 2 == 0 ? 1.0 : -1.0;
+							adj.set(c_i, r_i, sign * coef * this._det(tmp_r, tmp_c)); 
+						}
+					}
+					
+					return adj;	
+				}
+			}
+
+
+			
+			
+
+			
+			function draw_gl_canvas()
+			{
+				gl.clearColor(0.2,0,0,1);
+				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);		
+
+				gl.bindVertexArray(vao);
+				gl.useProgram(program);
+				
+			
+				proj_mat.set_perspective(90.0, 90.0, 0.1, 100.0);
+				
+				var tmp = new Matrix4x4();
+				view_mat.set_identity();
+				tmp.set_rotate('x', camera_pitch);
+				view_mat.set_translate(0, 0, -2);
+				view_mat = view_mat.mult(tmp);
+
+				mesh_rot += 0.2;
+				
+				model_mat.set_rotate('y', mesh_rot);
+			
+				
+				gl.bindBuffer(gl.UNIFORM_BUFFER, ubo);					
+				gl.bufferSubData(gl.UNIFORM_BUFFER, model_mat_loc, model_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, view_mat_loc, view_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, proj_mat_loc, proj_mat.data);
+
+
+				gl.drawElements(
+					gl.TRIANGLES,
+					6,
+					gl.UNSIGNED_INT,
+					0);
+
+			
+				window.requestAnimationFrame(draw_gl_canvas)
+				
+			}
+
+			function update_pitch()
+			{
+				camera_pitch = -document.getElementById("camera_pitch_slider").value;
+			}
+			
+			
+			function main()
+			{
+				var frame_canvas = document.getElementById("frame_canvas");
+				
+				gl = frame_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});
+				gl.enable(gl.DEPTH_TEST);
+				
+				var positions = new Float32Array([
+					-0.5, 0.0, 0.5, 1.0,
+					 0.5, 0.0, 0.5, 1.0,
+					 0.5, 0.0, -0.5, 1.0,
+					-0.5, 0.0, -0.5, 1.0,
+				]);
+				
+		
+				vbo1 = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					vbo1
+				);
+								
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					positions,
+					gl.STATIC_DRAW
+				);
+				
+				
+				var colors = new Uint8Array([
+					255, 0, 0,
+					0, 255, 0,
+					0, 0, 255,
+					255, 255, 255,
+				]);
+					
+				
+				vbo2 = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					vbo2
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER, 
+					colors, 
+					gl.STATIC_DRAW
+				);
+				
+				vbo3 = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					vbo3
+				);
+				
+
+				var indices = new Uint32Array([
+					0, 1, 2,
+					2, 3, 0,
+				]);
+
+				ebo1 = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ELEMENT_ARRAY_BUFFER,
+					ebo1);
+					
+				gl.bufferData(
+					gl.ELEMENT_ARRAY_BUFFER,
+					new Uint32Array(indices),
+					gl.STATIC_DRAW
+				);
+				
+				vao = gl.createVertexArray();
+				gl.bindVertexArray(vao);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, vbo1);
+				gl.enableVertexAttribArray(0);
+				gl.vertexAttribPointer(
+					0,
+					4,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, vbo2);
+				gl.enableVertexAttribArray(1);
+				gl.vertexAttribPointer(
+					1,
+					3,
+					gl.UNSIGNED_BYTE,
+					true,
+					0,
+					0					
+				);
+
+
+				gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ebo1);
+				
+				gl.bindVertexArray(null);
+				
+				var vs_code = `#version 300 es
+								precision highp float;
+								layout(location=0) in vec4 aPos;
+								layout(location=1) in vec3 aCol;
+
+								uniform global_data
+								{
+									mat4 proj;
+									mat4 view;
+									mat4 model;
+								};
+
+
+								smooth out vec3 vCol;
+								
+								void main(){
+
+									vCol = aCol;
+									
+									gl_Position = proj * view * model * aPos;								
+								}`;
+				
+				
+				var vertex_shader = gl.createShader(gl.VERTEX_SHADER);
+				gl.shaderSource(vertex_shader, vs_code);
+				gl.compileShader(vertex_shader);
+				if (!gl.getShaderParameter(vertex_shader, gl.COMPILE_STATUS))
+				{
+					alert('Failed to compile vertex shader:' + gl.getShaderInfoLog(vertex_shader));
+					return;
+				}
+
+
+				var fs_code = `#version 300 es
+								precision highp float;
+								
+								smooth in vec3 vCol;
+								
+								out vec4 outCol;
+								
+								void main() {
+								
+									outCol = vec4(vCol, 1.0);
+									
+								}`;
+								
+				var fragment_shader = gl.createShader(gl.FRAGMENT_SHADER);
+				gl.shaderSource(fragment_shader, fs_code);
+				gl.compileShader(fragment_shader);
+				if (!gl.getShaderParameter(fragment_shader, gl.COMPILE_STATUS))
+				{
+					alert('Failed to compile fragment shader:' + gl.getShaderInfoLog(fragment_shader));
+					return;
+				}
+						
+				
+				program = gl.createProgram();
+				gl.attachShader(program, vertex_shader);
+				gl.attachShader(program, fragment_shader);
+				gl.linkProgram(program);
+				
+				if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+				{
+					alert('Failed to link shader program:' + gl.getProgramInfoLog(program));
+					return;
+				}
+				
+				
+				ubo = gl.createBuffer();
+				gl.bindBuffer(gl.UNIFORM_BUFFER, ubo);
+			
+
+		
+				
+				var block_index = gl.getUniformBlockIndex(program, "global_data");
+		
+				var block_size = gl.getActiveUniformBlockParameter(program,
+																   block_index,
+																   gl.UNIFORM_BLOCK_DATA_SIZE);
+				gl.bufferData(gl.UNIFORM_BUFFER, block_size, gl.DYNAMIC_DRAW);
+
+				gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, ubo);
+				gl.uniformBlockBinding(program, block_index, 0);
+
+				
+				var ubo_names = ["proj", "view", "model"];
+				var ubo_indices = gl.getUniformIndices(program,
+													   ubo_names);
+				var ubo_offsets = gl.getActiveUniforms(program,
+													   ubo_indices,
+													   gl.UNIFORM_OFFSET);
+				proj_mat_loc  = ubo_offsets[0];
+				view_mat_loc  = ubo_offsets[1];
+				model_mat_loc = ubo_offsets[2];
+		
+		
+				
+				
+				
+				mesh_rot = -document.getElementById("camera_pitch_slider").value;
+				
+				model_mat = new Matrix4x4();
+				view_mat = new Matrix4x4();
+				proj_mat = new Matrix4x4();				
+				
+				update_pitch();
+				
+				draw_gl_canvas();
+			}
+		</script>
+		
+	</head>	
+
+	<body onload="main()">
+		<h1>Demo: WebGL Hello Perspective Camera</h1>	
+		<p>
+			Name: Dane Christensen</br>
+			Date: 7/14/2026
+		</p>
+		
+		<canvas	id="frame_canvas"
+				style="background-color: #FFFFFF;" 
+				width=512 
+				height=512>
+		</canvas>	
+		<br/>
+		<input type="range" oninput="update_pitch()" style="width:512px;" id="camera_pitch_slider" value="15" min="0" max="90"/>
+		<br/>
+		Camera Angle
+	
+		</br>
+		
+		<h2>Description</h2>
+		Hello Triangle (x2) with a camera control feature presented in WebGL with a slightly red, dark background.</br>
+
+	</body>
+
+</html>
