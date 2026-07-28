@@ -58,6 +58,7 @@
 					view_mat_loc: null,
 					proj_mat_loc: null,
 					model_mat_loc: null,					
+					camera_pos_loc: null,
 				};
 			
 			
@@ -333,15 +334,16 @@
 				gl.uniformBlockBinding(gl_shader_program, block_index, 0);
 
 				
-				var ubo_names = ["proj", "view", "model"];
+				var ubo_names = ["proj", "view", "model", "camera_pos"];
 				var ubo_indices = gl.getUniformIndices(gl_shader_program,
 													   ubo_names);
 				var ubo_offsets = gl.getActiveUniforms(gl_shader_program,
 													   ubo_indices,
 													   gl.UNIFORM_OFFSET);
-				gl_client_data.proj_mat_loc  = ubo_offsets[0];
-				gl_client_data.view_mat_loc  = ubo_offsets[1];
-				gl_client_data.model_mat_loc = ubo_offsets[2];
+				gl_client_data.proj_mat_loc   = ubo_offsets[0];
+				gl_client_data.view_mat_loc   = ubo_offsets[1];
+				gl_client_data.model_mat_loc  = ubo_offsets[2];
+				gl_client_data.camera_pos_loc = ubo_offsets[3];
 
 
 				return gl_client_data;
@@ -385,11 +387,11 @@
 								 proj_mat,
 								 view_mat,
 								 model_mat,
+								 world_camera_pos,
 								 gl_client_data,
 								 gl_shader_program)
 			{
 				gl.viewport(sx, sy, ex, ey);
-			
 			
 				gl.useProgram(gl_shader_program);
 
@@ -397,9 +399,11 @@
 				tmp.set_scale(4, 1, 4);
 				tmp.set_translate(0, -1.5, 0);
 				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.phong_ubo);					
-				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.model_mat_loc, tmp.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.model_mat_loc,  tmp.data);
 				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.proj_mat_loc,   proj_mat.data);
 				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.view_mat_loc,   view_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.camera_pos_loc, world_camera_pos);
+								
 								
 																				
 				gl.bindVertexArray(gl_client_data.floor_vao);
@@ -433,9 +437,12 @@
 				jsgl.set_viewport(sx, sy, ex, ey);
 				
 				this.jsgl_uniforms = {
-					proj:  proj_mat,
-					view:  view_mat,
-					model: tmp,
+					proj:  		proj_mat,
+					view:  		view_mat,
+					model: 		tmp,
+					camera_pos: new Vec3(world_camera_pos[0], 
+										 world_camera_pos[1], 
+										 world_camera_pos[2]),
 				};
 				
 				jsgl.draw_triangles(this.jsgl_board_vertex_inputs, 
@@ -457,31 +464,29 @@
 			///////////////////////////////////////////
 			function jsgl_vertex_shader(vertex_input, uniforms)
 			{		
-				var interp_normal = uniforms.view.mult_Vec4(
-										uniforms.model.mult_Vec4( 
-											new Vec4(vertex_input.normal.x, 
-												     vertex_input.normal.y, 
-												     vertex_input.normal.z, 
-												     0.0)
-										)
+				var interp_normal = uniforms.model.mult_Vec4( 
+										new Vec4(vertex_input.normal.x, 
+												 vertex_input.normal.y, 
+												 vertex_input.normal.z, 
+												 0.0)
 									);
 
-				var tmp = uniforms.view.mult_Vec4(
-							uniforms.model.mult_Vec4(
-								new Vec4(vertex_input.pos.x,
-										 vertex_input.pos.y,
-										 vertex_input.pos.z,
-										 1.0)
-							)
-						   );
+				var tmp = uniforms.model.mult_Vec4(
+							new Vec4(vertex_input.pos.x,
+									 vertex_input.pos.y,
+									 vertex_input.pos.z,
+									 1.0)
+						  );
 			
 				
 				var rv = {
 					gl_Position: uniforms.proj.mult_Vec4( 
-									new Vec4(tmp.x,
-											 tmp.y,
-											 tmp.z,
-											 1.0) 
+									uniforms.view.mult_Vec4(
+										new Vec4(tmp.x,
+												 tmp.y,
+												 tmp.z,
+												 1.0) 
+									)
 								  ),
 								  
 					interp_pos: new Vec3(tmp.x,
@@ -500,29 +505,6 @@
 				return rv;
 			}
 			
-
-			function jsgl_reflect(I, N)
-			{
-				// Refl(I,N) = I - 2*dot(I,N)* N
-				
-				var a = I.x * N.x +
-						I.y * N.y + 
-						I.z * N.z;
-
-						
-				var b = new Vec3(a * N.x,
-								 a * N.y,
-								 a * N.z
-								);
-						
-						
-				var rv = new Vec3(I.x - b.x,
-								  I.y - b.y,
-								  I.z - b.z);
-
-				return rv;
-			}
-
 							
 			///////////////////////////////////////////
 			// jsgl Equivalent 
@@ -563,19 +545,19 @@
 				color.z += align * base_color.z;
 				
 				// Specular 
-				var reflected = jsgl_reflect(new Vec3(-light_dir.x,
-													  -light_dir.y,
-													  -light_dir.z), 
-													  normal);
-				reflected.normalize();
-				var look_dir = new Vec3(fragment_input.interp_pos.x, 
-										fragment_input.interp_pos.y, 
-										fragment_input.interp_pos.z);
+				var look_dir = new Vec3(uniforms.camera_pos.x - fragment_input.interp_pos.x,
+										uniforms.camera_pos.y - fragment_input.interp_pos.y,
+										uniforms.camera_pos.z - fragment_input.interp_pos.z);						
 				look_dir.normalize();
 				
-				align = look_dir.x * -reflected.x +
-						look_dir.y * -reflected.y + 
-						look_dir.z * -reflected.z;
+				var half_vector = new Vec3(look_dir.x + light_dir.x,
+										   look_dir.y + light_dir.y,
+										   look_dir.z + light_dir.z);
+				half_vector.normalize();
+				
+				align = half_vector.x * normal.x + 
+						half_vector.y * normal.y + 
+						half_vector.z * normal.z;					
 				align = Math.max(0, align);
 				align = Math.pow(align, 256);
 				
@@ -622,13 +604,22 @@
 				tmp_mat.set_rotate('y', rot_lr);
 				tmp2_mat.set_rotate('x', rot_td);
 				tmp2_mat.set_translate(0.0, 0.0, -4);
-				tmp_mat = view_mat.mult( tmp2_mat.mult(tmp_mat) );
+				var trans_rot = tmp2_mat.mult(tmp_mat);
+				tmp_mat = view_mat.mult( trans_rot );
 
+				var inv_trans_rot = trans_rot.inverse();
+				var origin = new Vec4(0.0, 0.0, 0.0, 1.0);
+				var world_camera_pos_V4 = inv_trans_rot.mult_Vec4(origin);
+				var world_camera_pos_v3 = new Float32Array([ world_camera_pos_V4.x,
+															 world_camera_pos_V4.y,
+															 world_camera_pos_V4.z ]);
+				
 
 				this._draw_bunny(gl, 0, 0, ctx_width, ctx_height,
 								 proj_mat,
 								 tmp_mat,
 								 model_mat,
+								 world_camera_pos_v3,
 								 webGL_client_data,
 								 webGL_program_handle);							
 			}
@@ -875,63 +866,51 @@
 			</tr>
 		</table>
 
-		<p>	For this project, you will implement several parts of your own software rasterizer. You will do this by extending the Javascript in this web page as well as in Software_Renderer.js. In the latter, you will add state and function calls to reproduce the functionality of WebGL using Javascript. The webGL version and your Software_Renderer will need to provide similar renderings of the teapots used in this template. 
+		<p>	For this project, you will implement the pieces of your software rasterizer relating to perspective division and perspective correct interpolation. You will also implement the Blinn-Phong shading model as seen on the left. This model makes use of a base "Ambient", as well as additive "Diffuse" and "Specular". Again Note that from an API point, you are free to mimic or deviate from the conventions used by WebGL. In particular, you will want to make sure to model the following details:
 			<br/>
 			<br/>
-			From an API point, you are free to mimic or deviate from the conventions used by WebGL. These act as a jump point for you to start reading what your Software Renderer will need to proivde an equivalence for:
 			<ol type="A" style="list-style-position: inside;">
 
-
-				<u><b>Global State:</u></b>
+				<u><b>Divide by "W":</u></b>
 				<br/>
 				<br/>
-				<li>gl.enable - Important for allowing the CULL, SCISSOR, and DEPTH features used in a rasterizer.</li>					
-				<li>gl.clearColor - Sets the value for when the screen is eventually reset to a new color. Used here for a background color effect.</li>					
-				<li>gl.clear - For all flags passed in the respective buffers are cleared. Often used to clear color and depth values.</li>					
-
-				<br/>
-				<u><b>VBO/UBO:</u></b>
+				In your NDC step, it is important that you preserve "1/W" in the output "W" coordinate and that you divide all other interpolants by "W". Without this, perspective projection and perspective correct interpolation will not be implemented correctly.
 				<br/>
 				<br/>
-				<li>gl.createBuffer - Allocates a new buffer (VBO, UBO, etc) and returns a handle to that object. At this point, no type is ascribed to that buffer object.</li>
-				<li>gl.bindBuffer - Set a type to a given buffer and references this object for any subsequent and related buffer object function calls.</li>
-				<li>gl.bufferData - Either allocate a bound buffer's memory or copy an array into buffer memory.</li>
-				<li>gl.bufferSubData - Similar to gl.bufferData, but only modifies a subset of the buffer rather than allocating new memory or overwriting all members in the buffer.</li>
+				At the rasterization stage, make sure to use the "1/W" value to correct your interpolated attributed. Otherwise, your shader will give uncanny, linear-interpolation based results. 				
+				<br/>
+				<br/>
+				<u><b>Uniform data:</u></b>
+				<br/>
+				<br/>
+				This will be very similar to what you did for Project #2, except that you will need to support one more variable called "camera_pos". To implement this new feature, make sure that your uniforms structure takes in this new variable. As you can see both the Vertex and Fragment shader programs make use of the same UBO. This is related to the linking step that occurs between shaders. Effectively, all the different shaders may reference the same UBO for a particular struct as long as their definitions and precision standards match. Replicating this in your own pipeline should be a straightforward design to mimic.
 				
 				<br/>
-				<u><b>VAO:</u></b>
+				<br/>
+				
+				<u><b>Blinn-Phong Shading:</u></b>
 				<br/>
 				<br/>
-				<li>gl.createVertexArray - Allocate a new VAO (Vertex Array Object). The VAO will reference other VBOs to setup the input layout for a draw call such as "drawArrays".</li>
-				<li>gl.bindVertexArray - Set the VAO as the current, in scope object for all subsequent VAO based function calls.
-				<li>gl.enableVertexAttribArray - Tell the bound VAO that a particular attribute is "enabled" for the "pipeline_input_assembler" reference internally.</li>
-				<li>gl.vertexAttribPointer -  Tell the bound VAO what index, how large, what the spacing is for a particular vertex attribute.</li>
+				The shading model used in this project is a notable upgrade from the one in Project #2. Note in particular, that the shading has migrated from the Vertex Shader to the Fragment shader. Originally, Phong shading had all the same ideas as Blinn-Phong, but was susceptible to a particular failure mode in its implementation. Jim Blinn made a popular "fix" to this by introducing a vector called the "Half Vector", which is just the average of the light direction and eye direction vectors. By taking the dot product of the "Half Vector" and the Surface normal, the "Specular" component of this model is implemented. 
+				<br/>
+				<br/>
+				Make sure to take time to understand this model as it will appear again in the future/on an upcoming exam. As a very common/popular shading model, you should have a strong familiarity with it/feel comfortable implementing it from memory.
 				
 				<br/>
-				<u><b>UBO:</u></b>
 				<br/>
-				<br/>
-				<li>gl.getUniformBlockIndex - Finds the block index of a uniform block within a shader program.</li>
-				<li>gl.getActiveUniformBlockParameter - Used to query information about a Uniform Block in a shader, such as its total byte size (including padding).</li>
-				<li>gl.bindBufferBase - Bind a UBO to a block binding slot.</li>
-				<li>gl.uniformBlockBinding - Map a shader program (vertex + fragment)'s uniform block with a block binding slot.</li>
-				<li>gl.getUniformIndices - From a linked shader program, find the unique uniform index of any given uniform variable.</li>
-				<li>gl.getActiveUniforms - Query information about uniform variables such as the byte offset of a member from the beginning of its block ("gl.UNIFORM_OFFSET").</li>
-
-
-				<br/>
-				<u><b>Shader Program:</u></b>
-				<br/>
-				<br/>
-				<li>gl.useProgram - Binds an already built GLSL program (vertex + fragment shaders) so any uniform/draw calls reference it.</li>
 				
+				<u><b>Last thoughts:</u></b>
 				<br/>
-				<u><b>Drawing:</u></b>
+				<br/>
+				<ul>				
+				</ul>
+				<li>This project in the "Invent the Wheel" sequence should feel a bit easier than Project #2, unless you took major shortcuts. Ask for help if that is not your experience getting started.</li>
+				<li>If your project #2 is complete, reusing your previous work to render the bunny is a good launch point. You should be able to see the bunny and a plane beneath it with everything from before to tell you all you have left is the shader and pipeline updates to include.</li>
+				<li>If you find yourself struggling with the perspective correction, revisit our class lectures to see the two equations that allow you to model "Z" and your attributes correctly. </li>
+				<li>If you complete this last project give yourself a big pat on the back! You have implemented all the major parts of a rasterization pipeline from scratch!</li>
 				<br/>
 				<br/>
-				<li>gl.viewport - Changes the viewport transform used at the end of rasterization to a subset of the total target area. This affects rasterization outputs but not functions like gl.clear(...)</li>					
-				<li>gl.scissor - Restricts pixel operations including "gl.clear(...)" to a subset of the total target area.</li>					
-				<li>gl.drawArrays - The essential draw function used to render the teapot. Draws triangles to render the teapot above.</li>
+				
 			</ol>
 			<br/>
 			<br/>

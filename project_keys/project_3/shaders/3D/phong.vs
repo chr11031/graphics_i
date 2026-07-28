@@ -10,7 +10,7 @@ layout(std140) uniform phong_data
 	mat4 proj;
 	mat4 view;
 	mat4 model;
-	mediump vec3 camera_pos;
+	vec3 camera_pos;
 };
 
 smooth out vec3 interp_pos;

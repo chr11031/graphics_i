@@ -6,7 +6,7 @@ layout(std140) uniform phong_data
 	mat4 proj;
 	mat4 view;
 	mat4 model;
-	mediump vec3 camera_pos;
+	vec3 camera_pos;
 };
 
 const vec3 light_pos = vec3(-5.0, 5.0, 5.0);
@@ -34,18 +34,17 @@ void main() {
 
 
 	// Diffuse
-	vec3 light_dir = normalize( light_pos - interp_pos.xyz );	
+	vec3 light_dir = normalize( light_pos - interp_pos );	
 	vec3 normal = normalize(interp_normal);
-
-
 	float align = dot(light_dir, normal);
 	align = max(0.0, align);
 	color += align * base_color;
 	
+	
 	// Specular
-	vec3 reflected = reflect(-light_dir, normal); 
-	vec3 look_dir = normalize(interp_pos - camera_pos);
-	align = dot(look_dir, -normalize(reflected));
+	vec3 look_dir = normalize( camera_pos - interp_pos );
+	vec3 half_vector = normalize( look_dir + light_dir );
+	align = dot(half_vector, normal);
 	align = max(0.0, align);
 	align = pow(align, 256.0);
 	color += align * vec3(1.0, 1.0, 1.0);
