@@ -6,9 +6,6 @@
 		</style>
 		
 		<script type="text/javascript" src="/js/Types/RGBA.js"></script>
-		<script type="text/javascript" src="/js/Types/Vec2.js"></script>		
-		<script type="text/javascript" src="/js/Types/Vec3.js"></script>		
-		<script type="text/javascript" src="/js/Types/Vec4.js"></script>		
 		<script type="text/javascript" src="/js/Types/Matrix4x4.js"></script>		
 		<script type="text/javascript" src="/js/Helpers/Shader.js"></script>
 		<script type="text/javascript" src="/js/Wheel/Software_Renderer.js"></script>
@@ -25,12 +22,6 @@
 			var webGL = null;
 			var webGL_client_data = null;
 			var webGL_program_handle = null;
-
-			var jsgl = null;
-			var jsgl_board_vertex_inputs = null;
-			var jsgl_bunny_vertex_inputs = null;
-			var jsgl_uniforms = null;
-
 
 			var ctx_width = null;
 			var ctx_height = null;
@@ -372,14 +363,6 @@
 
 				gl.clearColor(r, g, b, a);
 				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	
-
-
-				///////////////////////////////////////
-				// jsgl EQUIVALENT
-				///////////////////////////////////////
-
-				var col = new RGBA(r*255, g*255, b*255, 255);
-				jsgl.clear(0, 0, ctx_width, ctx_height, col);
 			}
 			
 			
@@ -427,160 +410,9 @@
 		
 				
 				gl.bindVertexArray(null);
-	
-				
-				///////////////////////////////////////////
-				// jsgl Equivalent 
-				///////////////////////////////////////////
+			}
+
 					
-				
-				jsgl.set_viewport(sx, sy, ex, ey);
-				
-				this.jsgl_uniforms = {
-					proj:  		proj_mat,
-					view:  		view_mat,
-					model: 		tmp,
-					camera_pos: new Vec3(world_camera_pos[0], 
-										 world_camera_pos[1], 
-										 world_camera_pos[2]),
-				};
-				
-				jsgl.draw_triangles(this.jsgl_board_vertex_inputs, 
-									this.jsgl_uniforms, 
-									jsgl_vertex_shader,
-									jsgl_fragment_shader);
-									
-				this.jsgl_uniforms.model = model_mat;
-
-				jsgl.draw_triangles(this.jsgl_bunny_vertex_inputs, 
-									this.jsgl_uniforms, 
-									jsgl_vertex_shader,
-									jsgl_fragment_shader);
-			}
-
-							
-			///////////////////////////////////////////
-			// jsgl Equivalent 
-			///////////////////////////////////////////
-			function jsgl_vertex_shader(vertex_input, uniforms)
-			{		
-				var interp_normal = uniforms.model.mult_Vec4( 
-										new Vec4(vertex_input.normal.x, 
-												 vertex_input.normal.y, 
-												 vertex_input.normal.z, 
-												 0.0)
-									);
-
-				var tmp = uniforms.model.mult_Vec4(
-							new Vec4(vertex_input.pos.x,
-									 vertex_input.pos.y,
-									 vertex_input.pos.z,
-									 1.0)
-						  );
-			
-				
-				var rv = {
-					gl_Position: uniforms.proj.mult_Vec4( 
-									uniforms.view.mult_Vec4(
-										new Vec4(tmp.x,
-												 tmp.y,
-												 tmp.z,
-												 1.0) 
-									)
-								  ),
-								  
-					interp_pos: new Vec3(tmp.x,
-										 tmp.y,
-										 tmp.z),
-
-					interp_normal: new Vec3(interp_normal.x,
-											interp_normal.y,
-											interp_normal.z),
-										 
-					interp_uv: new Vec2(vertex_input.uv.x,
-										vertex_input.uv.y),										 
-				};
-						
-								
-				return rv;
-			}
-			
-							
-			///////////////////////////////////////////
-			// jsgl Equivalent 
-			///////////////////////////////////////////
-			function jsgl_fragment_shader(fragment_input, uniforms)
-			{
-				var uv_checker_x = Math.floor(fragment_input.interp_uv.x * 8.0);
-				var uv_checker_y = Math.floor(fragment_input.interp_uv.y * 8.0);
-				
-				var base_color = new Vec3(1.0, 1.0, 1.0);
-				if (uv_checker_x % 2 == uv_checker_y % 2)
-				{
-					base_color = new Vec3(1.0, 0.0, 0.0);
-				}
-				
-				
-				// Ambient 
-				var color = new Vec3(0.1, 0.1, 0.1);
-				
-				// Diffuse
-				var light_pos = new Vec3(-5.0, 5.0, 5.0);
-				var light_dir = new Vec3(light_pos.x - fragment_input.interp_pos.x, 
-										 light_pos.y - fragment_input.interp_pos.y,
-										 light_pos.z - fragment_input.interp_pos.z);
-				light_dir.normalize();
-				var normal = new Vec3(fragment_input.interp_normal.x,
-									  fragment_input.interp_normal.y,
-									  fragment_input.interp_normal.z);
-				normal.normalize();
-				
-				var align = light_dir.x * normal.x + 
-							light_dir.y * normal.y + 
-							light_dir.z * normal.z;
-				align = Math.max(0, align);
-
-				color.x += align * base_color.x;
-				color.y += align * base_color.y;
-				color.z += align * base_color.z;
-				
-				// Specular 
-				var look_dir = new Vec3(uniforms.camera_pos.x - fragment_input.interp_pos.x,
-										uniforms.camera_pos.y - fragment_input.interp_pos.y,
-										uniforms.camera_pos.z - fragment_input.interp_pos.z);						
-				look_dir.normalize();
-				
-				var half_vector = new Vec3(look_dir.x + light_dir.x,
-										   look_dir.y + light_dir.y,
-										   look_dir.z + light_dir.z);
-				half_vector.normalize();
-				
-				align = half_vector.x * normal.x + 
-						half_vector.y * normal.y + 
-						half_vector.z * normal.z;					
-				align = Math.max(0, align);
-				align = Math.pow(align, 256);
-				
-				color.x += align;
-				color.y += align;
-				color.z += align;
-				
-				
-				var rv = {
-					gl_Position: new Vec4(fragment_input.gl_Position.x,
-										  fragment_input.gl_Position.y,
-										  fragment_input.gl_Position.z,
-										  fragment_input.gl_Position.w),
-										  
-					out_color: new Vec4(color.x,
-										color.y,
-										color.z,
-										1.0)	
-				};
-			
-				return rv;
-			}
-							
 			
 			function _draw_scene(gl)
 			{
@@ -608,11 +440,11 @@
 				tmp_mat = view_mat.mult( trans_rot );
 
 				var inv_trans_rot = trans_rot.inverse();
-				var origin = new Vec4(0.0, 0.0, 0.0, 1.0);
-				var world_camera_pos_V4 = inv_trans_rot.mult_Vec4(origin);
-				var world_camera_pos_v3 = new Float32Array([ world_camera_pos_V4.x,
-															 world_camera_pos_V4.y,
-															 world_camera_pos_V4.z ]);
+				var origin = [0.0, 0.0, 0.0, 1.0];
+				var world_camera_pos_V4 = inv_trans_rot.mult_vec4(origin);
+				var world_camera_pos_v3 = new Float32Array([ world_camera_pos_V4[0],
+															 world_camera_pos_V4[1],
+															 world_camera_pos_V4[2] ]);
 				
 
 				this._draw_bunny(gl, 0, 0, ctx_width, ctx_height,
@@ -648,118 +480,7 @@
 				draw_scene();
 			}
 			
-			
-			function _init_jsgl_variables(canvas_element)
-			{
-				this.jsgl = new Software_Renderer(canvas_element);
-				this.jsgl_board_vertex_inputs = [];
-				this.jsgl_bunny_vertex_inputs = [];
-
-
-				// First triangle
-				this.jsgl_board_vertex_inputs.push( {
-														pos: 	new Vec3(-1.0, 0.0, -1.0),
-														normal: new Vec3(0.0, 1.0, 0.0),
-														uv: 	new Vec2(0.0, 1.0),				
-													});
-													
-				this.jsgl_board_vertex_inputs.push( {
-														pos: 	new Vec3(-1.0, 0.0, 1.0),
-														normal: new Vec3(0.0, 1.0, 0.0),
-														uv: 	new Vec2(0.0, 0.0),				
-													});
-
-				this.jsgl_board_vertex_inputs.push( {
-														pos: 	new Vec3(1.0, 0.0, 1.0),
-														normal: new Vec3(0.0, 1.0, 0.0),
-														uv: 	new Vec2(1.0, 0.0),				
-													});
-
-				// Second triangle
-				this.jsgl_board_vertex_inputs.push( {
-														pos: 	new Vec3(1.0, 0.0, 1.0),
-														normal: new Vec3(0.0, 1.0, 0.0),
-														uv: 	new Vec2(1.0, 0.0),				
-													});
-
-				this.jsgl_board_vertex_inputs.push( {
-														pos: 	new Vec3(1.0, 0.0,-1.0),
-														normal: new Vec3(0.0, 1.0, 0.0),
-														uv: 	new Vec2(1.0, 1.0),				
-													});
-
-				this.jsgl_board_vertex_inputs.push( {
-														pos: 	new Vec3(-1.0, 0.0, -1.0),
-														normal: new Vec3(0.0, 1.0, 0.0),
-														uv: 	new Vec2(0.0, 1.0),				
-													});
-
-													
-													
-
-
-				var bunny_obj = resources["bunny_obj"];
-				for (var i = 0; i < bunny_obj.length; i++)
-				{
-					var vert_input_a = {
-
-						pos: 	new Vec3(bunny_obj[i].v0.x,
-										 bunny_obj[i].v0.y,
-										 bunny_obj[i].v0.z),
-									  
-						normal: new Vec3(bunny_obj[i].v0.nx,
-										 bunny_obj[i].v0.ny,
-										 bunny_obj[i].v0.nz),
-
-						uv:		new Vec2(0.0, 0.0)
-					};
 					
-					this.jsgl_bunny_vertex_inputs.push( vert_input_a );
-					
-					
-					var vert_input_b = {
-
-						pos: 	new Vec3(bunny_obj[i].v1.x,
-										 bunny_obj[i].v1.y,
-										 bunny_obj[i].v1.z),
-									  
-						normal: new Vec3(bunny_obj[i].v1.nx,
-										 bunny_obj[i].v1.ny,
-										 bunny_obj[i].v1.nz),
-	
-						uv:		new Vec2(0.0, 0.0)
-					};
-					
-					this.jsgl_bunny_vertex_inputs.push( vert_input_b );
-					
-
-					var vert_input_c = {
-
-						pos: 	new Vec3(bunny_obj[i].v2.x,
-										 bunny_obj[i].v2.y,
-										 bunny_obj[i].v2.z),
-									  
-						normal: new Vec3(bunny_obj[i].v2.nx,
-										 bunny_obj[i].v2.ny,
-										 bunny_obj[i].v2.nz),
-										 
-						uv: 	new Vec2(0.0, 0.0)
-					};
-					
-					this.jsgl_bunny_vertex_inputs.push( vert_input_c );
-					
-				}
-				
-			
-				this.jsgl_uniforms = {
-					proj:  null,
-					view:  null,
-					model: null,
-				};
-				
-			}
-
-			
 			function initialize_demo()
 			{
 				this.webGL = webGL_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});		
@@ -781,13 +502,7 @@
 				document.getElementById("camera_pitch_slider").addEventListener("input", view_updated);
 				document.getElementById("camera_yaw_slider").addEventListener(  "input", view_updated);
 
-
-				///////////////////////////////////////////
-				// jsgl equivalent				
-				///////////////////////////////////////////
-				this._init_jsgl_variables(document.getElementById("jsGL_canvas"));
-
-				
+			
 				// Draw view
 				view_updated();
 			}
