@@ -1,0 +1,634 @@
+<html style="font-family: 'Roboto', sans-serif;">
+	<head>
+		<title>Project 3: Projection, Perspective Correction, &amp Phong</title>
+		<style>
+			table {border: 0px solid;}
+		</style>
+		
+		<script type="text/javascript" src="/js/Types/RGBA.js"></script>
+		<script type="text/javascript" src="/js/Types/Matrix4x4.js"></script>		
+		<script type="text/javascript" src="/js/Helpers/Shader.js"></script>
+		<script type="text/javascript" src="/js/Wheel/Software_Renderer.js"></script>
+		<script type="text/javascript" src="/js/Loaders/Resource_Loader.js"></script>
+		
+		<script>
+
+			// App state
+			var resources = null;
+			
+			var rot_lr = -15.0;
+			var rot_td = -15.0;
+			
+			var webGL = null;
+			var webGL_client_data = null;
+			var webGL_program_handle = null;
+
+			var ctx_width = null;
+			var ctx_height = null;
+
+			var view_mode = null;
+
+			
+			function _init_gl(gl)
+			{
+				gl.enable(gl.CULL_FACE);
+				gl.enable(gl.DEPTH_TEST);							
+				gl.enable(gl.SCISSOR_TEST);
+			}
+			
+			function _build_client_data_webgl(gl, gl_shader_program)
+			{
+				var gl_client_data = {
+					floor_vao: null,
+					floor_vertices_count: null,
+
+					bunny_vao: null,
+					bunny_vertices_count: null,					
+					
+					phong_ubo: null,					
+					view_mat_loc: null,
+					proj_mat_loc: null,
+					model_mat_loc: null,					
+					camera_pos_loc: null,
+				};
+			
+			
+				
+				var floor_verts = [
+					-1.0, 0.0, -1.0,
+					-1.0, 0.0,  1.0,
+					 1.0, 0.0,  1.0,
+					 
+					 1.0, 0.0,  1.0,
+					 1.0, 0.0, -1.0,
+					-1.0, 0.0, -1.0,					 
+				];
+				
+				var floor_norms = [
+					0.0, 1.0, 0.0,
+					0.0, 1.0, 0.0,
+					0.0, 1.0, 0.0,
+					
+					0.0, 1.0, 0.0,
+					0.0, 1.0, 0.0,
+					0.0, 1.0, 0.0				
+				];
+				var floor_uvs = [
+					0.0, 1.0,
+					0.0, 0.0,
+					1.0, 0.0,
+					
+					1.0, 0.0,
+					1.0, 1.0,
+				    0.0, 1.0
+				];
+
+
+				var floor_verts_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					floor_verts_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(floor_verts),
+					gl.STATIC_DRAW
+				);
+
+				var floor_norms_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					floor_norms_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(floor_norms),
+					gl.STATIC_DRAW
+				);
+				
+				var floor_uvs_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					floor_uvs_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(floor_uvs),
+					gl.STATIC_DRAW
+				);
+
+				gl_client_data.floor_vao = gl.createVertexArray();
+				
+				gl.bindVertexArray(gl_client_data.floor_vao);
+				
+				
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, floor_verts_vbo);
+				gl.enableVertexAttribArray(0);
+				gl.vertexAttribPointer(
+					0,
+					3,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, floor_norms_vbo);
+				gl.enableVertexAttribArray(1);
+				gl.vertexAttribPointer(
+					1,
+					3,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, floor_uvs_vbo);
+				gl.enableVertexAttribArray(2);
+				gl.vertexAttribPointer(
+					2,
+					2,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+											
+				gl_client_data.floor_vertices_count = 6;
+				
+				gl.bindVertexArray(null);
+						
+				
+				var bunny_verts = [];
+				var bunny_norms = [];
+				var bunny_uvs = [];
+			
+			
+				var bunny_obj = resources["bunny_obj"];
+			
+				for (var i = 0; i < bunny_obj.length; i++)
+				{
+					// XYZs
+					bunny_verts.push(bunny_obj[i].v0.x);
+					bunny_verts.push(bunny_obj[i].v0.y);
+					bunny_verts.push(bunny_obj[i].v0.z);
+					
+					bunny_verts.push(bunny_obj[i].v1.x);
+					bunny_verts.push(bunny_obj[i].v1.y);
+					bunny_verts.push(bunny_obj[i].v1.z);
+
+					bunny_verts.push(bunny_obj[i].v2.x);
+					bunny_verts.push(bunny_obj[i].v2.y);
+					bunny_verts.push(bunny_obj[i].v2.z);
+					
+					
+					// NORMs
+					bunny_norms.push(bunny_obj[i].v0.nx);
+					bunny_norms.push(bunny_obj[i].v0.ny);
+					bunny_norms.push(bunny_obj[i].v0.nz);
+					
+					bunny_norms.push(bunny_obj[i].v1.nx);
+					bunny_norms.push(bunny_obj[i].v1.ny);
+					bunny_norms.push(bunny_obj[i].v1.nz);
+					
+					bunny_norms.push(bunny_obj[i].v2.nx);
+					bunny_norms.push(bunny_obj[i].v2.ny);
+					bunny_norms.push(bunny_obj[i].v2.nz);
+					
+					
+					// UVs (OVERRIDDEN)
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+					bunny_uvs.push(0.0);
+				}
+
+
+				// OBJ Verts
+				var bunny_verts_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					bunny_verts_vbo
+				);
+
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(bunny_verts),
+					gl.STATIC_DRAW
+				);
+				
+				// OBJ NORMs 
+				var bunny_normals_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(
+					gl.ARRAY_BUFFER,
+					bunny_normals_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(bunny_norms),
+					gl.STATIC_DRAW
+				);
+
+				
+				// OBJ UVs
+				var bunny_uvs_vbo = gl.createBuffer();
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER,
+							  bunny_uvs_vbo
+				);
+				
+				gl.bufferData(
+					gl.ARRAY_BUFFER,
+					new Float32Array(bunny_uvs),
+					gl.STATIC_DRAW
+				);
+
+				
+				// OBJ VAO
+				gl_client_data.bunny_vao = gl.createVertexArray();
+
+				gl.bindVertexArray(gl_client_data.bunny_vao);
+
+				gl.bindBuffer(gl.ARRAY_BUFFER, bunny_verts_vbo);
+				gl.enableVertexAttribArray(0);
+				gl.vertexAttribPointer(
+					0,
+					3,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, bunny_normals_vbo);
+				gl.enableVertexAttribArray(1);
+				gl.vertexAttribPointer(
+					1,
+					3,
+					gl.FLOAT,
+					false,
+					0,
+					0				
+				);
+				
+				gl.bindBuffer(gl.ARRAY_BUFFER, bunny_uvs_vbo);
+				gl.enableVertexAttribArray(2);
+				gl.vertexAttribPointer(
+					2,
+					2,
+					gl.FLOAT,
+					false,
+					0,
+					0
+				);
+				
+				gl_client_data.bunny_vertices_count = bunny_obj.length * 3;
+
+				// Unbind VAO attachment
+				gl.bindVertexArray(null);
+
+
+
+
+
+				// Shader specific UBO allocation and internal member offsets
+				gl_client_data.phong_ubo = gl.createBuffer();
+				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.phong_ubo);
+				
+				var block_index = gl.getUniformBlockIndex(gl_shader_program, "phong_data");
+		
+				var block_size = gl.getActiveUniformBlockParameter(gl_shader_program,
+																   block_index,
+																   gl.UNIFORM_BLOCK_DATA_SIZE);
+				gl.bufferData(gl.UNIFORM_BUFFER, block_size, gl.DYNAMIC_DRAW);
+
+				gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, gl_client_data.phong_ubo);
+				gl.uniformBlockBinding(gl_shader_program, block_index, 0);
+
+				
+				var ubo_names = ["proj", "view", "model", "camera_pos"];
+				var ubo_indices = gl.getUniformIndices(gl_shader_program,
+													   ubo_names);
+				var ubo_offsets = gl.getActiveUniforms(gl_shader_program,
+													   ubo_indices,
+													   gl.UNIFORM_OFFSET);
+				gl_client_data.proj_mat_loc   = ubo_offsets[0];
+				gl_client_data.view_mat_loc   = ubo_offsets[1];
+				gl_client_data.model_mat_loc  = ubo_offsets[2];
+				gl_client_data.camera_pos_loc = ubo_offsets[3];
+
+
+				return gl_client_data;
+			}
+			
+				
+			function _build_program_webGL(gl)
+			{
+				var vs = _make_gl_shader(webGL, resources["phong.vs"], gl.VERTEX_SHADER);				
+				var fs = _make_gl_shader(webGL, resources["phong.fs"], gl.FRAGMENT_SHADER);
+				var program = _make_gl_program(webGL, vs, fs);
+					
+				return program;
+			}
+						
+			
+			function _clear_backgrounds(gl)
+			{
+				var W = 0.92;
+				
+				var r = W;
+				var g = W;
+				var b = W;
+				var a = 1.0;
+			
+
+				gl.clearColor(r, g, b, a);
+				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);	
+			}
+			
+			
+			function _draw_bunny(gl, sx, sy, ex, ey,
+								 proj_mat,
+								 view_mat,
+								 model_mat,
+								 world_camera_pos,
+								 gl_client_data,
+								 gl_shader_program)
+			{
+				gl.viewport(sx, sy, ex, ey);
+			
+				gl.useProgram(gl_shader_program);
+
+				var tmp = new Matrix4x4();
+				tmp.set_scale(4, 1, 4);
+				tmp.set_translate(0, -1.5, 0);
+				gl.bindBuffer(gl.UNIFORM_BUFFER, gl_client_data.phong_ubo);					
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.model_mat_loc,  tmp.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.proj_mat_loc,   proj_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.view_mat_loc,   view_mat.data);
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.camera_pos_loc, world_camera_pos);
+								
+								
+																				
+				gl.bindVertexArray(gl_client_data.floor_vao);
+				gl.drawArrays(
+					gl.TRIANGLES,
+					0,
+					gl_client_data.floor_vertices_count
+				);
+
+
+				
+				gl.bindVertexArray(gl_client_data.bunny_vao);
+
+				gl.bufferSubData(gl.UNIFORM_BUFFER, gl_client_data.model_mat_loc, model_mat.data);
+				
+				gl.drawArrays(
+					gl.TRIANGLES,
+					0,
+					gl_client_data.bunny_vertices_count
+				);
+		
+				
+				gl.bindVertexArray(null);
+			}
+
+					
+			
+			function _draw_scene(gl)
+			{
+				this._clear_backgrounds(gl);
+				
+				var proj_mat = new Matrix4x4();
+				proj_mat.set_perspective(90.0, 90.0, 0.1, 100.0);
+				
+				var view_mat = new Matrix4x4();
+				view_mat.set_translate(0.0, 0.0, -4.5);
+
+				var model_mat = new Matrix4x4();
+				model_mat.set_translate(-0.2140625, -1.575, 0.0);
+				model_mat.set_scale(20, 20, 20);
+
+				var tmp_mat = new Matrix4x4();
+				var tmp2_mat = new Matrix4x4();
+				
+				tmp_mat.set_identity();
+				tmp2_mat.set_identity();
+				tmp_mat.set_rotate('y', rot_lr);
+				tmp2_mat.set_rotate('x', rot_td);
+				tmp2_mat.set_translate(0.0, 0.0, -4);
+				var trans_rot = tmp2_mat.mult(tmp_mat);
+				tmp_mat = view_mat.mult( trans_rot );
+
+				var inv_trans_rot = trans_rot.inverse();
+				var origin = [0.0, 0.0, 0.0, 1.0];
+				var world_camera_pos_V4 = inv_trans_rot.mult_vec4(origin);
+				var world_camera_pos_v3 = new Float32Array([ world_camera_pos_V4[0],
+															 world_camera_pos_V4[1],
+															 world_camera_pos_V4[2] ]);
+				
+
+				this._draw_bunny(gl, 0, 0, ctx_width, ctx_height,
+								 proj_mat,
+								 tmp_mat,
+								 model_mat,
+								 world_camera_pos_v3,
+								 webGL_client_data,
+								 webGL_program_handle);							
+			}
+
+
+
+
+			
+			function draw_scene()
+			{
+				// Part #4 - Rendering with the pipeline
+				this._draw_scene(webGL, webGL_client_data);
+				
+				
+				// Redraw the screen 
+				// Disabled due to low performance in javascript
+				// window.requestAnimationFrame(draw_scene);				
+			}
+			
+			
+			function view_updated()
+			{
+				rot_lr = document.getElementById("camera_yaw_slider").value;
+				rot_td = document.getElementById("camera_pitch_slider").value;
+			
+				draw_scene();
+			}
+			
+					
+			function initialize_demo()
+			{
+				this.webGL = webGL_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});		
+				_init_gl(this.webGL);
+
+
+				this.ctx_width = webGL_canvas.width;
+				this.ctx_height = webGL_canvas.height;
+
+				// Part #2 - Vertex Shader, Fragment Shader, Shader Program (completed for you)
+				webGL_program_handle = _build_program_webGL(webGL);
+
+
+				// Part #3 - VBO, VAO, UBO dependencies
+				webGL_client_data = _build_client_data_webgl(webGL, webGL_program_handle);
+
+								
+				// LOCAL state (View)
+				document.getElementById("camera_pitch_slider").addEventListener("input", view_updated);
+				document.getElementById("camera_yaw_slider").addEventListener(  "input", view_updated);
+
+			
+				// Draw view
+				view_updated();
+			}
+			
+				
+			function load_resources()
+			{	
+				// Load the Engine resources
+				var demo_resource_list = [
+					["bunny_obj",		"/assets/objs/bunny.json",		"json"],
+					["phong.vs",		"/shaders/3D/phong.vs",			"text"],
+					["phong.fs",		"/shaders/3D/phong.fs",			"text"],
+				];
+				
+				var all_resources_dict = {
+					demo:		demo_resource_list,
+				};
+				
+				load_external_resources(all_resources_dict, function (resource_sets)
+				{
+					resources = resource_sets['demo'];
+					initialize_demo();
+				});
+			}
+			
+		</script>
+		
+	</head>	
+
+	<body onload="load_resources()">
+		<h1>Project 3: Projection, Perspective Correction, &amp Phong</h1>	
+		<p>
+			Name: Dane Christensen</br>
+			Date: 6/16/2026
+		</p>
+		<table>
+			<tr>
+				<td style="border-color:green; border-style: solid;">
+					<canvas	id="webGL_canvas"
+							style="background-color: #FFFFFF;" 
+							width=512 
+							height=512>
+					</canvas>	
+				</td>
+				<td style="border-color:gray; border-style: solid;">
+					<canvas	id="jsGL_canvas"
+							style="background-color: #FFFFFF;" 
+							width=512 
+							height=512>
+					</canvas>	
+				</td>
+			</tr>
+			<tr style="text-align:center">
+				<td>
+					<br/>
+					WebGL (GPU Reference)
+				</td> 
+				<td>
+					<br/>
+					Software Renderer (Yours)
+				</td>
+			</tr>
+			<tr style="text-align:center">
+				<td colspan="2">
+								
+					<br/>
+					<input type="range" id="camera_yaw_slider" style="width:512px;" value="-15" min="-90" max="90"/>
+					<br/>
+					Camera Left-Right
+				
+					<br/>
+					<input type="range" id="camera_pitch_slider" style="width:512px;" value="-15" min="-90" max="90"/>
+					<br/>
+					Camera Top-Bottom
+				</td>
+			</tr>
+		</table>
+
+		<p>	For this project, you will implement the pieces of your software rasterizer relating to perspective division and perspective correct interpolation. You will also implement the Blinn-Phong shading model as seen on the left. This model makes use of a base "Ambient", as well as additive "Diffuse" and "Specular". Again Note that from an API point, you are free to mimic or deviate from the conventions used by WebGL. In particular, you will want to make sure to model the following details:
+			<br/>
+			<br/>
+			<ol type="A" style="list-style-position: inside;">
+
+				<u><b>Divide by "W":</u></b>
+				<br/>
+				<br/>
+				In your NDC step, it is important that you preserve "1/W" in the output "W" coordinate and that you divide all other interpolants by "W". Without this, perspective projection and perspective correct interpolation will not be implemented correctly.
+				<br/>
+				<br/>
+				At the rasterization stage, make sure to use the "1/W" value to correct your interpolated attributed. Otherwise, your shader will give uncanny, linear-interpolation based results. 				
+				<br/>
+				<br/>
+				<u><b>Uniform data:</u></b>
+				<br/>
+				<br/>
+				This will be very similar to what you did for Project #2, except that you will need to support one more variable called "camera_pos". To implement this new feature, make sure that your uniforms structure takes in this new variable. As you can see both the Vertex and Fragment shader programs make use of the same UBO. This is related to the linking step that occurs between shaders. Effectively, all the different shaders may reference the same UBO for a particular struct as long as their definitions and precision standards match. Replicating this in your own pipeline should be a straightforward design to mimic.
+				
+				<br/>
+				<br/>
+				
+				<u><b>Blinn-Phong Shading:</u></b>
+				<br/>
+				<br/>
+				The shading model used in this project is a notable upgrade from the one in Project #2. Note in particular, that the shading has migrated from the Vertex Shader to the Fragment shader. Originally, Phong shading had all the same ideas as Blinn-Phong, but was susceptible to a particular failure mode in its implementation. Jim Blinn made a popular "fix" to this by introducing a vector called the "Half Vector", which is just the average of the light direction and eye direction vectors. By taking the dot product of the "Half Vector" and the Surface normal, the "Specular" component of this model is implemented. 
+				<br/>
+				<br/>
+				Make sure to take time to understand this model as it will appear again in the future/on an upcoming exam. As a very common/popular shading model, you should have a strong familiarity with it/feel comfortable implementing it from memory.
+				
+				<br/>
+				<br/>
+				
+				<u><b>Last thoughts:</u></b>
+				<br/>
+				<br/>
+				<ul>				
+				</ul>
+				<li>This project in the "Invent the Wheel" sequence should feel a bit easier than Project #2, unless you took major shortcuts. Ask for help if that is not your experience getting started.</li>
+				<li>If your project #2 is complete, reusing your previous work to render the bunny is a good launch point. You should be able to see the bunny and a plane beneath it with everything from before to tell you all you have left is the shader and pipeline updates to include.</li>
+				<li>If you find yourself struggling with the perspective correction, revisit our class lectures to see the two equations that allow you to model "Z" and your attributes correctly. </li>
+				<li>If you complete this last project give yourself a big pat on the back! You have implemented all the major parts of a rasterization pipeline from scratch!</li>
+				<br/>
+				<br/>
+				
+			</ol>
+			<br/>
+			<br/>
+		</p>
+	</body>
+</html>
