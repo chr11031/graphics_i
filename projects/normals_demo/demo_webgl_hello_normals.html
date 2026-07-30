@@ -646,6 +646,11 @@
 				console.log(TB);
 				
 				
+				// If we are in a right-handed coordinate system, our surface normal has a positive Z component. No change to the Bitangent is needed
+				// If we are in a left-handed coordinate system, our surface normal has a negative Z component. The sign of the bitangent needs to change. 
+				// See this page for a clearer distinction: http://jerome.jouvie.free.fr/opengl-tutorials/lessons/Lesson8-TBNwithMirroredUV.png
+				// We do not have to and consequently chose not to implement this detail here.
+				
 				gl.bufferData(
 					gl.ARRAY_BUFFER,
 					new Float32Array([
