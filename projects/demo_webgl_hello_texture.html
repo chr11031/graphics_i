@@ -476,7 +476,7 @@
 			
 			function update_scale()
 			{
-				mesh_scale = parseInt(document.getElementById("model_scale_slider").value);
+				mesh_scale = parseFloat(document.getElementById("model_scale_slider").value);
 			}
 
 
@@ -707,8 +707,8 @@
 				
 				
 				mesh_rot   = -document.getElementById("camera_pitch_slider").value;
-				mesh_scale = parseInt(document.getElementById("model_scale_slider").value);
-				
+				mesh_scale = parseFloat(document.getElementById("model_scale_slider").value);
+
 				model_mat = new Matrix4x4();
 				view_mat = new Matrix4x4();
 				proj_mat = new Matrix4x4();				
@@ -737,6 +737,7 @@
 		<input type="range" oninput="update_pitch()" style="width:512px;" id="camera_pitch_slider" value="15" min="0" max="90"/>
 		<br/>
 		Camera Angle
+		<br/>
 		<input type="range" oninput="update_scale()" style="width:512px;" id="model_scale_slider" value="1" min="1.0" max="2" step="0.01"/>
 		<br/>
 		Model Scale
@@ -744,7 +745,7 @@
 		</br>
 		
 		<h2>Description</h2>
-		 Triangle with a camera control feature presented in WebGL with a slightly purple background. Check:
+		 Quadrilateral Texture Example. Creates a texture resource, mapss it to the first texture unit (0), and then connects it to the Fragment Shader. Relevant texture format details available here:
 		 </br>
 		 </br>
 		<a href="https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html">https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html</a>
@@ -753,9 +754,6 @@
 		<a href="https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texImage2D">
 		https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texImage2D</a>
 		<br/>
-		<br/>
-
-		for more texture parameter/compatability information.
 		<br/>
 
 	</body>

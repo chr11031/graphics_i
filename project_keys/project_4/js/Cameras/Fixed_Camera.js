@@ -14,9 +14,9 @@ class Fixed_Camera
 
 
 		
-		var look_dir = new Vec3(look_at.x - position.x,
-								look_at.y - position.y,
-								look_at.z - position.z);
+		var look_dir = new Vec3(position.x - look_at.x,
+								position.y - look_at.y,
+								position.z - look_at.z);
 		look_dir.normalize();
 		
 		var up = new Vec3(up_vec.x, up_vec.y, up_vec.z);
@@ -29,28 +29,30 @@ class Fixed_Camera
 		
 		
 		// Set rotation basis after translating it
-		var tmp = new Matrix4x4();
-		tmp.set_translate(-position.x,
-						  -position.y,
-						  -position.z);
-						  
 		this.view = new Matrix4x4();
 
 		this.view.set(0, 0, right.x);
-		this.view.set(1, 0, right.y);
-		this.view.set(2, 0, right.z);
+		this.view.set(0, 1, right.y);
+		this.view.set(0, 2, right.z);
 		
-		this.view.set(0, 1, up_prime.x);
+		this.view.set(1, 0, up_prime.x);
 		this.view.set(1, 1, up_prime.y);
-		this.view.set(2, 1, up_prime.z);
+		this.view.set(1, 2, up_prime.z);
 		
-		this.view.set(0, 2, look_dir.x);
-		this.view.set(1, 2, look_dir.y);
+		this.view.set(2, 0, look_dir.x);
+		this.view.set(2, 1, look_dir.y);
 		this.view.set(2, 2, look_dir.z);
-
-
-		// Move to new origin, then rotate it 
-		this.view = this.view.mult( tmp );
 		
+		this.view.set(0, 3, -position.x * right.x +
+							-position.y * right.y +
+							-position.z * right.z);
+							
+		this.view.set(1, 3, -position.x * up_prime.x +
+							-position.y * up_prime.y +
+							-position.z * up_prime.z);
+							
+		this.view.set(2, 3, -position.x * look_dir.x +
+							-position.y * look_dir.y +
+							-position.z * look_dir.z);
 	}
 }

@@ -53,7 +53,7 @@
 				{
 					var delta_x = e.offsetX - mouse_last_x; 
 					
-					camera.increment_yaw(-delta_x / 10);
+					user_camera.increment_yaw(-delta_x / 10);
 					
 					mouse_last_x = e.offsetX;
 				}
@@ -395,6 +395,19 @@
 			{
 				// Choose a background color
 				var background_color = new RGBA(0.45, 0.98, 0.99, 1);
+
+				var q = parseFloat( document.getElementById("debug").value );
+				shadow_camera = new Fixed_Camera(new Vec3(5.0, q, 10.0), 	// Pos
+												 new Vec3(0.0, 0.0, 0.0),	// Look at
+												 new Vec3(0.0, 1.0, 0.0),	// Up
+												 60.0,						// FOV_LR
+												 60.0,						// FOV_TD
+												 0.1,						// Near_Z
+												 100.0);					// Far_Z
+
+				
+
+
 			
 				shadow_effect.draw(null, 		// <-- 'null' references the default Framebuffer in WebGL
 								   
@@ -427,13 +440,7 @@
 				user_camera = new Orbit_Camera(60.0, 60.0, 0.1, 100.0, // fov_lr, fov_td, near, far
 											   2.5, -30.0, -20.0);	  // orbit_distance, yaw, roll
 
-				shadow_camera = new Fixed_Camera(new Vec3(0.0, 0.0, 10.0), 	// Pos
-												 new Vec3(0.0, 0.0, 0.0),	// Look at
-												 new Vec3(0.0, 1.0, 0.0),	// Up
-												 60.0,						// FOV_LR
-												 60.0,						// FOV_TD
-												 0.1,						// Near_Z
-												 100.0);					// Far_Z
+
 
 
 				// LOCAL state (GL)
@@ -445,7 +452,6 @@
 				
 				// Effect is half the screen size so it can be used on the right half of the screen only
 				shadow_effect = new Shadow_Mapping(gl, frame_canvas.width, frame_canvas.height);
-
 								
 				window.requestAnimationFrame(draw_scene);
 			}
@@ -506,6 +512,7 @@
 				</td>
 			</tr>
 		</table>
+		<input style="width:512px;"	type="range" id="debug" value=2.0 min=0 max=16 step=0.1>
 
 		<p>	This page demonstrates how a multiple pass effect for cell shading can be realized. Click to drag the camera around the cow subject.
 			<br/>

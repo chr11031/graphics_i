@@ -429,7 +429,7 @@
 			
 			function draw_gl_canvas()
 			{
-				gl.clearColor(0.2,0,0.2,1);
+				gl.clearColor(0.2,0.5,0.2,1);
 				gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);		
 
 				gl.bindVertexArray(vao);
@@ -489,6 +489,45 @@
 			{
 				camera_pitch = -document.getElementById("camera_pitch_slider").value;
 			}
+		
+		
+			function tangent_bitangent_calc(p1, p2, p3, uv1, uv2, uv3)
+			{
+				var u1  = uv2[0] - uv1[0];
+				var v1  = uv2[1] - uv1[1];
+				
+				var u2  = uv3[0] - uv2[0];
+				var v2  = uv3[1] - uv2[1];
+				
+				var e1x = p2[0] - p1[0];
+				var e1y = p2[1] - p1[1];
+				var e1z = p2[2] - p1[2];
+				
+				var e2x = p3[0] - p2[0];
+				var e2y = p3[1] - p2[1];
+				var e2z = p3[2] - p2[2];
+				
+				var e3x = p1[0] - p3[0];
+				var e3y = p1[1] - p3[1];
+				var e3z = p1[2] - p3[2];
+			
+				var tmp = 1.0 / (u1 * v2 - v1 * u2);
+				
+				var T = [	tmp * (v2 * e1x - v1 * e2x),
+							tmp * (v2 * e1y - v1 * e2y),
+							tmp * (v2 * e1z - v1 * e2z),
+						];
+						
+				var B = [	tmp * (-u2 * e1x + u1 * e2x),
+							tmp * (-u2 * e1y + u1 * e2y),
+							tmp * (-u2 * e1z + u1 * e2z),
+						];
+			
+				return {
+					T_vec: T,
+					B_vec: B
+				};
+			}
 			
 			
 			function main()
@@ -497,6 +536,7 @@
 				
 				gl = frame_canvas.getContext("webgl2", {preserveDrawingBuffer: true, antialias: false});
 				gl.enable(gl.DEPTH_TEST);
+				gl.enable(gl.CULL_FACE);
 				
 				var positions = new Float32Array([
 					-1, -1, 0, 1.0,
@@ -596,59 +636,21 @@
 					vbo4
 				);
 
-				function fun(p1, p2, p3, uv1, uv2, uv3)
-				{
-					var u1  = uv2[0] - uv1[0];
-					var v1  = uv2[1] - uv1[1];
-					
-					var u2  = uv3[0] - uv2[0];
-					var v2  = uv3[1] - uv2[1];
-					
-					var e1x = p2[0] - p1[0];
-					var e1y = p2[1] - p1[1];
-					var e1z = p2[2] - p1[2];
-					
-					var e2x = p3[0] - p2[0];
-					var e2y = p3[1] - p2[1];
-					var e2z = p3[2] - p2[2];
-					
-					var e3x = p1[0] - p3[0];
-					var e3y = p1[1] - p3[1];
-					var e3z = p1[2] - p3[2];
-				
-					var tmp = 1.0 / (u1 * v2 - v1 * u2);
-					
-					var T = [	tmp * (v2 * e1x - v1 * e2x),
-								tmp * (v2 * e1y - v1 * e2y),
-								tmp * (v2 * e1z - v1 * e2z),
-							];
-							
-					var B = [	tmp * (-u2 * e1x + u1 * e2x),
-								tmp * (-u2 * e1y + u1 * e2y),
-								tmp * (-u2 * e1z + u1 * e2z),
-							];
-				
-					return {
-						T_vec: T,
-						B_vec: B
-					};
-				}
-				
 				// Normal 
-				var TB = fun([-1,-1, 0], [1,-1, 0], [1, 1, 0],
-							 [0, 0], [1, 0], [1, 1]);
+				var TB = tangent_bitangent_calc([-1,-1, 0], [1,-1, 0], [1, 1, 0],
+												[0, 0], [1, 0], [1, 1]);
 				console.log(TB);
 
 
 				// Top side
-				var TB = fun([-1, 1, 0], [1, 1, 0], [1, 1, -2],
-							 [0, 0], [1, 0], [1, 1]);
+				var TB = tangent_bitangent_calc([-1, 1, 0], [1, 1, 0], [1, 1, -2],
+												[0, 0], [1, 0], [1, 1]);
 				console.log(TB);
 				
 				
 				// If we are in a right-handed coordinate system, our surface normal has a positive Z component. No change to the Bitangent is needed
 				// If we are in a left-handed coordinate system, our surface normal has a negative Z component. The sign of the bitangent needs to change. 
-				// See this page for a clearer distinction: http://jerome.jouvie.free.fr/opengl-tutorials/lessons/Lesson8-TBNwithMirroredUV.png
+				// See this visual for a clearer distinction: http://jerome.jouvie.free.fr/opengl-tutorials/lessons/Lesson8-TBNwithMirroredUV.png
 				// We do not have to and consequently chose not to implement this detail here.
 				
 				gl.bufferData(
@@ -961,7 +963,7 @@
 		</br>
 		
 		<h2>Description</h2>
-		Texture Quad with Surface Normals mapped to it.
+		Texture Quad with Surface Normals mapped to it using the Tangent, Bitangent, Normal basis transformation (TBN).
 		<br/>
 		<br/>
 		<img id = "brick_normals" src="assets/brick_norms.jpg" hidden></img>
