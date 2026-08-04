@@ -48,7 +48,14 @@ class Shadow_Mapping
 			view_ubo_offset: null,
 			model_ubo_offset: null,
 			
+			shadow_view_ubo_offset: null,
+			shadow_proj_ubo_offset: null,
+
+			light_pos_offset: null,
+			camera_pos_offset: null,
+			
 			albedo_location: null,
+			shadow_map_location: null,
 		};			
 	
 	
@@ -59,7 +66,7 @@ class Shadow_Mapping
 	_init_framebuffer()
 	{
 		this.first_pass_texture = _make_2d_RGBA_UINT_texture(gl, this.ctx_width/2, this.ctx_height, gl.LINEAR, gl.CLAMP_TO_EDGE);
-		this.first_pass_depth   = _make_2d_depth_texture(gl, this.ctx_width/2, this.ctx_height, gl.LINEAR, gl.CLAMP_TO_EDGE);
+		this.first_pass_depth   = _make_2d_depth_texture(gl, this.ctx_width/2, this.ctx_height, gl.NEAREST, gl.CLAMP_TO_EDGE);
 		this.first_pass_fbo     = _make_framebuffer(gl, [
 															{ texture: this.first_pass_texture, att: gl.COLOR_ATTACHMENT0, tex: gl.TEXTURE_2D },
 															{ texture: this.first_pass_depth, 	att: gl.DEPTH_ATTACHMENT,  tex: gl.TEXTURE_2D },
@@ -141,7 +148,7 @@ class Shadow_Mapping
 
 
 		
-		var ubo_names = ["proj", "view", "model"];
+		var ubo_names = ["proj", "view", "model", "shadow_view", "shadow_proj", "light_pos", "camera_pos"];
 		var ubo_indices = gl.getUniformIndices(this.shadow_second.program,
 											   ubo_names);
 		var ubo_offsets = gl.getActiveUniforms(this.shadow_second.program,
@@ -150,13 +157,18 @@ class Shadow_Mapping
 
 
 
-		this.shadow_second.proj_ubo_offset  = ubo_offsets[0];
-		this.shadow_second.view_ubo_offset  = ubo_offsets[1];
-		this.shadow_second.model_ubo_offset = ubo_offsets[2];
+		this.shadow_second.proj_ubo_offset        = ubo_offsets[0];
+		this.shadow_second.view_ubo_offset        = ubo_offsets[1];
+		this.shadow_second.model_ubo_offset       = ubo_offsets[2];
+		this.shadow_second.shadow_view_ubo_offset = ubo_offsets[3];
+		this.shadow_second.shadow_proj_ubo_offset = ubo_offsets[4];
+		this.shadow_second.light_pos_offset 	  = ubo_offsets[5];
+		this.shadow_second.camera_pos_offset  	  = ubo_offsets[6];
 		
 
 		// Texture location
-		this.shadow_second.albedo_location = gl.getUniformLocation(this.shadow_second.program, "albedo");			
+		this.shadow_second.albedo_location     = gl.getUniformLocation(this.shadow_second.program, "albedo");			
+		this.shadow_second.shadow_map_location = gl.getUniformLocation(this.shadow_second.program, "shadow_map");
 	}
 	
 	
@@ -171,8 +183,6 @@ class Shadow_Mapping
 
 	_draw_shadow_first(proj_mat, view_mat, drawables)
 	{
-		var gl = this.gl; // (Alias for brevity)
-
 		// Progam & Uniforms common to both objects
 		gl.useProgram(this.shadow_first.program);
 		gl.bindBuffer(gl.UNIFORM_BUFFER, this.shadow_first.ubo);					
@@ -223,11 +233,11 @@ class Shadow_Mapping
 	}
 	
 	
-	_draw_shadow_second(proj_mat, view_mat, drawables)
+	_draw_shadow_second(shadow_proj_mat, shadow_view_mat, 
+						proj_mat, view_mat, 
+						light_pos, camera_pos,
+						drawables)
 	{	
-
-		var gl = this.gl; // (Alias for brevity)
-
 		// Progam & Uniforms common to both objects
 		gl.useProgram(this.shadow_second.program);
 
@@ -235,8 +245,20 @@ class Shadow_Mapping
 		gl.uniformBlockBinding(this.shadow_second.program, this.shadow_second.block_idx, 0);
 
 		gl.bindBuffer(gl.UNIFORM_BUFFER, this.shadow_second.ubo);					
-		gl.bufferSubData(gl.UNIFORM_BUFFER, this.shadow_second.proj_ubo_offset,  proj_mat.data,  0);
-		gl.bufferSubData(gl.UNIFORM_BUFFER, this.shadow_second.view_ubo_offset,  view_mat.data,  0);
+		gl.bufferSubData(gl.UNIFORM_BUFFER, this.shadow_second.proj_ubo_offset,  		proj_mat.data,  				0);
+		gl.bufferSubData(gl.UNIFORM_BUFFER, this.shadow_second.view_ubo_offset,  		view_mat.data,		  			0);
+		gl.bufferSubData(gl.UNIFORM_BUFFER, this.shadow_second.shadow_proj_ubo_offset,  shadow_proj_mat.data,  			0);
+		gl.bufferSubData(gl.UNIFORM_BUFFER, this.shadow_second.shadow_view_ubo_offset,  shadow_view_mat.data,  			0);
+		gl.bufferSubData(gl.UNIFORM_BUFFER, this.shadow_second.light_pos_offset,  		new Float32Array(light_pos),	0);
+		gl.bufferSubData(gl.UNIFORM_BUFFER, this.shadow_second.camera_pos_offset,  		new Float32Array(camera_pos),	0);
+
+
+
+		// Bind shadow map texture
+		gl.activeTexture(gl.TEXTURE0 + 0);
+		gl.bindTexture(gl.TEXTURE_2D, this.first_pass_depth);
+		gl.uniform1i(this.shadow_second.shadow_map_location, 0);
+
 
 		for (var i = 0; i < drawables.length; i++)
 		{
@@ -244,9 +266,9 @@ class Shadow_Mapping
 			gl.bufferSubData(gl.UNIFORM_BUFFER, this.shadow_second.model_ubo_offset, drawables[i].uniforms.model.data, 0);
 
 			// Texture update
-			gl.activeTexture(gl.TEXTURE0 + 0);
+			gl.activeTexture(gl.TEXTURE0 + 1);
 			gl.bindTexture(gl.TEXTURE_2D, drawables[i].uniforms.albedo);
-			gl.uniform1i(this.shadow_second.albedo_location, 0);
+			gl.uniform1i(this.shadow_second.albedo_location, 1);
 
 			gl.bindVertexArray(drawables[i].vao);
 			
@@ -282,6 +304,8 @@ class Shadow_Mapping
 		 shadow_view_mat, 
 		 user_proj_mat, 
 		 user_view_mat,
+		 light_pos,
+		 camera_pos,
 		 drawables, 
 		 clear_color)
 	{
@@ -318,7 +342,10 @@ class Shadow_Mapping
 		gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer_target);
 		
 		gl.viewport(this.ctx_width/2, 0, this.ctx_width/2, this.ctx_height);
-		this._draw_shadow_second(user_proj_mat, user_view_mat, drawables);
+		this._draw_shadow_second(shadow_proj_mat, shadow_view_mat,
+								 user_proj_mat, user_view_mat, 
+								 light_pos, camera_pos,
+								 drawables);
 		
 
 

@@ -19,6 +19,6 @@ smooth out vec3 interp_normal;
 void main()
 {
 	interp_uv = uv;
-	interp_normal = normal; 
+	interp_normal = (model * vec4(normal, 0.0)).xyz; 
 	gl_Position = proj * view * model * vec4(pos, 1.0);								
 }

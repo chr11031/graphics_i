@@ -1,6 +1,6 @@
 <html style="font-family: 'Roboto', sans-serif;">
 	<head>
-		<title>Multi-Pass Cell Shading</title>
+		<title>Project 4: Skylights, Shadows, &amp Spot</title>
 		<style>
 			table {border: 0px solid;}
 		</style>
@@ -394,20 +394,21 @@
 			function draw_scene()
 			{
 				// Choose a background color
-				var background_color = new RGBA(0.45, 0.98, 0.99, 1);
+				var background_color = new RGBA(0.05, 0.05, 0.25, 1);
 
-				var q = parseFloat( document.getElementById("debug").value );
-				shadow_camera = new Fixed_Camera(new Vec3(5.0, q, 10.0), 	// Pos
-												 new Vec3(0.0, 0.0, 0.0),	// Look at
-												 new Vec3(0.0, 1.0, 0.0),	// Up
-												 60.0,						// FOV_LR
-												 60.0,						// FOV_TD
-												 0.1,						// Near_Z
-												 100.0);					// Far_Z
+				var q = parseFloat( document.getElementById("light_height").value );
+				var light_pos = [-2.0, q, 3.0];
+				shadow_camera = new Fixed_Camera(
+									new Vec3(light_pos[0], light_pos[1], light_pos[2]),	// Pos
+									new Vec3(0.0, 0.0, 0.0),							// Look at
+									new Vec3(0.0, 1.0, 0.0),							// Up
+									60.0,												// FOV_TD
+									60.0,												// FOV_LR
+									0.1,												// Near_Z
+									100.0);												// Far_Z
 
 				
-
-
+				var camera_pos = user_camera.view_matrix().inverse().mult_vec4([0.0, 0.0, 0.0, 1.0]);
 			
 				shadow_effect.draw(null, 		// <-- 'null' references the default Framebuffer in WebGL
 								   
@@ -416,6 +417,9 @@
 								
 								   user_camera.proj_matrix(), 
 								   user_camera.view_matrix(), 
+
+								   light_pos,
+								   camera_pos,
 
 								   [spot_drawable, grass_drawable], 
 								   background_color);
@@ -438,7 +442,7 @@
 				// LOCAL state (View)
 				mouse_last_x = null;
 				user_camera = new Orbit_Camera(60.0, 60.0, 0.1, 100.0, // fov_lr, fov_td, near, far
-											   2.5, -30.0, -20.0);	  // orbit_distance, yaw, roll
+											   2.5, 30.0, -20.0);	  // orbit_distance, yaw, roll
 
 
 
@@ -496,10 +500,10 @@
 	</head>	
 
 	<body onload="load_resources()">
-		<h1>Multi-Pass Cell Shading Demo</h1>	
+		<h1>Project 4: Skylights, Shadows, &amp Spot</h1>	
 		<p>
 			Name: Dane Christensen</br>
-			Date: 6/16/2026
+			Date: 8/4/2026
 		</p>
 		<table>
 			<tr>
@@ -511,8 +515,15 @@
 					</canvas>	
 				</td>
 			</tr>
+			<tr style="text-align:center">
+				<td colspan="2">
+					<br/>
+					<input style="width:1024px;" type="range" id="light_height" value=1.4 min=0 max=16 step=0.1>
+					<br/>
+					Light Source Height
+				</td>
+			</tr>
 		</table>
-		<input style="width:512px;"	type="range" id="debug" value=2.0 min=0 max=16 step=0.1>
 
 		<p>	This page demonstrates how a multiple pass effect for cell shading can be realized. Click to drag the camera around the cow subject.
 			<br/>

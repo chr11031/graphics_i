@@ -10,15 +10,27 @@ layout(std140) uniform matrix_data
 	mat4 model;
 	mat4 view;
 	mat4 proj;
+	
+	mat4 shadow_view;
+	mat4 shadow_proj;
+	
+	vec3 light_pos;
+	vec3 camera_pos;
 };
 
 
 smooth out vec2 interp_uv;
 smooth out vec3 interp_normal;
+smooth out vec3 interp_world_pos;
+
 
 void main()
 {
 	interp_uv = uv;
-	interp_normal = normal; 
-	gl_Position = proj * view * model * vec4(pos, 1.0);								
+	interp_normal = (model * vec4(normal, 0.0)).xyz; 
+	
+	vec4 world_pos = model * vec4(pos, 1.0);
+	
+	interp_world_pos = world_pos.xyz;
+	gl_Position = proj * view * world_pos;								
 }
