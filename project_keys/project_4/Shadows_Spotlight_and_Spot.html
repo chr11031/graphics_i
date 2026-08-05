@@ -1,6 +1,6 @@
 <html style="font-family: 'Roboto', sans-serif;">
 	<head>
-		<title>Project 4: Skylights, Shadows, &amp Spot</title>
+		<title>Project 4: Shadows, Spotlights, &amp Spot</title>
 		<style>
 			table {border: 0px solid;}
 		</style>
@@ -500,7 +500,7 @@
 	</head>	
 
 	<body onload="load_resources()">
-		<h1>Project 4: Skylights, Shadows, &amp Spot</h1>	
+		<h1>Project 4: Shadows, Spotlights, &amp Spot</h1>	
 		<p>
 			Name: Dane Christensen</br>
 			Date: 8/4/2026
@@ -525,29 +525,66 @@
 			</tr>
 		</table>
 
-		<p>	This page demonstrates how a multiple pass effect for cell shading can be realized. Click to drag the camera around the cow subject.
+		<p>	For this project you will implement shadow mapping using multiple passes by means of WebGL's Framebuffer object. 
 			<br/>
 			<br/>
-			From an API point of view, several WebGL related objects are created / loaded. These include:
-			<ol type="A">
-				<li>Ten VBOs (Vertex Buffer Objects). Spot the cow and the grass plane each have one vertex VBO, one UV VBO, one normal vector VBO, and one index  buffer VBO. By contrast, the full screen quad drawn in the second pass only makes use of a vertex VBO and a UV VBO.</li>					
-				<li>Three VAOs (Vertex Array Objects). Spot the cow and the grassy plane beneath Spot are each drawn using "DrawElements" WebGL calls, which use indexed VBO data for vertex assembly and are organized as dictated by their respective VAOs. The cell shading pass does not use index vertex data and by contrast uses the "DrawArrays" WebGL call, still requiring a VAO but not a vertex index buffer.</li>					
-				<li>One UBO (Uniform Buffer Object) for uploading MVP matrices for the off screen render pass. Offsets and locations for each matrix, "Uniform" texture inputs for shaders are also loaded for reference on each drawn frame.</li>					
-				<li>Four textures: Two color albedo textures are loaded for Spot the cow and the grassy ground beneath them. A third color texture is created with no initial data. Finally, a fourth, depth texture is created as well.</li>					
-				<li>One Framebuffer for off-screen rendering. The third, color texture and the fourth, depth texture are attached to this Framebuffer so they will be updated/drawn to rather than the default Framebuffer. Said default Framebuffer is provided by default and does not require any initialization.</li>					
-				<li>Two Shader Programs, each including a Vertex Shader and Fragment Shader. Each pair of VS/FS are linked into a WebGL program, each of which is bound when completing the albedo and cell shading passes respectively.</li>
+			Although you are welcome to use your Software Renderer to implement this project, you are recommended to use the WebGL2 API.
+			<ol type="A" style="list-style-position: inside;">
+
+				<u><b>Starting File</u></b>
+				<br/>
+				<br/>
+				You will notice your output deliverable is similar to another in class demo that exhibits "Cell Shading" of Spot the cow. You are recommended to use and extend this environment to build out the cell shading effect. You will need to:
+				<ol>
+					<li>Create a new file in the "Effects" JS folder appropriately named for this project</li>
+					<li>Add a new file in the "Cameras" folder that will model a "LookAt" camera. You will need to implement the math to control the spotlight's movement and orientation through a position/direction vector pair of control inputs (FOV and near/far planes are other inputs required as well).</li>
+					<li>Write your own shaders. Whatever shaders you use should be detailed/setup in the "shaders/3D" part of the file tree.</li>
+				</ol>
+				<br/>
+				<br/>
+				<u><b>Camera Look At Function</u></b>
+				<br/>
+				<br/>
+				Think back to our earlier units on Vectors and Matrices. Everything you need to implement a "look-at" style camera exists in that earlier work. Although there are different ways to go about this, using the cross product to compute missing vectors and using your vectors as the basis for your light's "view" transformation will be essential to an optimal solution. Remember that in this context, the camera does not move around the world, rather, the world revolves around us. If we were to move and then rotate our camera, we would move the world the opposite way and rotate the world around us in the opposite direction.
+				<br/>
+				<br/>
+				<u><b>Shadow Mapping</u></b>
+				<br/>
+				<br/>
+				Your shadow mapping effect, like the cell shading effect before it should show two views of the scene. Except for any cameras and view/projection matrices, your new "JS" class to capture this effect should manage its own state.
+				
+				<br/>
+				<br/>
+				The first view should give a base "albedo" color of the scene from the point of view of the light source. The "albedo" shader from the reference example will help you in completing this part of the challenge. Although both color and depth values are being generated, the former are for visual intuition/grading benefit and the latter is more essential to implementing shadow mapping. 
+				<br/>
+				<br/>
+				
+				The second view should be the polished rendering of spot the cow. Use the Blinn-Phong shading model from Project #3 here. Your light source should be nearby "Spot" and clearly indicate the shadow mapping capabilities of your render. Although we usually think of being in shadow as a boolean value, here it can be a coefficient (let's call it "illuminated") in the range [0,+1] should your take many samples and find some are light visible, others not. You can say that the ambient term is a constant such as "0.1" based on the albedo color of each primitive and then multiply the remaining diffuse/specular components by the 
+				"illuminated" value.
+				<br/>
+				<br/>
+				You will need to pass a reference to a "depth texture" as used in the first half of your render. You will also need to interpolate a world space position between each triangle's vertices, so the fragment shader can know each fragment's world space position. With that, you can calculate what depth value would be calculated for that fragment in the light's rendering pass based on the view/projection matrices used there. If the corresponding value in the depth buffer closely matches the one you calculate, then you can assume that the fragment is seen by the light source. 
+				<br/>
+				<br/>
+				Make sure that you understand how the matrices transform a world space position to NDC and then to the viewport transform (for us, this last transform will directly map to UV coordinates). You may want to manually multiply matrices/vectors together in JS with your browser's IDE to check that your understanding is complete. Without such a mapping, you will be unable to relate your shadow map to your rendering of Spot the cow. 				
+				<br/>
+				<br/>
+				You will want to take multiple samples of the visible/not visible test. About 25 tests, spread across adjacent X/Y pixels in the depth buffer should suffice. Even with all this filtering, you will see some pixelated artifacts. It is important to tolerate a certain amount of precision error. The range of that error is a fine tuning detail I leave to you to choose.
+				<br/>
+				<br/>
+				
+				<u><b>Last thoughts:</u></b>
+				<br/>
+				<br/>
+				<ul>				
+				</ul>
+				<li>This project is a challenging one for its WebGL complexity. Save your progress often and start out simple while working on the two features described above.</li>
+				<li>When nothing is rendering, consider tracing the math through by hand in the JS console. The interactive session the debugger affords should make it easy to see how points transform/relate to each other.</li>
+				<li>When debugging your GLSL shaders, I recommend that you use the colors as a debugging aid. If a condition ("if" statement) is in your code, you can rewrite it so that a particular color is sent to the screen. Use this to make educated guesses/tests of what is happening within this pipeline stage. </li>
+				<br/>
+				<br/>
+				
 			</ol>
-			Procedurally:
-			<ol>
-				<li>JS initializes WebGL and enables the DEPTH, SCISSOR, &amp back-face CULLing tests.</li>
-				<li>A collection of "Drawable"s (containing per-object Uniforms, VAO, type, vertex count, &amp indexed/non-indexed) data are created so they can be passed to the "Cell_Shading" effect. Then the rendering loop begins.</li>
-				<li>WebGL binds to an off-screen Framebuffer with one texture attached as the first color output attachment and one depth attachment. A WebGL "Clear" operation gives the sky its light blue color. With this off-screen Framebuffer targeted by WebGL, two draw calls render the scene with the albedo details only (Spot the cow &amp the Grass plane under them). At this point, no visible change to the screen is seen.</li>
-				<li>A "Blit" operation is performed, copying rendering data from the off screen Framebuffer to regions in the default (visible) Framebuffer for the left half of the viewing screen.</li>				
-				<li>Limiting the viewport to the right half of the screen, with the default Framebuffer bound, a second pass draws a single viewport-filling square (two triangles). In this draw call, the fragment shader uses the texture, previously attached to the off screen Framebuffer.</li>
-				<li>The Fragment Shader in said draw call, (see "cell.fs" script in the Shaders/2D folder) samples from the texture used in the off-screen Framebuffer are used to calculate a new output color. When the color values differ enough, a black line is drawn. For all samples, a desaturated color value is calculated as well. </li>
-				<li>"Scissor" and "Clear" operations are used to draw a vertical bar between the two halves of the default Framebuffer. Note that the scissor region must be reset or future draw calls will not allow drawing to occur anywhere outside the last specified region.</li>
-				<li>JS tells the window to redraw the scene when appropriate: see "window.requestAnimationFrame(draw_scene);".</li>
-			</ol>						
 		</p>
 	</body>
 </html>
